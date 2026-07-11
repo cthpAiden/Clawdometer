@@ -61,19 +61,23 @@ fn main() {
                     _ => {}
                 })
                 .build(app)?;
-            // Restore HUD position
+            // Restore HUD position. Skip Windows' minimized-window sentinel
+            // (-32000, -32000) — restoring to it would leave the HUD
+            // permanently off-screen.
             let ui_path = clawdometer_core::paths::clawdometer_dir().join("ui.json");
             if let (Some(win), Some(prefs)) =
                 (app.get_webview_window("hud"), ui_prefs::load(&ui_path))
             {
-                let _ = win.set_position(tauri::PhysicalPosition::new(prefs.x, prefs.y));
+                if prefs.x > -30000 && prefs.y > -30000 {
+                    let _ = win.set_position(tauri::PhysicalPosition::new(prefs.x, prefs.y));
+                }
             }
             watcher::spawn(app.handle().clone());
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Moved(pos) = event {
-                if window.label() == "hud" {
+                if window.label() == "hud" && pos.x > -30000 && pos.y > -30000 {
                     let ui_path = clawdometer_core::paths::clawdometer_dir().join("ui.json");
                     ui_prefs::save(&ui_path, ui_prefs::UiPrefs { x: pos.x, y: pos.y });
                 }
