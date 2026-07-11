@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-tauri-drag-region>
+  <div id="card" data-tauri-drag-region>
+    <div id="model" data-tauri-drag-region>Clawdometer</div>
+    <div class="row">
+      <span class="label">5h</span>
+      <div class="bar"><div id="bar5h" class="fill"></div></div>
+      <span id="txt5h" class="pct">—</span>
+    </div>
+    <div class="row">
+      <span class="label">7d</span>
+      <div class="bar"><div id="bar7d" class="fill"></div></div>
+      <span id="txt7d" class="pct">—</span>
+    </div>
+    <div id="footer">waiting for Claude Code activity</div>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[package]
+name = "clawdometer-app"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-autostart = "2"
+clawdometer-core = { path = "../../crates/core" }
+serde_json = "1"
+notify = "6"
+
+[dev-dependencies]
+tempfile = "3"

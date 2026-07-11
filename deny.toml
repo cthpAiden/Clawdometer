@@ -1,5 +1,12 @@
 # Safety invariant 1: NO network calls anywhere in the workspace.
 # Any crate capable of opening a socket to the internet is banned.
+
+# v1 is Windows-only. Tauri pulls reqwest/hyper on non-Windows targets
+# (they never compile into our binaries); scoping the graph to the shipped
+# target keeps the ban strict for everything that actually builds.
+[graph]
+targets = ["x86_64-pc-windows-msvc"]
+
 [bans]
 multiple-versions = "allow"
 deny = [
