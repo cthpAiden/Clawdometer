@@ -89,6 +89,36 @@ fn purge_removes_clawdometer_dir() {
 }
 
 #[test]
+fn install_with_settings_flag_missing_value_exits_2_and_touches_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let claw = tmp.path().join("claw");
+    let (_, stderr, code) = run(&["install", "--settings"], &claw);
+    assert_eq!(code, 2, "missing --settings value must exit 2, not silently target real ~/.claude");
+    assert!(!stderr.is_empty(), "must print usage to stderr");
+    assert!(!claw.exists(), "no files must be written when --settings is rejected");
+}
+
+#[test]
+fn install_with_settings_flag_followed_by_another_flag_exits_2() {
+    let tmp = tempfile::tempdir().unwrap();
+    let claw = tmp.path().join("claw");
+    let (_, stderr, code) = run(&["install", "--settings", "--purge"], &claw);
+    assert_eq!(code, 2, "--settings followed by another flag must exit 2");
+    assert!(!stderr.is_empty());
+    assert!(!claw.exists());
+}
+
+#[test]
+fn uninstall_with_settings_flag_missing_value_exits_2_and_touches_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let claw = tmp.path().join("claw");
+    let (_, stderr, code) = run(&["uninstall", "--settings"], &claw);
+    assert_eq!(code, 2, "missing --settings value must exit 2, not silently target real ~/.claude");
+    assert!(!stderr.is_empty(), "must print usage to stderr");
+    assert!(!claw.exists(), "no files must be written when --settings is rejected");
+}
+
+#[test]
 fn status_reports_no_state_then_state() {
     let tmp = tempfile::tempdir().unwrap();
     let claw = tmp.path().join("claw");

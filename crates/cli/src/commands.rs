@@ -13,12 +13,28 @@ fn our_command() -> String {
     format!("\"{}\" hook", exe.display())
 }
 
-fn settings_path(args: &[String]) -> PathBuf {
-    args.iter()
-        .position(|a| a == "--settings")
-        .and_then(|i| args.get(i + 1))
-        .map(PathBuf::from)
-        .unwrap_or_else(paths::default_claude_settings_path)
+/// `Ok(None)` means `--settings` wasn't passed; use the default path.
+/// `Err(())` means `--settings` was passed without a usable value — caller
+/// must abort rather than silently falling back to the real settings path.
+fn settings_path(args: &[String]) -> Result<Option<PathBuf>, ()> {
+    let Some(i) = args.iter().position(|a| a == "--settings") else {
+        return Ok(None);
+    };
+    match args.get(i + 1) {
+        Some(v) if !v.starts_with("--") => Ok(Some(PathBuf::from(v))),
+        _ => Err(()),
+    }
+}
+
+fn resolve_settings_path(args: &[String]) -> Option<PathBuf> {
+    match settings_path(args) {
+        Ok(Some(p)) => Some(p),
+        Ok(None) => Some(paths::default_claude_settings_path()),
+        Err(()) => {
+            eprintln!("usage: clawdometer <install|uninstall> --settings <path> [--purge]");
+            None
+        }
+    }
 }
 
 fn backup_timestamp() -> String {
@@ -30,7 +46,9 @@ fn backup_timestamp() -> String {
 }
 
 pub fn cmd_install(args: &[String]) -> i32 {
-    let sp = settings_path(args);
+    let Some(sp) = resolve_settings_path(args) else {
+        return 2;
+    };
     let claw = paths::clawdometer_dir();
     match install(&sp, &claw, &our_command(), &backup_timestamp()) {
         Ok(InstallOutcome::Installed) => {
@@ -56,7 +74,9 @@ pub fn cmd_install(args: &[String]) -> i32 {
 }
 
 pub fn cmd_uninstall(args: &[String]) -> i32 {
-    let sp = settings_path(args);
+    let Some(sp) = resolve_settings_path(args) else {
+        return 2;
+    };
     let claw = paths::clawdometer_dir();
     let purge = args.iter().any(|a| a == "--purge");
     let code = match uninstall(&sp, &claw, &our_command()) {
