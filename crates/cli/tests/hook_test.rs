@@ -39,3 +39,32 @@ fn hook_pre_response_writes_null_limits() {
     let state = clawdometer_core::state::read_state(&dir.path().join("state.json")).unwrap();
     assert!(state.rate_limits.is_none());
 }
+
+#[test]
+fn hook_survives_garbage_stdin() {
+    let dir = tempfile::tempdir().unwrap();
+    let (line, code) = run_hook("%%% not json {{{", dir.path());
+    assert_eq!(code, 0);
+    assert!(!line.is_empty());
+    assert!(!dir.path().join("state.json").exists(), "garbage must not produce a state file");
+}
+
+#[test]
+fn hook_survives_empty_stdin() {
+    let dir = tempfile::tempdir().unwrap();
+    let (line, code) = run_hook("", dir.path());
+    assert_eq!(code, 0);
+    assert!(!line.is_empty());
+}
+
+#[test]
+fn hook_survives_unwritable_state_dir() {
+    // CLAWDOMETER_DIR whose parent is a FILE -> create_dir_all fails.
+    let dir = tempfile::tempdir().unwrap();
+    let blocker = dir.path().join("blocker");
+    std::fs::write(&blocker, "i am a file").unwrap();
+    let bad_dir = blocker.join("nested");
+    let (line, code) = run_hook(FULL, &bad_dir);
+    assert_eq!(code, 0, "unwritable dir must still exit 0");
+    assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%", "statusline still renders from parsed input");
+}
