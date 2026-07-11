@@ -137,7 +137,7 @@ pub fn install(
             if existed {
                 backup(clawdometer_dir, timestamp, &raw)?;
             }
-            root[STATUSLINE_KEY] = serde_json::json!({ "command": our_command });
+            root[STATUSLINE_KEY] = serde_json::json!({ "type": "command", "command": our_command });
             save_settings(settings_path, &root)?;
             return Ok(InstallOutcome::Installed);
         }
@@ -150,7 +150,7 @@ pub fn install(
         let wrapped_body = serde_json::to_string_pretty(&existing)
             .map_err(|e| SettingsError::MalformedSettings(e.to_string()))?;
         atomic_write(&clawdometer_dir.join("wrapped.json"), wrapped_body.as_bytes())?;
-        root[STATUSLINE_KEY] = serde_json::json!({ "command": our_command });
+        root[STATUSLINE_KEY] = serde_json::json!({ "type": "command", "command": our_command });
         save_settings(settings_path, &root)?;
         return Ok(InstallOutcome::Wrapped);
     }
@@ -158,7 +158,7 @@ pub fn install(
     if existed {
         backup(clawdometer_dir, timestamp, &raw)?;
     }
-    root[STATUSLINE_KEY] = serde_json::json!({ "command": our_command });
+    root[STATUSLINE_KEY] = serde_json::json!({ "type": "command", "command": our_command });
     save_settings(settings_path, &root)?;
     Ok(InstallOutcome::Installed)
 }

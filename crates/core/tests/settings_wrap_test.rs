@@ -29,6 +29,8 @@ fn install_with_missing_settings_creates_file() {
     assert_eq!(outcome, InstallOutcome::Installed);
     let json = read_json(&e.settings);
     assert_eq!(json["statusLine"]["command"], OURS);
+    // Claude Code rejects the whole settings file if statusLine.type is absent.
+    assert_eq!(json["statusLine"]["type"], "command");
     assert!(!e.claw.join("wrapped.json").exists());
     // no backup for a file that didn't exist
     assert!(!e.claw.join("backups").exists());
