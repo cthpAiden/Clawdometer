@@ -107,8 +107,11 @@ pub fn cmd_uninstall(args: &[String]) -> i32 {
     };
     if code == 0 {
         if purge {
-            let _ = std::fs::remove_dir_all(&claw);
-            println!("purged {}", claw.display());
+            match std::fs::remove_dir_all(&claw) {
+                Ok(()) => println!("purged {}", claw.display()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => eprintln!("warning: failed to purge {}: {e}", claw.display()),
+            }
         } else if claw.exists() {
             println!("left on disk (remove with --purge): {}", claw.display());
         }

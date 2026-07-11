@@ -7,7 +7,8 @@ fn main() {
         Some("hook") => {
             let line = std::panic::catch_unwind(hook::run_hook)
                 .unwrap_or_else(|_| String::from("clawdometer"));
-            println!("{line}");
+            use std::io::Write;
+            let _ = writeln!(std::io::stdout(), "{line}");
             0
         }
         Some("install") => commands::cmd_install(&args),
