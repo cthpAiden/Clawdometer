@@ -163,6 +163,23 @@ fn install_preserves_unicode_values() {
 }
 
 #[test]
+fn install_replaces_stale_clawdometer_hook_command_without_wrapping() {
+    let e = env();
+    std::fs::write(
+        &e.settings,
+        r#"{"statusLine":{"command":"\"C:\\old path\\clawdometer.exe\" hook"},"model":"opus"}"#,
+    ).unwrap();
+    let outcome = install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
+    assert_eq!(outcome, InstallOutcome::Installed, "stale self-command must be Installed, not Wrapped");
+    assert!(!e.claw.join("wrapped.json").exists(), "must not wrap a stale clawdometer hook command");
+    let json = read_json(&e.settings);
+    assert_eq!(json["statusLine"]["command"], OURS);
+    assert_eq!(json["model"], "opus");
+    // still backed up, since the file existed
+    assert!(e.claw.join("backups").join("settings-20260712-000000.json").exists());
+}
+
+#[test]
 fn extra_fields_survive_full_wrap_round_trip() {
     // install (wrap) -> uninstall (restore) must return the EXACT original object.
     // The uninstall half of this assertion lives in settings_uninstall_test.rs;

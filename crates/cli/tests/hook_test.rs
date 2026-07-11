@@ -108,6 +108,35 @@ fn hook_falls_back_when_wrapped_command_hangs() {
 }
 
 #[test]
+fn hook_never_chains_a_stale_clawdometer_hook_command() {
+    let dir = tempfile::tempdir().unwrap();
+    // Simulate wrapped.json accidentally pointing at a clawdometer hook
+    // invocation (e.g. a stale self-wrap from before the install-time fix).
+    write_wrapped(dir.path(), r#""C:\old path\clawdometer.exe" hook"#);
+    let start = std::time::Instant::now();
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%", "must fall back to our own render, not chain");
+    assert!(start.elapsed() < std::time::Duration::from_secs(5), "must not attempt to spawn/wait on the chained command");
+}
+
+#[test]
+fn hook_never_chains_the_real_current_exe_self_wrap() {
+    // Point wrapped.json at the ACTUAL current exe with `hook` — this is the
+    // true self-wrap scenario: without the guard, run_wrapped would spawn a
+    // real clawdometer process that recurses into itself indefinitely
+    // (each level spawning another, sharing the same CLAWDOMETER_DIR/wrapped.json).
+    let dir = tempfile::tempdir().unwrap();
+    let exe = env!("CARGO_BIN_EXE_clawdometer");
+    write_wrapped(dir.path(), &format!("\"{exe}\" hook"));
+    let start = std::time::Instant::now();
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%", "must fall back, never chain into itself");
+    assert!(start.elapsed() < std::time::Duration::from_secs(5), "self-wrap recursion must be short-circuited, not merely timed out");
+}
+
+#[test]
 fn hook_falls_back_when_wrapped_json_malformed() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path()).unwrap();

@@ -87,6 +87,32 @@ fn is_ours(status_line: &Value, our_command: &str) -> bool {
     status_line.get("command").and_then(|c| c.as_str()) == Some(our_command)
 }
 
+/// True if `cmd` looks like a clawdometer hook invocation, i.e. `"<path>" hook`
+/// (quoted, our own format) or `<path> hook` (unquoted), where the path's file
+/// stem is "clawdometer" (case-insensitive). Used to detect a stale
+/// clawdometer command left over from an install at a different exe path, so
+/// we never wrap it (which would make the hook chain-call itself).
+pub fn is_clawdometer_hook_command(cmd: &str) -> bool {
+    let cmd = cmd.trim();
+    let Some(rest) = cmd.strip_suffix(" hook") else {
+        return false;
+    };
+    let rest = rest.trim();
+    let path_str = if rest.starts_with('"') && rest.ends_with('"') && rest.len() >= 2 {
+        &rest[1..rest.len() - 1]
+    } else {
+        rest
+    };
+    if path_str.is_empty() {
+        return false;
+    }
+    Path::new(path_str)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(|stem| stem.eq_ignore_ascii_case("clawdometer"))
+        .unwrap_or(false)
+}
+
 pub fn install(
     settings_path: &Path,
     clawdometer_dir: &Path,
@@ -98,6 +124,22 @@ pub fn install(
     if let Some(existing) = root.get(STATUSLINE_KEY) {
         if is_ours(existing, our_command) {
             return Ok(InstallOutcome::AlreadyInstalled);
+        }
+        // Stale clawdometer hook command (e.g. install moved to a new exe path):
+        // it's ours, just outdated. Replace it directly — never wrap our own
+        // hook command, or the hook would chain-call itself.
+        let is_stale_self = existing
+            .get("command")
+            .and_then(|c| c.as_str())
+            .map(is_clawdometer_hook_command)
+            .unwrap_or(false);
+        if is_stale_self {
+            if existed {
+                backup(clawdometer_dir, timestamp, &raw)?;
+            }
+            root[STATUSLINE_KEY] = serde_json::json!({ "command": our_command });
+            save_settings(settings_path, &root)?;
+            return Ok(InstallOutcome::Installed);
         }
         // Persist FULL original statusLine object (command + extra fields).
         let existing = existing.clone();

@@ -36,6 +36,10 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
     let value: serde_json::Value =
         serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()?;
     let command = value.get("command")?.as_str()?.to_string();
+    if clawdometer_core::settings::is_clawdometer_hook_command(&command) {
+        // Never chain a stale clawdometer hook command into itself.
+        return None;
+    }
 
     let mut cmd = shell_command(&command);
     let mut child = cmd
