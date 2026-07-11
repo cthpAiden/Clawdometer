@@ -1,5 +1,7 @@
 #![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
 
+mod watcher;
+
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
@@ -52,6 +54,7 @@ fn main() {
                     _ => {}
                 })
                 .build(app)?;
+            watcher::spawn(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
