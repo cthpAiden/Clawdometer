@@ -71,3 +71,23 @@ pub fn read_state(path: &Path) -> Option<State> {
     let raw = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()
 }
+
+/// One-line statusline text. Absent rate_limits is a normal state.
+pub fn render_statusline(state: &State) -> String {
+    let model = state
+        .model
+        .as_ref()
+        .map(|m| m.display_name.as_str())
+        .unwrap_or("Claude");
+    match &state.rate_limits {
+        Some(rl) => {
+            let pct = |w: &Option<crate::schema::LimitWindow>| {
+                w.as_ref()
+                    .map(|w| format!("{}%", w.used_percentage))
+                    .unwrap_or_else(|| "?".into())
+            };
+            format!("[{model}] 5h {} · 7d {}", pct(&rl.five_hour), pct(&rl.seven_day))
+        }
+        None => format!("[{model}] limits pending"),
+    }
+}

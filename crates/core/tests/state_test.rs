@@ -75,3 +75,19 @@ fn write_creates_parent_dir() {
     write_state_atomic(&path, &State::from_input(&input, "t".into())).unwrap();
     assert!(read_state(&path).is_some());
 }
+
+use clawdometer_core::state::render_statusline;
+
+#[test]
+fn renders_line_with_limits() {
+    let input = parse_statusline_input(FULL).unwrap();
+    let state = State::from_input(&input, "t".into());
+    assert_eq!(render_statusline(&state), "[Opus 4.8 (1M context)] 5h 1% · 7d 5%");
+}
+
+#[test]
+fn renders_pending_line_without_limits() {
+    let input = parse_statusline_input(PRE).unwrap();
+    let state = State::from_input(&input, "t".into());
+    assert_eq!(render_statusline(&state), "[Opus 4.8 (1M context)] limits pending");
+}
