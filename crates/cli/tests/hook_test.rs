@@ -137,6 +137,24 @@ fn hook_never_chains_the_real_current_exe_self_wrap() {
 }
 
 #[test]
+fn hook_does_not_hang_when_wrapped_command_leaves_grandchild_holding_stdout() {
+    let dir = tempfile::tempdir().unwrap();
+    // The wrapped command itself exits successfully and prints a line, but
+    // leaves a lingering background grandchild alive that (on Windows) still
+    // holds the inherited stdout pipe handle open, so plain read_to_string
+    // on that handle would never see EOF.
+    write_wrapped(dir.path(), r#"cmd /C "start /B ping -n 30 127.0.0.1 & echo chained-line""#);
+    let start = std::time::Instant::now();
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert!(
+        line == "chained-line" || line == "[Opus 4.8 (1M context)] 5h 1% · 7d 5%",
+        "expected chained output or fallback, got: {line}"
+    );
+    assert!(start.elapsed() < std::time::Duration::from_secs(10), "must not hang on lingering grandchild holding stdout open");
+}
+
+#[test]
 fn hook_falls_back_when_wrapped_json_malformed() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path()).unwrap();
