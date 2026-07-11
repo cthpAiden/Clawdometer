@@ -42,7 +42,8 @@ fn load_settings(path: &Path) -> Result<(Value, bool, Vec<u8>), SettingsError> {
         return Ok((serde_json::json!({}), false, Vec::new()));
     }
     let raw = std::fs::read(path)?;
-    let text = String::from_utf8_lossy(&raw);
+    let text = std::str::from_utf8(&raw)
+        .map_err(|_| SettingsError::MalformedSettings("settings.json is not valid UTF-8".into()))?;
     let root: Value = serde_json::from_str(text.trim_start_matches('\u{feff}'))
         .map_err(|e| SettingsError::MalformedSettings(e.to_string()))?;
     if !root.is_object() {

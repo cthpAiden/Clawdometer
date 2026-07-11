@@ -117,3 +117,17 @@ fn install_aborts_on_malformed_json_touching_nothing() {
     assert_eq!(std::fs::read_to_string(&e.settings).unwrap(), "{ this is not json");
     assert!(!e.claw.exists(), "abort must touch nothing, not even backups");
 }
+
+#[test]
+fn install_aborts_on_invalid_utf8_touching_nothing() {
+    let e = env();
+    // 0xFF is never valid UTF-8; embed it inside otherwise-plausible JSON bytes
+    let mut bytes = br#"{"note":""#.to_vec();
+    bytes.push(0xFF);
+    bytes.extend_from_slice(br#""}"#);
+    std::fs::write(&e.settings, &bytes).unwrap();
+    let err = install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap_err();
+    assert!(matches!(err, SettingsError::MalformedSettings(_)));
+    assert_eq!(std::fs::read(&e.settings).unwrap(), bytes, "file untouched");
+    assert!(!e.claw.exists(), "abort must touch nothing");
+}
