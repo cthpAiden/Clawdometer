@@ -120,3 +120,45 @@ pub fn install(
     save_settings(settings_path, &root)?;
     Ok(InstallOutcome::Installed)
 }
+
+#[derive(Debug, PartialEq)]
+pub enum UninstallOutcome {
+    Restored,
+    RemovedKey,
+    NotInstalled,
+    NotOurs,
+}
+
+pub fn uninstall(
+    settings_path: &Path,
+    clawdometer_dir: &Path,
+    our_command: &str,
+) -> Result<UninstallOutcome, SettingsError> {
+    let (mut root, existed, _raw) = load_settings(settings_path)?;
+    if !existed {
+        return Ok(UninstallOutcome::NotInstalled);
+    }
+    let Some(current) = root.get(STATUSLINE_KEY) else {
+        return Ok(UninstallOutcome::NotInstalled);
+    };
+    if !is_ours(current, our_command) {
+        // User edited statusLine after install: warn, touch nothing.
+        return Ok(UninstallOutcome::NotOurs);
+    }
+    let wrapped_path = clawdometer_dir.join("wrapped.json");
+    if wrapped_path.exists() {
+        let raw = std::fs::read_to_string(&wrapped_path)?;
+        let original: Value = serde_json::from_str(raw.trim_start_matches('\u{feff}'))
+            .map_err(|e| SettingsError::MalformedSettings(format!("wrapped.json: {e}")))?;
+        root[STATUSLINE_KEY] = original;
+        save_settings(settings_path, &root)?;
+        std::fs::remove_file(&wrapped_path)?;
+        Ok(UninstallOutcome::Restored)
+    } else {
+        root.as_object_mut()
+            .expect("load_settings guarantees object")
+            .remove(STATUSLINE_KEY);
+        save_settings(settings_path, &root)?;
+        Ok(UninstallOutcome::RemovedKey)
+    }
+}
