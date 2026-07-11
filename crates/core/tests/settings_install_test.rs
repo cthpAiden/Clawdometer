@@ -131,3 +131,48 @@ fn install_aborts_on_invalid_utf8_touching_nothing() {
     assert_eq!(std::fs::read(&e.settings).unwrap(), bytes, "file untouched");
     assert!(!e.claw.exists(), "abort must touch nothing");
 }
+
+#[test]
+fn install_handles_bom_and_crlf() {
+    let e = env();
+    let content = "\u{feff}{\r\n  \"model\": \"opus\",\r\n  \"statusLine\": {\"command\": \"old.cmd\"}\r\n}\r\n";
+    std::fs::write(&e.settings, content).unwrap();
+    let outcome = install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
+    assert_eq!(outcome, InstallOutcome::Wrapped);
+    let json = read_json(&e.settings);
+    assert_eq!(json["model"], "opus");
+    assert_eq!(json["statusLine"]["command"], OURS);
+    // backup preserved the original bytes exactly, BOM and CRLF included
+    let backup = std::fs::read(e.claw.join("backups").join("settings-20260712-000000.json")).unwrap();
+    assert_eq!(backup, content.as_bytes());
+}
+
+#[test]
+fn install_preserves_unicode_values() {
+    let e = env();
+    std::fs::write(
+        &e.settings,
+        r#"{"userName":"Phúc Châu 🦀","note":"日本語テスト","statusLine":{"command":"echo héllo"}}"#,
+    ).unwrap();
+    install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
+    let json = read_json(&e.settings);
+    assert_eq!(json["userName"], "Phúc Châu 🦀");
+    assert_eq!(json["note"], "日本語テスト");
+    let wrapped = read_json(&e.claw.join("wrapped.json"));
+    assert_eq!(wrapped["command"], "echo héllo");
+}
+
+#[test]
+fn extra_fields_survive_full_wrap_round_trip() {
+    // install (wrap) -> uninstall (restore) must return the EXACT original object.
+    // The uninstall half of this assertion lives in settings_uninstall_test.rs;
+    // here we prove wrapped.json captures the full object.
+    let e = env();
+    let original_status_line = serde_json::json!({
+        "command": "old.cmd", "padding": 2, "type": "command", "nested": {"deep": [1, 2, 3]}
+    });
+    let root = serde_json::json!({ "statusLine": original_status_line });
+    std::fs::write(&e.settings, serde_json::to_string(&root).unwrap()).unwrap();
+    install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
+    assert_eq!(read_json(&e.claw.join("wrapped.json")), original_status_line);
+}
