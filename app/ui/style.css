@@ -1,0 +1,15 @@
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+html, body { background: transparent; overflow: hidden; }
+#card {
+  width: 260px; height: 120px; padding: 10px 12px;
+  background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
+  border-radius: 10px; font: 12px/1.5 "Segoe UI", sans-serif;
+  display: flex; flex-direction: column; gap: 4px;
+}
+#model { font-weight: 600; font-size: 12px; }
+.row { display: flex; align-items: center; gap: 6px; }
+.label { width: 18px; color: #9a9aa2; }
+.bar { flex: 1; height: 8px; background: #35353c; border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; width: 0%; background: #d97706; border-radius: 4px; transition: width .3s; }
+.pct { min-width: 92px; text-align: right; color: #c9c9cf; font-variant-numeric: tabular-nums; }
+#footer { margin-top: auto; color: #7a7a82; font-size: 11px; }
