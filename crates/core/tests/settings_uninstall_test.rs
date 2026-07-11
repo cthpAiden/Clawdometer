@@ -89,3 +89,17 @@ fn uninstall_aborts_on_malformed_settings() {
     assert!(uninstall(&e.settings, &e.claw, OURS).is_err());
     assert_eq!(std::fs::read_to_string(&e.settings).unwrap(), "{ nope");
 }
+
+#[test]
+fn uninstall_with_malformed_wrapped_json_errors_and_touches_nothing() {
+    let e = env();
+    std::fs::write(&e.settings, r#"{"statusLine":{"command":"old.cmd"}}"#).unwrap();
+    install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
+    let after_install = std::fs::read_to_string(&e.settings).unwrap();
+    // corrupt the wrapped backup
+    std::fs::write(e.claw.join("wrapped.json"), "{ nope").unwrap();
+    let err = uninstall(&e.settings, &e.claw, OURS);
+    assert!(err.is_err(), "malformed wrapped.json must error");
+    assert_eq!(std::fs::read_to_string(&e.settings).unwrap(), after_install, "settings untouched");
+    assert!(e.claw.join("wrapped.json").exists(), "corrupt wrapped.json left for inspection");
+}

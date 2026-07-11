@@ -152,7 +152,11 @@ pub fn uninstall(
             .map_err(|e| SettingsError::MalformedSettings(format!("wrapped.json: {e}")))?;
         root[STATUSLINE_KEY] = original;
         save_settings(settings_path, &root)?;
-        std::fs::remove_file(&wrapped_path)?;
+        // settings.json is already restored at this point; wrapped.json is only
+        // leftover cleanup. If it can't be deleted (e.g. locked by AV/indexer on
+        // Windows), don't report failure — a later uninstall will see NotOurs,
+        // which is safe.
+        let _ = std::fs::remove_file(&wrapped_path);
         Ok(UninstallOutcome::Restored)
     } else {
         root.as_object_mut()
