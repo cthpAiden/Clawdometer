@@ -1,0 +1,4 @@
+[toolchain]
+# Tauri on Windows requires the MSVC toolchain; the GNU toolchain lacks
+# the binutils (dlltool/as) needed by raw-dylib crates.
+channel = "stable-x86_64-pc-windows-msvc"
