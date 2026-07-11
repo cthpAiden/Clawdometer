@@ -68,3 +68,51 @@ fn hook_survives_unwritable_state_dir() {
     assert_eq!(code, 0, "unwritable dir must still exit 0");
     assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%", "statusline still renders from parsed input");
 }
+
+fn write_wrapped(dir: &Path, command: &str) {
+    std::fs::create_dir_all(dir).unwrap();
+    let obj = serde_json::json!({ "command": command, "padding": 0 });
+    std::fs::write(dir.join("wrapped.json"), serde_json::to_string(&obj).unwrap()).unwrap();
+}
+
+#[test]
+fn hook_passes_through_wrapped_command_output() {
+    let dir = tempfile::tempdir().unwrap();
+    write_wrapped(dir.path(), "echo original-statusline");
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "original-statusline");
+    // state.json still written even when passing through
+    assert!(clawdometer_core::state::read_state(&dir.path().join("state.json")).is_some());
+}
+
+#[test]
+fn hook_falls_back_when_wrapped_command_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    write_wrapped(dir.path(), "cmd /C exit 3");
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%");
+}
+
+#[test]
+fn hook_falls_back_when_wrapped_command_hangs() {
+    let dir = tempfile::tempdir().unwrap();
+    // ping -n 30 sleeps ~29s on Windows; must be killed at the 2s timeout.
+    write_wrapped(dir.path(), "ping -n 30 127.0.0.1");
+    let start = std::time::Instant::now();
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%");
+    assert!(start.elapsed() < std::time::Duration::from_secs(10), "timeout did not fire");
+}
+
+#[test]
+fn hook_falls_back_when_wrapped_json_malformed() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path()).unwrap();
+    std::fs::write(dir.path().join("wrapped.json"), "{ nope").unwrap();
+    let (line, code) = run_hook(FULL, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "[Opus 4.8 (1M context)] 5h 1% · 7d 5%");
+}
