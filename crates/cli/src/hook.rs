@@ -37,15 +37,10 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
         serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()?;
     let command = value.get("command")?.as_str()?.to_string();
 
-    // Use temp file for stdout to avoid pipe deadlocks
-    let tmp_file = std::env::temp_dir()
-        .join(format!("clawdometer_{}.txt", std::process::id()));
-    let stdout_file = std::fs::File::create(&tmp_file).ok()?;
-
     let mut cmd = shell_command(&command);
     let mut child = cmd
         .stdin(Stdio::piped())
-        .stdout(stdout_file)
+        .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .ok()?;
@@ -53,25 +48,30 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
     if let Some(mut stdin) = child.stdin.take() {
         let _ = stdin.write_all(stdin_raw.as_bytes());
     }
-
-    // Wait with 2s timeout
     match child.wait_timeout(Duration::from_secs(2)) {
         Ok(Some(status)) if status.success() => {
-            let out = std::fs::read_to_string(&tmp_file).unwrap_or_default();
-            let _ = std::fs::remove_file(&tmp_file);
+            let mut out = String::new();
+            child.stdout.take()?.read_to_string(&mut out).ok()?;
             let line = out.lines().next()?.trim().to_string();
             if line.is_empty() { None } else { Some(line) }
         }
-        Ok(Some(_)) => {
-            let _ = std::fs::remove_file(&tmp_file);
-            None
-        }
-        Ok(None) | Err(_) => {
-            // Timeout or error: kill the process
+        Ok(Some(_)) => None,
+        _ => {
+            // On Windows, Command inherits handles (bInheritHandles=TRUE), so our
+            // own stdout pipe leaks into cmd.exe and any grandchild it spawns
+            // (e.g. ping.exe). child.kill() only kills cmd.exe; the grandchild
+            // can survive holding that inherited handle open, so the caller
+            // never sees EOF. Kill the whole process tree first.
+            #[cfg(windows)]
+            {
+                let _ = Command::new("taskkill")
+                    .args(["/PID", &child.id().to_string(), "/T", "/F"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
+            }
             let _ = child.kill();
-            // Give the process a moment to be killed
-            std::thread::sleep(Duration::from_millis(100));
-            let _ = std::fs::remove_file(&tmp_file);
+            let _ = child.wait();
             None
         }
     }
@@ -80,12 +80,9 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
 #[cfg(windows)]
 fn shell_command(command: &str) -> Command {
     use std::os::windows::process::CommandExt;
-    const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
     let mut cmd = Command::new("cmd");
     // raw_arg: hand the command string to cmd.exe unmangled.
-    cmd.arg("/C")
-        .raw_arg(command)
-        .creation_flags(CREATE_NEW_PROCESS_GROUP);
+    cmd.arg("/C").raw_arg(command);
     cmd
 }
 
