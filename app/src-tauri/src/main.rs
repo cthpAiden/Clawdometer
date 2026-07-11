@@ -1,9 +1,10 @@
 #![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
 
+mod ui_prefs;
 mod watcher;
 
 use tauri::menu::{Menu, MenuItem};
-use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 
 fn toggle_hud(app: &tauri::AppHandle) {
@@ -36,7 +37,13 @@ fn main() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { button: MouseButton::Left, .. } = event {
+                    // Click fires for both Down and Up; toggle once per click.
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
                         toggle_hud(tray.app_handle());
                     }
                 })
@@ -54,8 +61,23 @@ fn main() {
                     _ => {}
                 })
                 .build(app)?;
+            // Restore HUD position
+            let ui_path = clawdometer_core::paths::clawdometer_dir().join("ui.json");
+            if let (Some(win), Some(prefs)) =
+                (app.get_webview_window("hud"), ui_prefs::load(&ui_path))
+            {
+                let _ = win.set_position(tauri::PhysicalPosition::new(prefs.x, prefs.y));
+            }
             watcher::spawn(app.handle().clone());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Moved(pos) = event {
+                if window.label() == "hud" {
+                    let ui_path = clawdometer_core::paths::clawdometer_dir().join("ui.json");
+                    ui_prefs::save(&ui_path, ui_prefs::UiPrefs { x: pos.x, y: pos.y });
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("failed to run clawdometer app");

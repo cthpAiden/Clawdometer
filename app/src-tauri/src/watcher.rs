@@ -42,17 +42,38 @@ pub fn spawn(app: AppHandle) {
         let payload = build_payload(&state_path);
         let mut last_state = payload["state"].clone();
         let _ = app.emit(STATE_EVENT, &payload);
+        update_tooltip(&app, &payload);
+
+        // The webview's event listener attaches asynchronously, so early
+        // emissions can be lost. Re-emit unconditionally for the first few
+        // ticks so a restarted HUD renders pre-existing state.
+        let mut startup_grace: u32 = 5;
 
         loop {
             // wake on FS event or every 2s (debounce fallback poll)
             let _ = rx.recv_timeout(Duration::from_secs(2));
             let payload = build_payload(&state_path);
-            if payload["state"] != last_state {
+            if startup_grace > 0 || payload["state"] != last_state {
+                startup_grace = startup_grace.saturating_sub(1);
                 last_state = payload["state"].clone();
                 let _ = app.emit(STATE_EVENT, &payload);
+                update_tooltip(&app, &payload);
             }
         }
     });
+}
+
+fn update_tooltip(app: &AppHandle, payload: &serde_json::Value) {
+    let text = match (
+        payload.pointer("/state/rate_limits/five_hour/used_percentage").and_then(|v| v.as_i64()),
+        payload.pointer("/state/rate_limits/seven_day/used_percentage").and_then(|v| v.as_i64()),
+    ) {
+        (Some(fh), Some(sd)) => format!("5h {fh}% · 7d {sd}%"),
+        _ => String::from("Clawdometer — waiting for data"),
+    };
+    if let Some(tray) = app.tray_by_id("main") {
+        let _ = tray.set_tooltip(Some(text));
+    }
 }
 
 #[cfg(test)]
