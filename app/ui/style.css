@@ -14,3 +14,9 @@ html, body { background: transparent; overflow: hidden; }
 .fill { height: 100%; width: 0%; background: #d97706; border-radius: 4px; transition: width .3s; }
 .pct { min-width: 92px; text-align: right; color: #c9c9cf; font-variant-numeric: tabular-nums; }
 #footer { margin-top: auto; color: #7a7a82; font-size: 11px; }
+
+/* Compact: 150x84 window — bars + percentages only. */
+body.compact #card { width: 150px; height: 84px; }
+body.compact #footer { display: none; }
+body.compact .pct { min-width: 34px; }
+body.compact #title { font-size: 11px; }

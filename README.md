@@ -61,8 +61,14 @@ timeout), and `uninstall` restores it exactly.
   remembered across restarts (and sanity-checked against your current
   monitors, so an unplugged display can't strand it off-screen).
 - **Tray icon, left-click:** show/hide the HUD.
-- **Tray icon, right-click:** menu with *Show/Hide*, *Start with Windows*
-  (toggles the HKCU Run key), and *Quit*.
+- **Tray icon, right-click:** menu with *Show/Hide*, *Compact size*,
+  *Opacity*, *Start with Windows* (toggles the HKCU Run key), and *Quit*.
+- **Compact size:** shrinks the card to roughly half width (bars and
+  percentages only — no footer or reset times). Remembered across restarts.
+- **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
+  blocking. Remembered across restarts.
+- Right-clicking the card itself does nothing (the browser-style context
+  menu is disabled); all controls live in the tray menu.
 - **Footer:** data age ("as of 1m ago"). If it turns red saying the poll is
   failing, your network is down or the OAuth token expired — using Claude
   Code once refreshes it.
@@ -95,7 +101,7 @@ Everything lives in `~/.clawdometer/`:
 | `state.json` | last statusline snapshot (written by the hook) |
 | `live.json` | last poller snapshot (written by the HUD every 60s) |
 | `wrapped.json` | your original statusline command, chained + restored on uninstall |
-| `ui.json` | HUD window position |
+| `ui.json` | HUD window position, opacity, compact mode |
 | `backups/` | timestamped copies of settings.json taken before each install |
 
 ## Building from source

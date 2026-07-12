@@ -1,5 +1,12 @@
-// Default skin. Contract: the single `state-updated` event. No other IPC.
+// Default skin. Contract: `state-updated` (usage data) and `ui-prefs`
+// (opacity/compact) events in; `ui-ready` event out. No other IPC.
+
+// The HUD is chrome, not a page — suppress WebView2's context menu
+// (Back/Refresh/Save as/Print).
+window.addEventListener("contextmenu", (e) => e.preventDefault());
+
 const els = {
+  card: document.getElementById("card"),
   title: document.getElementById("title"),
   bar5h: document.getElementById("bar5h"),
   bar7d: document.getElementById("bar7d"),
@@ -9,6 +16,7 @@ const els = {
 };
 
 let current = null; // last payload
+let compactMode = false; // mirrors the tray's "Compact size" toggle
 
 // Header: countdown to the 5h window reset — the limits are account-wide, so
 // this beats a model name (same numbers whatever model is running).
@@ -38,7 +46,10 @@ function renderWindow(win, barEl, txtEl, nowMs) {
   const pct = Math.max(0, Math.min(100, win.used_percentage));
   barEl.style.width = pct + "%";
   barEl.style.background = pct >= 90 ? "#dc2626" : pct >= 70 ? "#f59e0b" : "#d97706";
-  txtEl.textContent = `${win.used_percentage}% · ${fmtReset(win.resets_at, nowMs)}`;
+  // Compact drops the reset time — percentage only.
+  txtEl.textContent = compactMode
+    ? `${win.used_percentage}%`
+    : `${win.used_percentage}% · ${fmtReset(win.resets_at, nowMs)}`;
 }
 
 function fmtAge(capturedAtIso, nowMs) {
@@ -79,6 +90,17 @@ window.__TAURI__.event.listen("state-updated", (event) => {
   current = event.payload;
   render();
 });
+
+window.__TAURI__.event.listen("ui-prefs", (event) => {
+  const p = event.payload || {};
+  compactMode = !!p.compact;
+  document.body.classList.toggle("compact", compactMode);
+  els.card.style.opacity = typeof p.opacity === "number" ? p.opacity : 1;
+  render();
+});
+// Ask the backend to (re)send prefs — emissions before this listener
+// attached were lost.
+window.__TAURI__.event.emit("ui-ready");
 
 // Age line ticks locally between updates.
 setInterval(render, 30000);
