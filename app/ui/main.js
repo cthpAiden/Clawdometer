@@ -63,13 +63,14 @@ const barColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f59e0b" : "#4a7
 const numColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f0b429" : "#63b35f");
 
 // Header countdown to the 5h window reset. Account-wide limits, so this beats a
-// model name. Compact shows just the duration; the label supplies the context.
+// model name. Leading ↻ marks it as a reset countdown so the number isn't read as
+// usage; regular spells "resets in", compact drops the words to fit the pill.
 function fmtCountdown(resetsAtEpochSec, nowMs, compact) {
   if (!Number.isFinite(resetsAtEpochSec)) return "—";
   const mins = Math.ceil((resetsAtEpochSec * 1000 - nowMs) / 60000);
-  if (mins <= 0) return compact ? "resetting…" : "resetting…";
+  if (mins <= 0) return "↻ resetting…";
   const core = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
-  return compact ? core : `resets in ${core}`;
+  return compact ? `↻ ${core}` : `↻ resets in ${core}`;
 }
 
 // The dominant 5h window: big number + bar to its right, both threshold-colored.
