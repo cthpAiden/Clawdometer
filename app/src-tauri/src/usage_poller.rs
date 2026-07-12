@@ -120,11 +120,12 @@ fn poll_once() -> PollOutcome {
         return PollOutcome::NoCurl;
     }
     let cred_path = clawdometer_core::paths::claude_credentials_path();
-    // No readable credentials file means no sign-in: installing/opening
-    // Claude Code creates it, so this is a local failure, not a network one.
-    let Ok(raw) = std::fs::read_to_string(&cred_path) else {
-        return PollOutcome::NoCredentials;
+    let raw = match read_credentials(&cred_path) {
+        Ok(raw) => raw,
+        Err(outcome) => return outcome,
     };
+    // Unparseable content still maps to NoCredentials: whether the file is
+    // corrupt or holds no OAuth grant, signing in to Claude Code rewrites it.
     let Ok(mut creds) =
         serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}'))
     else {
@@ -184,8 +185,47 @@ fn refresh_and_persist(
 ) -> Option<serde_json::Value> {
     let consumed = creds.pointer("/claudeAiOauth/refreshToken")?.as_str()?.to_string();
     let fresh = refresh(creds, unix_now_ms())?;
-    let _ = write_credentials_if_current(cred_path, &fresh, &consumed);
+    persist_with_retry(cred_path, &fresh, &consumed, Duration::from_millis(200));
     Some(fresh)
+}
+
+/// The refresh POST already rotated the token server-side, so a rotated
+/// refresh token that never reaches disk is stranded in this cycle's memory —
+/// the disk (and Claude Code) keep the consumed one, and the next refresh from
+/// either party can fail, signing the user out. Retry brief I/O failures (AV
+/// lock, writer mid-write); stop as soon as the disk provably moved on.
+fn persist_with_retry(
+    path: &std::path::Path,
+    fresh: &serde_json::Value,
+    consumed_refresh_token: &str,
+    retry_delay: Duration,
+) -> bool {
+    for attempt in 0..5 {
+        if attempt > 0 {
+            std::thread::sleep(retry_delay);
+        }
+        match write_credentials_if_current(path, fresh, consumed_refresh_token) {
+            PersistOutcome::Persisted => return true,
+            PersistOutcome::Superseded => return false,
+            PersistOutcome::Failed => {}
+        }
+    }
+    false
+}
+
+/// The raw credentials file. A missing file means no sign-in — installing or
+/// opening Claude Code creates it. Any other read error (sharing violation
+/// from a writer mid-write, AV lock, ACL) says nothing about sign-in state:
+/// the file is there, this cycle just couldn't read it, so it must not tell
+/// the user to sign in.
+fn read_credentials(path: &std::path::Path) -> Result<String, PollOutcome> {
+    std::fs::read_to_string(path).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            PollOutcome::NoCredentials
+        } else {
+            PollOutcome::Transient
+        }
+    })
 }
 
 /// Failure marker for the HUD ({"kind": "auth" | "network" |
@@ -227,30 +267,48 @@ fn backoff_delay(consecutive_failures: u32) -> Duration {
     POLL_INTERVAL.saturating_mul(1 << doublings).min(MAX_BACKOFF)
 }
 
+/// Result of one attempt to persist rotated credentials.
+enum PersistOutcome {
+    Persisted,
+    /// Disk holds a different refresh token (or the file is gone): Claude
+    /// Code rotated first and its copy is the live one — ours must not
+    /// clobber it, and there is nothing to retry.
+    Superseded,
+    /// Read, parse, or write trouble (AV lock, writer mid-write, disk): the
+    /// rotated token reached nobody's disk yet, so retrying is worthwhile.
+    Failed,
+}
+
 /// Persist refreshed credentials only if the file still holds the refresh
-/// token we consumed — a compare-and-swap against Claude Code rotating the
-/// tokens itself between our read and this write. On mismatch (or an
-/// unreadable file, which may be Claude Code mid-write) nothing is written:
-/// the disk copy is newer than ours, and the next poll re-reads it.
+/// token we consumed — a check against Claude Code rotating the tokens itself
+/// between our read and this write. Only a *provably different* token on disk
+/// means ours is stale; an unreadable or torn file is an I/O problem to retry
+/// (see persist_with_retry), not evidence the disk is newer.
 fn write_credentials_if_current(
     path: &std::path::Path,
     fresh: &serde_json::Value,
     consumed_refresh_token: &str,
-) -> bool {
-    let on_disk = std::fs::read_to_string(path)
-        .ok()
-        .and_then(|raw| {
-            serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}')).ok()
-        });
-    let unchanged = on_disk
-        .as_ref()
-        .and_then(|v| v.pointer("/claudeAiOauth/refreshToken"))
-        .and_then(|v| v.as_str())
+) -> PersistOutcome {
+    let raw = match std::fs::read_to_string(path) {
+        Ok(raw) => raw,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return PersistOutcome::Superseded,
+        Err(_) => return PersistOutcome::Failed,
+    };
+    let Ok(on_disk) =
+        serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}'))
+    else {
+        return PersistOutcome::Failed;
+    };
+    let unchanged = on_disk.pointer("/claudeAiOauth/refreshToken").and_then(|v| v.as_str())
         == Some(consumed_refresh_token);
     if !unchanged {
-        return false;
+        return PersistOutcome::Superseded;
     }
-    write_credentials_atomic(path, fresh).is_ok()
+    if write_credentials_atomic(path, fresh).is_ok() {
+        PersistOutcome::Persisted
+    } else {
+        PersistOutcome::Failed
+    }
 }
 
 /// Expired (or about to) per the stored `expiresAt` (epoch millis). Missing
@@ -606,10 +664,16 @@ mod tests {
         .unwrap();
         let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r", "accessToken": "new-a"}}"#);
         // Disk changed under us (Claude Code rotated first): must not clobber.
-        assert!(!write_credentials_if_current(&path, &fresh, "someone-elses-r"));
+        assert!(matches!(
+            write_credentials_if_current(&path, &fresh, "someone-elses-r"),
+            PersistOutcome::Superseded
+        ));
         assert!(std::fs::read_to_string(&path).unwrap().contains("old-a"));
         // Disk still holds the token we consumed: persist.
-        assert!(write_credentials_if_current(&path, &fresh, "old-r"));
+        assert!(matches!(
+            write_credentials_if_current(&path, &fresh, "old-r"),
+            PersistOutcome::Persisted
+        ));
         assert!(std::fs::read_to_string(&path).unwrap().contains("new-a"));
     }
 
@@ -618,8 +682,99 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(".credentials.json");
         let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r"}}"#);
-        assert!(!write_credentials_if_current(&path, &fresh, "old-r"));
+        assert!(matches!(
+            write_credentials_if_current(&path, &fresh, "old-r"),
+            PersistOutcome::Superseded
+        ));
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn missing_credentials_file_reads_as_no_credentials() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(matches!(
+            read_credentials(&dir.path().join("nope.json")),
+            Err(PollOutcome::NoCredentials)
+        ));
+    }
+
+    #[test]
+    fn readable_credentials_pass_through() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(&path, "{}").unwrap();
+        assert!(matches!(read_credentials(&path).as_deref(), Ok("{}")));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn locked_credentials_file_reads_as_transient_not_auth() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(&path, "{}").unwrap();
+        // share_mode(0): exclusive open — every other open gets a sharing
+        // violation, which is what an AV scan or a writer mid-write looks
+        // like. The user IS signed in, so this must not be auth-shaped.
+        let _lock = std::fs::OpenOptions::new().read(true).share_mode(0).open(&path).unwrap();
+        assert!(matches!(read_credentials(&path), Err(PollOutcome::Transient)));
+    }
+
+    #[test]
+    fn persist_reports_torn_disk_file_as_retryable() {
+        // A torn read is a non-atomic writer mid-write, not proof the disk is
+        // newer — must come back Failed (retry) rather than Superseded (drop
+        // the rotated token on the floor).
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(&path, "{ torn").unwrap();
+        let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r"}}"#);
+        assert!(matches!(
+            write_credentials_if_current(&path, &fresh, "old-r"),
+            PersistOutcome::Failed
+        ));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "{ torn");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn persist_reports_locked_file_as_retryable() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(&path, r#"{"claudeAiOauth": {"refreshToken": "old-r"}}"#).unwrap();
+        let _lock = std::fs::OpenOptions::new().read(true).share_mode(0).open(&path).unwrap();
+        let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r"}}"#);
+        assert!(matches!(
+            write_credentials_if_current(&path, &fresh, "old-r"),
+            PersistOutcome::Failed
+        ));
+    }
+
+    #[test]
+    fn persist_with_retry_recovers_when_transient_failure_clears() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(&path, "{ torn").unwrap();
+        let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r", "accessToken": "new-a"}}"#);
+        let fixer_path = path.clone();
+        let fixer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(30));
+            std::fs::write(&fixer_path, r#"{"claudeAiOauth": {"refreshToken": "old-r"}}"#).unwrap();
+        });
+        assert!(persist_with_retry(&path, &fresh, "old-r", Duration::from_millis(25)));
+        fixer.join().unwrap();
+        assert!(std::fs::read_to_string(&path).unwrap().contains("new-a"));
+    }
+
+    #[test]
+    fn persist_with_retry_stops_immediately_when_superseded() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(&path, r#"{"claudeAiOauth": {"refreshToken": "someone-elses-r"}}"#).unwrap();
+        let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r"}}"#);
+        assert!(!persist_with_retry(&path, &fresh, "old-r", Duration::ZERO));
+        assert!(std::fs::read_to_string(&path).unwrap().contains("someone-elses-r"));
     }
 
     #[test]

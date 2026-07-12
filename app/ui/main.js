@@ -123,6 +123,7 @@ function fmtAge(capturedAtIso, nowMs) {
   const t = Date.parse(capturedAtIso);
   if (Number.isNaN(t)) return "";
   const mins = Math.floor((nowMs - t) / 60000);
+  if (mins < -1) return ""; // future timestamp (clock stepped back); render() flags it stale
   if (mins < 1) return "as of just now";
   if (mins < 60) return `as of ${mins}m ago`;
   const hours = Math.floor(mins / 60);
@@ -169,9 +170,16 @@ function render() {
   // visible instead of silently aging, with the poller's own diagnosis
   // (poll_error.json) picking the right recovery hint.
   const ageMs = nowMs - Date.parse(state.captured_at);
-  const stale = Number.isFinite(ageMs) && ageMs > 10 * 60000;
-  const hint = " — " + (pollErrorHints[pollError] || "poll failing, open Claude Code");
-  els.age.textContent = fmtAge(state.captured_at, nowMs) + (stale ? hint : "");
+  // Unparseable or future-stamped captured_at (clock stepped back) is as
+  // untrustworthy as old data — never render it as fresh.
+  const stale = !Number.isFinite(ageMs) || ageMs > 10 * 60000 || ageMs < -60000;
+  const hint = " — " + (
+    Number.isFinite(ageMs) && ageMs < -60000
+      ? "check system clock"
+      : pollErrorHints[pollError] || "poll failing, open Claude Code");
+  els.age.textContent = stale
+    ? (fmtAge(state.captured_at, nowMs) || "stale data") + hint
+    : fmtAge(state.captured_at, nowMs);
   els.footer.classList.toggle("stale", stale);
   const sd = state.rate_limits.seven_day;
   const resetDay = fmtResetDay(sd && sd.resets_at);
