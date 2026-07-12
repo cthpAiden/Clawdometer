@@ -94,8 +94,11 @@ writes the standard HKCU Run registry key, only when you click it.
 ## Requirements
 
 - Windows 10 1803+ (needs the bundled `curl.exe`) or Windows 11.
+- Microsoft Edge WebView2 runtime — preinstalled on Windows 11 and updated
+  Windows 10. If missing, the installer downloads it, which needs internet.
 - Claude Code installed and signed in (the HUD reads its OAuth token from
-  `~/.claude/.credentials.json`; using Claude Code refreshes it).
+  `~/.claude/.credentials.json` — or `%CLAUDE_CONFIG_DIR%\.credentials.json`
+  if you've set that variable; using Claude Code refreshes it).
 
 ## Install
 
@@ -180,6 +183,12 @@ clawdometer uninstall --purge   # also deletes ~/.clawdometer/
   `~/.clawdometer/` within a minute.
 - `--settings <path>` (for `install`/`uninstall`) targets a non-default
   settings.json — mainly for testing.
+- **Complete removal:** run `clawdometer uninstall --purge`, then uninstall
+  the HUD app from Windows *Apps & features* — its uninstaller also removes
+  the "Start with Windows" autostart entry. If you run a portable or
+  from-source build (no installer), toggle *Start with Windows* off in the
+  tray menu **before** deleting the binary; otherwise the HKCU Run registry
+  value it created is left pointing at a deleted exe.
 
 ## Files
 
@@ -208,6 +217,10 @@ cargo deny check bans      # verify the no-network-crates invariant
 - Percentages have 1% granularity — the same as `/usage` inside Claude Code.
 - The HUD footer shows how old the data is ("as of Xm ago"). With live
   polling working it should never say more than a minute.
+- Live polling uses Windows' bundled `curl.exe`, which ignores the system
+  (WinHTTP/IE) proxy. Behind a corporate proxy, set the `HTTPS_PROXY`
+  environment variable (user level) so polls go through it; statusline-hook
+  data is unaffected.
 
 ## License
 
@@ -311,8 +324,11 @@ ghi khóa registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 ## Yêu cầu
 
 - Windows 10 1803+ (cần `curl.exe` đi kèm hệ điều hành) hoặc Windows 11.
+- Microsoft Edge WebView2 runtime — có sẵn trên Windows 11 và Windows 10 đã
+  cập nhật. Nếu thiếu, trình cài đặt sẽ tải về, việc này cần internet.
 - Đã cài và đăng nhập Claude Code (HUD đọc OAuth token từ
-  `~/.claude/.credentials.json`; dùng Claude Code sẽ làm mới token).
+  `~/.claude/.credentials.json` — hoặc `%CLAUDE_CONFIG_DIR%\.credentials.json`
+  nếu bạn đã đặt biến đó; dùng Claude Code sẽ làm mới token).
 
 ## Cài đặt
 
@@ -392,6 +408,12 @@ clawdometer uninstall --purge   # đồng thời xóa ~/.clawdometer/
   lại `~/.clawdometer/` trong vòng một phút.
 - `--settings <path>` (cho `install`/`uninstall`) nhắm tới settings.json
   không mặc định — chủ yếu để kiểm thử.
+- **Gỡ bỏ hoàn toàn:** chạy `clawdometer uninstall --purge`, rồi gỡ app HUD
+  trong *Apps & features* của Windows — trình gỡ cài đặt cũng xóa mục tự
+  khởi động "Start with Windows". Nếu bạn dùng bản portable hoặc tự build
+  (không qua installer), hãy tắt *Start with Windows* trong menu khay
+  **trước khi** xóa binary; nếu không, giá trị registry HKCU Run mà nó tạo
+  sẽ trỏ tới một exe đã bị xóa.
 
 ## Các file
 
@@ -420,6 +442,10 @@ cargo deny check bans      # kiểm chứng lệnh cấm crate mạng
 - Phần trăm có độ chi tiết 1% — giống `/usage` bên trong Claude Code.
 - Chân HUD hiển thị tuổi dữ liệu ("as of Xm ago"). Khi poller hoạt động bình
   thường, con số này không bao giờ quá một phút.
+- Poller dùng `curl.exe` đi kèm Windows, vốn bỏ qua proxy hệ thống
+  (WinHTTP/IE). Nếu ở sau proxy công ty, hãy đặt biến môi trường
+  `HTTPS_PROXY` (mức người dùng) để poller đi qua proxy; dữ liệu từ
+  statusline hook không bị ảnh hưởng.
 
 ## Giấy phép
 
