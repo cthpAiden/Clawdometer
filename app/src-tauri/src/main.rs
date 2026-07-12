@@ -191,6 +191,18 @@ fn main() {
                 let p = current_prefs(&handle);
                 apply_prefs(&handle, &p);
             });
+            // Double-clicking the HUD toggles compact size — same effect as the
+            // tray's "Compact size" item, kept in sync (window resize + CSS via
+            // apply_prefs, and the tray checkmark).
+            let compact_handle = app.handle().clone();
+            let compact_toggle = compact_item.clone();
+            app.listen("toggle-compact", move |_| {
+                let mut p = current_prefs(&compact_handle);
+                p.compact = !p.compact;
+                ui_prefs::save(&ui_path(), p);
+                apply_prefs(&compact_handle, &p);
+                let _ = compact_toggle.set_checked(p.compact);
+            });
             watcher::spawn(app.handle().clone());
             usage_poller::spawn();
             Ok(())

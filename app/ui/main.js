@@ -1,13 +1,21 @@
 // Default skin. Contract: `state-updated` (usage data) and `ui-prefs`
-// (opacity/compact) events in; `ui-ready` event out. No other IPC.
+// (opacity/compact) events in; `ui-ready` and `toggle-compact` events out.
 
 // The HUD is chrome, not a page — suppress WebView2's context menu
 // (Back/Refresh/Save as/Print).
 window.addEventListener("contextmenu", (e) => e.preventDefault());
 
+// Double-click the panel to toggle compact size — same as the tray's "Compact
+// size" item. Detect it on mousedown with detail===2 (the way Tauri's own
+// drag-region handler does), so the native drag loop that the first click
+// starts doesn't swallow the gesture.
+window.addEventListener("mousedown", (e) => {
+  if (e.button === 0 && e.detail === 2) window.__TAURI__.event.emit("toggle-compact");
+});
+
 const els = {
   card: document.getElementById("card"),
-  title: document.getElementById("title"),
+  countdown: document.getElementById("countdown"),
   bar5h: document.getElementById("bar5h"),
   bar7d: document.getElementById("bar7d"),
   txt5h: document.getElementById("txt5h"),
@@ -18,38 +26,47 @@ const els = {
 let current = null; // last payload
 let compactMode = false; // mirrors the tray's "Compact size" toggle
 
-// Header: countdown to the 5h window reset — the limits are account-wide, so
-// this beats a model name (same numbers whatever model is running).
-function fmtCountdown(resetsAtEpochSec, nowMs) {
-  if (!Number.isFinite(resetsAtEpochSec)) return "";
+// Usage colors: calm green when safe, amber past 70%, red past 90% — so a low
+// number reads as safe instead of the old always-orange bar.
+const barColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f59e0b" : "#4a7c47");
+const numColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f0b429" : "#63b35f");
+
+// Header countdown to the 5h window reset. Account-wide limits, so this beats a
+// model name. Compact shows just the duration; the label supplies the context.
+function fmtCountdown(resetsAtEpochSec, nowMs, compact) {
+  if (!Number.isFinite(resetsAtEpochSec)) return "—";
   const mins = Math.ceil((resetsAtEpochSec * 1000 - nowMs) / 60000);
-  if (mins <= 0) return "5h window resetting…";
-  if (mins < 60) return `5h resets in ${mins}m`;
-  return `5h resets in ${Math.floor(mins / 60)}h ${mins % 60}m`;
+  if (mins <= 0) return compact ? "resetting…" : "resetting…";
+  const core = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  return compact ? core : `resets in ${core}`;
 }
 
-function fmtReset(resetsAtEpochSec, nowMs) {
-  if (!Number.isFinite(resetsAtEpochSec)) return "";
-  if (resetsAtEpochSec * 1000 < nowMs) return "refresh pending";
-  const d = new Date(resetsAtEpochSec * 1000);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `resets ${hh}:${mm}`;
-}
-
-function renderWindow(win, barEl, txtEl, nowMs) {
+// The dominant 5h window: big number + bar to its right, both threshold-colored.
+function renderPrimary(win) {
   if (!win || typeof win.used_percentage !== "number") {
-    barEl.style.width = "0%";
-    txtEl.textContent = "—";
+    els.txt5h.textContent = "—";
+    els.txt5h.style.color = "";
+    els.bar5h.style.width = "0%";
     return;
   }
   const pct = Math.max(0, Math.min(100, win.used_percentage));
-  barEl.style.width = pct + "%";
-  barEl.style.background = pct >= 90 ? "#dc2626" : pct >= 70 ? "#f59e0b" : "#d97706";
-  // Compact drops the reset time — percentage only.
-  txtEl.textContent = compactMode
-    ? `${win.used_percentage}%`
-    : `${win.used_percentage}% · ${fmtReset(win.resets_at, nowMs)}`;
+  els.txt5h.innerHTML = `${win.used_percentage}<span class="u">%</span>`;
+  els.txt5h.style.color = numColor(win.used_percentage);
+  els.bar5h.style.width = pct + "%";
+  els.bar5h.style.background = barColor(win.used_percentage);
+}
+
+// The demoted weekly window: thin bar (threshold-colored) + muted percentage.
+function renderSecondary(win) {
+  if (!win || typeof win.used_percentage !== "number") {
+    els.txt7d.textContent = "—";
+    els.bar7d.style.width = "0%";
+    return;
+  }
+  const pct = Math.max(0, Math.min(100, win.used_percentage));
+  els.txt7d.textContent = `${win.used_percentage}%`;
+  els.bar7d.style.width = pct + "%";
+  els.bar7d.style.background = barColor(win.used_percentage);
 }
 
 function fmtAge(capturedAtIso, nowMs) {
@@ -66,17 +83,25 @@ function render() {
   const nowMs = Date.now();
   const state = current && current.state;
   if (!state || !state.rate_limits) {
-    els.title.textContent = "Clawdometer";
-    renderWindow(null, els.bar5h, els.txt5h, nowMs);
-    renderWindow(null, els.bar7d, els.txt7d, nowMs);
+    els.countdown.textContent = "—";
+    els.countdown.style.color = "";
+    renderPrimary(null);
+    renderSecondary(null);
     els.footer.textContent = "waiting for usage data";
     els.footer.classList.remove("stale");
+    document.body.classList.remove("critical");
     return;
   }
   const fh = state.rate_limits.five_hour;
-  els.title.textContent = (fh && fmtCountdown(fh.resets_at, nowMs)) || "Clawdometer";
-  renderWindow(fh, els.bar5h, els.txt5h, nowMs);
-  renderWindow(state.rate_limits.seven_day, els.bar7d, els.txt7d, nowMs);
+  els.countdown.textContent = fmtCountdown(fh && fh.resets_at, nowMs, compactMode);
+  renderPrimary(fh);
+  renderSecondary(state.rate_limits.seven_day);
+
+  const fivePct = fh && typeof fh.used_percentage === "number" ? fh.used_percentage : 0;
+  const critical = fivePct >= 90;
+  document.body.classList.toggle("critical", critical);
+  els.countdown.style.color = critical ? "#e5484d" : "";
+
   // Data older than ~10 missed polls means the poller is failing (network
   // down or sign-in expired) — make that visible instead of silently aging.
   const ageMs = nowMs - Date.parse(state.captured_at);

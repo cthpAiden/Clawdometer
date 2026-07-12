@@ -1,22 +1,56 @@
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 html, body { background: transparent; overflow: hidden; }
 #card {
-  width: 260px; height: 120px; padding: 10px 12px;
+  width: 260px; height: 120px; padding: 12px 14px 14px;
   background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
-  border-radius: 10px; font: 12px/1.5 "Segoe UI", sans-serif;
-  display: flex; flex-direction: column; gap: 4px;
+  border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
+  display: grid; column-gap: 8px; row-gap: 6px; align-items: center;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "header  header"
+    "num     bar"
+    "wlabel  wbar"
+    "footer  footer";
 }
-#title { font-weight: 600; font-size: 12px; }
+#header { grid-area: header; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+#label { font-weight: 600; }
+#countdown { white-space: nowrap; color: #8a8a92; font-size: 11px; }
+#txt5h { grid-area: num; font-weight: 600; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+#txt5h .u { font-size: 0.58em; }
+.bar.main { grid-area: bar; height: 8px; }
+.wlabel { grid-area: wlabel; color: #8a8a92; }
+.wbar { grid-area: wbar; display: flex; align-items: center; gap: 8px; }
+.bar { background: #2c2c32; border-radius: 4px; overflow: hidden; }
+.bar.thin { flex: 1; height: 4px; border-radius: 2px; }
+.fill { height: 100%; width: 0%; background: #4a7c47; border-radius: inherit; transition: width .3s; }
+.pct { min-width: 34px; text-align: right; color: #a8a8b0; font-variant-numeric: tabular-nums; }
+#footer { grid-area: footer; align-self: end; color: #6a6a72; font-size: 10px; }
 #footer.stale { color: #f87171; }
-.row { display: flex; align-items: center; gap: 6px; }
-.label { width: 18px; color: #9a9aa2; }
-.bar { flex: 1; height: 8px; background: #35353c; border-radius: 4px; overflow: hidden; }
-.fill { height: 100%; width: 0%; background: #d97706; border-radius: 4px; transition: width .3s; }
-.pct { min-width: 92px; text-align: right; color: #c9c9cf; font-variant-numeric: tabular-nums; }
-#footer { margin-top: auto; color: #7a7a82; font-size: 11px; }
 
-/* Compact: 150x84 window — bars + percentages only. */
-body.compact #card { width: 150px; height: 84px; }
+/* Compact: 150x84 window — number + countdown, bars, weekly. No label/footer. */
+body.compact #card {
+  width: 150px; height: 84px; padding: 9px 11px; column-gap: 8px; row-gap: 6px;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "num    header"
+    "bar    bar"
+    "wlabel wbar";
+}
+body.compact #label { display: none; }
 body.compact #footer { display: none; }
-body.compact .pct { min-width: 34px; }
-body.compact #title { font-size: 11px; }
+body.compact #header { justify-content: flex-end; }
+body.compact #countdown { font-size: 10px; }
+body.compact #txt5h { font-size: 18px; }
+body.compact #txt5h .u { font-size: 0.6em; }
+body.compact .bar.main { height: 6px; }
+body.compact .wlabel { font-size: 10px; }
+body.compact .pct { min-width: 26px; font-size: 10px; }
+
+/* Near-limit (>=90%): pulse an inset red ring. Inset so the transparent
+   WebView2 window (sized to the card) never clips it. */
+body.critical #card { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.35); }
+  50%      { box-shadow: inset 0 0 0 2.5px rgba(229, 72, 77, 0.85); }
+}
