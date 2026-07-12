@@ -1,30 +1,10 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use clawdometer_core::state::State;
+use clawdometer_core::state::merge;
 use tauri::{AppHandle, Emitter};
 
 pub const STATE_EVENT: &str = "state-updated";
-
-/// Merge the statusline snapshot (state.json) with the live-poll snapshot
-/// (live.json). rate_limits + captured_at come from whichever snapshot is
-/// newer AND actually has rate_limits; model/context only ever exist in the
-/// statusline snapshot. captured_at strings are RFC3339 UTC from the same
-/// formatter, so lexicographic comparison is chronological.
-fn merge(state: Option<State>, live: Option<State>) -> Option<State> {
-    match (state, live) {
-        (Some(s), Some(l)) => {
-            let use_live = l.rate_limits.is_some()
-                && (s.rate_limits.is_none() || l.captured_at > s.captured_at);
-            if use_live {
-                Some(State { rate_limits: l.rate_limits, captured_at: l.captured_at, ..s })
-            } else {
-                Some(s)
-            }
-        }
-        (s, l) => s.or(l),
-    }
-}
 
 pub fn build_payload(state_path: &Path, live_path: &Path) -> serde_json::Value {
     let merged = merge(
@@ -108,7 +88,7 @@ fn update_tooltip(app: &AppHandle, payload: &serde_json::Value) {
 mod tests {
     use super::*;
     use clawdometer_core::schema::{LimitWindow, RateLimits};
-    use clawdometer_core::state::SCHEMA_VERSION;
+    use clawdometer_core::state::{State, SCHEMA_VERSION};
 
     fn snapshot(captured_at: &str, pct: Option<i64>) -> State {
         State {

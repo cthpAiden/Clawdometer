@@ -50,3 +50,63 @@ fn rejects_garbage() {
     assert!(parse_statusline_input("not json at all").is_err());
     assert!(parse_statusline_input("").is_err());
 }
+
+// Robustness: a type drift or malformed sub-object in ONE field must degrade
+// that field to None (or round it), never reject the whole input — a total
+// parse failure kills the statusline AND stops state.json updates.
+
+#[test]
+fn tolerates_float_percentages_by_rounding() {
+    let raw = r#"{
+        "rate_limits": {
+            "five_hour": {"used_percentage": 4.6, "resets_at": 1783814400},
+            "seven_day": {"used_percentage": 5.4, "resets_at": 1784170800.9}
+        },
+        "context_window": {"used_percentage": 3.5}
+    }"#;
+    let input = parse_statusline_input(raw).unwrap();
+    let rl = input.rate_limits.unwrap();
+    assert_eq!(rl.five_hour.as_ref().unwrap().used_percentage, 5);
+    assert_eq!(rl.seven_day.as_ref().unwrap().used_percentage, 5);
+    assert_eq!(rl.seven_day.unwrap().resets_at, 1784170801);
+    assert_eq!(input.context_window.unwrap().used_percentage, Some(4));
+}
+
+#[test]
+fn malformed_model_degrades_to_none_not_total_failure() {
+    // display_name missing: model unusable, but limits must still parse.
+    let raw = r#"{
+        "model": {"id": "claude-x"},
+        "rate_limits": {"five_hour": {"used_percentage": 9, "resets_at": 1}, "seven_day": null}
+    }"#;
+    let input = parse_statusline_input(raw).unwrap();
+    assert!(input.model.is_none());
+    assert_eq!(input.rate_limits.unwrap().five_hour.unwrap().used_percentage, 9);
+}
+
+#[test]
+fn malformed_rate_limits_degrade_to_none_not_total_failure() {
+    let raw = r#"{
+        "model": {"id": "x", "display_name": "X"},
+        "rate_limits": "what even is this",
+        "context_window": {"used_percentage": "also garbage"}
+    }"#;
+    let input = parse_statusline_input(raw).unwrap();
+    assert!(input.rate_limits.is_none());
+    assert!(input.context_window.is_none());
+    assert_eq!(input.model.unwrap().display_name, "X");
+}
+
+#[test]
+fn malformed_window_inside_rate_limits_degrades_only_that_window() {
+    let raw = r#"{
+        "rate_limits": {
+            "five_hour": {"used_percentage": "garbage", "resets_at": 1},
+            "seven_day": {"used_percentage": 5, "resets_at": 1784170800}
+        }
+    }"#;
+    let input = parse_statusline_input(raw).unwrap();
+    let rl = input.rate_limits.unwrap();
+    assert!(rl.five_hour.is_none());
+    assert_eq!(rl.seven_day.unwrap().used_percentage, 5);
+}

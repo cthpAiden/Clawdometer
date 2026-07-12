@@ -4,7 +4,7 @@ use clawdometer_core::paths;
 use clawdometer_core::settings::{
     install, uninstall, InstallOutcome, UninstallOutcome,
 };
-use clawdometer_core::state::{read_state, render_statusline};
+use clawdometer_core::state::{merge, read_state, render_statusline};
 
 /// `"<absolute exe path>" hook` — quoted because install paths contain spaces.
 fn our_command() -> String {
@@ -121,7 +121,9 @@ pub fn cmd_uninstall(args: &[String]) -> i32 {
 }
 
 pub fn cmd_status() -> i32 {
-    match read_state(&paths::state_path()) {
+    // Same merge the HUD does: live.json (poller) can be fresher than the
+    // last statusline snapshot.
+    match merge(read_state(&paths::state_path()), read_state(&paths::live_path())) {
         Some(state) => {
             println!("{}", render_statusline(&state));
             println!("captured_at: {}", state.captured_at);

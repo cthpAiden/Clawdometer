@@ -167,6 +167,11 @@ pub fn install(
     if existed {
         backup(clawdometer_dir, timestamp, &raw)?;
     }
+    // No statusLine key: nothing to wrap, so a leftover wrapped.json (from an
+    // uninstall that couldn't delete it, or a user who removed statusLine by
+    // hand) is stale — the hook would chain a statusline the user no longer
+    // has. Best-effort removal, same tolerance as uninstall's cleanup.
+    let _ = std::fs::remove_file(clawdometer_dir.join("wrapped.json"));
     root[STATUSLINE_KEY] = serde_json::json!({ "type": "command", "command": our_command });
     save_settings(settings_path, &root)?;
     Ok(InstallOutcome::Installed)

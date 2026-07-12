@@ -182,6 +182,23 @@ fn install_replaces_stale_clawdometer_hook_command_without_wrapping() {
 }
 
 #[test]
+fn install_on_fresh_key_removes_stale_wrapped_json() {
+    // A leftover wrapped.json (e.g. an uninstall that couldn't delete it, or a
+    // user who manually removed statusLine) must not survive a fresh-key
+    // install — the hook would chain a statusline the user no longer has.
+    let e = env();
+    std::fs::create_dir_all(&e.claw).unwrap();
+    std::fs::write(e.claw.join("wrapped.json"), r#"{"command":"obsolete.cmd"}"#).unwrap();
+    std::fs::write(&e.settings, r#"{"model":"opus"}"#).unwrap();
+    let outcome = install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
+    assert_eq!(outcome, InstallOutcome::Installed);
+    assert!(
+        !e.claw.join("wrapped.json").exists(),
+        "stale wrapped.json must be removed on fresh-key install"
+    );
+}
+
+#[test]
 fn extra_fields_survive_full_wrap_round_trip() {
     // install (wrap) -> uninstall (restore) must return the EXACT original object.
     // The uninstall half of this assertion lives in settings_uninstall_test.rs;

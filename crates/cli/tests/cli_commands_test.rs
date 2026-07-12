@@ -118,6 +118,42 @@ fn uninstall_with_settings_flag_missing_value_exits_2_and_touches_nothing() {
     assert!(!claw.exists(), "no files must be written when --settings is rejected");
 }
 
+fn write_snapshot(path: &Path, captured_at: &str, pct: i64) {
+    let state = clawdometer_core::state::State {
+        schema_version: clawdometer_core::state::SCHEMA_VERSION,
+        captured_at: captured_at.into(),
+        rate_limits: Some(clawdometer_core::schema::RateLimits {
+            five_hour: Some(clawdometer_core::schema::LimitWindow {
+                used_percentage: pct,
+                resets_at: 0,
+            }),
+            seven_day: None,
+        }),
+        model: None,
+        context_window: None,
+        session_id: None,
+        transcript_path: None,
+        cli_version: None,
+    };
+    clawdometer_core::state::write_state_atomic(path, &state).unwrap();
+}
+
+#[test]
+fn status_merges_newer_live_snapshot() {
+    // Same merge the HUD does: live.json (fresh poller data) must win over an
+    // older statusline snapshot, so `status` never reports hours-old numbers
+    // while the HUD shows fresh ones.
+    let tmp = tempfile::tempdir().unwrap();
+    let claw = tmp.path().join("claw");
+    std::fs::create_dir_all(&claw).unwrap();
+    write_snapshot(&claw.join("state.json"), "2026-07-12T00:00:00Z", 42);
+    write_snapshot(&claw.join("live.json"), "2026-07-12T01:00:00Z", 77);
+    let (stdout, _, code) = run(&["status"], &claw);
+    assert_eq!(code, 0);
+    assert!(stdout.contains("5h 77%"), "newer live.json must win: {stdout}");
+    assert!(stdout.contains("2026-07-12T01:00:00Z"), "captured_at from live: {stdout}");
+}
+
 #[test]
 fn status_reports_no_state_then_state() {
     let tmp = tempfile::tempdir().unwrap();

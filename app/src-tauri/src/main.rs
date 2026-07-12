@@ -22,6 +22,16 @@ fn toggle_hud(app: &tauri::AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        // Must be the first registered plugin (per its docs). A second launch
+        // (autostart already running + manual start) would otherwise mean two
+        // tray icons, two HUDs, and two pollers racing on live.json/ui.json —
+        // instead the new process exits and the existing HUD is shown.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(win) = app.get_webview_window("hud") {
+                let _ = win.show();
+                let _ = win.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,

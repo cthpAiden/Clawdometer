@@ -63,7 +63,7 @@ fn access_token(credentials_json: &str) -> Option<String> {
 /// header line on stdin, never on argv (argv is visible to every process on
 /// the machine).
 fn fetch(token: &str) -> Option<String> {
-    let mut cmd = Command::new("curl");
+    let mut cmd = Command::new(clawdometer_core::paths::system32_exe("curl.exe"));
     cmd.args(["--silent", "--fail", "--max-time", "15", "--config", "-", USAGE_URL]);
     #[cfg(windows)]
     {

@@ -176,6 +176,39 @@ fn hook_does_not_hang_when_wrapped_command_ignores_large_stdin() {
 }
 
 #[test]
+fn hook_does_not_hang_when_grandchild_holds_stderr() {
+    // Same class as the stdout-handle bug: whoever launched the hook may read
+    // our STDERR to EOF. A lingering grandchild of the wrapped command
+    // inherits our stderr handle (bInheritHandles=TRUE copies every
+    // inheritable handle) and keeps it open after we exit, so the reader
+    // never sees EOF unless the inherit flag is cleared on stderr too.
+    let dir = tempfile::tempdir().unwrap();
+    write_wrapped(dir.path(), r#"cmd /C "start /B ping -n 30 127.0.0.1 & echo chained-line""#);
+    let start = std::time::Instant::now();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_clawdometer"))
+        .arg("hook")
+        .env("CLAWDOMETER_DIR", dir.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped()) // piped: reader waits for stderr EOF
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(FULL.as_bytes()).unwrap();
+    // wait_with_output drains stdout AND stderr to EOF before returning.
+    let out = child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    assert!(
+        line == "chained-line" || line == "[Opus 4.8 (1M context)] 5h 1% · 7d 5%",
+        "expected chained output or fallback, got: {line}"
+    );
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(10),
+        "grandchild holding inherited stderr must not block our reader's EOF"
+    );
+}
+
+#[test]
 fn hook_falls_back_when_wrapped_json_malformed() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path()).unwrap();

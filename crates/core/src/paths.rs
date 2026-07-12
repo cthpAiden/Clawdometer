@@ -38,3 +38,30 @@ pub fn default_claude_settings_path() -> PathBuf {
         .join(".claude")
         .join("settings.json")
 }
+
+/// Absolute path to a System32 executable (cmd.exe, taskkill.exe, curl.exe).
+/// Spawning by bare name lets Windows resolve via the application directory
+/// and PATH before System32 — an absolute path removes that planting surface
+/// (the curl call carries the OAuth token). Falls back to the bare name
+/// (normal search) only if SystemRoot is unset, which effectively never
+/// happens on Windows.
+pub fn system32_exe(name: &str) -> PathBuf {
+    match std::env::var_os("SystemRoot") {
+        Some(root) => PathBuf::from(root).join("System32").join(name),
+        None => PathBuf::from(name),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(windows)]
+    fn system32_exe_is_absolute_under_system_root() {
+        let p = system32_exe("cmd.exe");
+        assert!(p.is_absolute(), "must not rely on PATH/app-dir search: {p:?}");
+        assert!(p.ends_with("System32\\cmd.exe"), "{p:?}");
+        assert!(p.exists(), "resolved path must actually exist: {p:?}");
+    }
+}

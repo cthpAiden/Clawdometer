@@ -107,7 +107,7 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
 fn kill_tree(child: &mut std::process::Child) {
     #[cfg(windows)]
     {
-        let _ = Command::new("taskkill")
+        let _ = Command::new(paths::system32_exe("taskkill.exe"))
             .args(["/PID", &child.id().to_string(), "/T", "/F"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -129,10 +129,13 @@ fn kill_tree(child: &mut std::process::Child) {
 #[cfg(windows)]
 fn disable_stdio_inheritance() {
     use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE_FLAG_INHERIT};
-    use windows_sys::Win32::System::Console::{GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE};
+    use windows_sys::Win32::System::Console::{
+        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
     unsafe {
         SetHandleInformation(GetStdHandle(STD_OUTPUT_HANDLE), HANDLE_FLAG_INHERIT, 0);
         SetHandleInformation(GetStdHandle(STD_INPUT_HANDLE), HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(GetStdHandle(STD_ERROR_HANDLE), HANDLE_FLAG_INHERIT, 0);
     }
 }
 
@@ -142,7 +145,7 @@ fn disable_stdio_inheritance() {}
 #[cfg(windows)]
 fn shell_command(command: &str) -> Command {
     use std::os::windows::process::CommandExt;
-    let mut cmd = Command::new("cmd");
+    let mut cmd = Command::new(paths::system32_exe("cmd.exe"));
     // raw_arg: hand the command string to cmd.exe unmangled.
     cmd.arg("/C").raw_arg(command);
     cmd
