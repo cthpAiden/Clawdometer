@@ -129,17 +129,29 @@ function fmtAge(capturedAtIso, nowMs) {
   return `as of ${hours}h ${mins % 60}m ago`;
 }
 
+// Poller diagnosis (poll_error.json kind) → user-facing hint. Shown alone
+// before the first data ever arrives (a first run without Claude Code would
+// otherwise say "waiting" forever), and as a suffix once data goes stale.
+const pollErrorHints = {
+  "no-credentials": "open Claude Code and sign in",
+  "auth": "sign-in expired, open Claude Code",
+  "no-curl": "curl.exe missing (needs Windows 10 1803+)",
+  "network": "offline, retrying",
+};
+
 function render() {
   const nowMs = Date.now();
   const state = current && current.state;
+  const pollError = current && current.poll_error;
   if (!state || !state.rate_limits) {
     els.countdown.textContent = "—";
     els.countdown.style.color = "";
     renderPrimary(null);
     renderSecondary(null);
-    els.age.textContent = "waiting for usage data";
+    const hint = pollErrorHints[pollError];
+    els.age.textContent = hint || "waiting for usage data";
     els.reset.textContent = "";
-    els.footer.classList.remove("stale");
+    els.footer.classList.toggle("stale", !!hint);
     document.body.classList.remove("critical");
     return;
   }
@@ -158,11 +170,7 @@ function render() {
   // (poll_error.json) picking the right recovery hint.
   const ageMs = nowMs - Date.parse(state.captured_at);
   const stale = Number.isFinite(ageMs) && ageMs > 10 * 60000;
-  const pollError = current && current.poll_error;
-  const hint =
-    pollError === "network" ? " — offline, retrying"
-    : pollError === "auth" ? " — sign-in expired, open Claude Code"
-    : " — poll failing, open Claude Code";
+  const hint = " — " + (pollErrorHints[pollError] || "poll failing, open Claude Code");
   els.age.textContent = fmtAge(state.captured_at, nowMs) + (stale ? hint : "");
   els.footer.classList.toggle("stale", stale);
   const sd = state.rate_limits.seven_day;

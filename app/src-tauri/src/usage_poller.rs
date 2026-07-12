@@ -41,23 +41,54 @@ const EXPIRY_MARGIN_MS: i64 = 60_000;
 /// Outcome of one poll cycle: drives backoff and the HUD's stale-data hint.
 enum PollOutcome {
     Success(RateLimits),
-    /// Token rejected or unusable — opening Claude Code fixes it.
+    /// Token rejected by the server — opening Claude Code fixes it.
     Auth,
+    /// No usable credentials on disk (file missing, unreadable, or without an
+    /// OAuth token) — installing/signing in to Claude Code fixes it.
+    NoCredentials,
+    /// System32 curl.exe is absent (Windows 10 before 1803) — the poller has
+    /// no transport at all.
+    NoCurl,
     /// Network down, 429/5xx, or malformed response — retrying fixes it.
     Transient,
+}
+
+/// poll_error.json kind for a failed cycle; None for success.
+fn error_kind(outcome: &PollOutcome) -> Option<&'static str> {
+    match outcome {
+        PollOutcome::Success(_) => None,
+        PollOutcome::Auth => Some("auth"),
+        PollOutcome::NoCredentials => Some("no-credentials"),
+        PollOutcome::NoCurl => Some("no-curl"),
+        PollOutcome::Transient => Some("network"),
+    }
+}
+
+/// Sleep until the next cycle. NoCredentials/NoCurl are pure local checks —
+/// no request was made, so there is nothing to back off from, and staying at
+/// the normal interval means a user who signs in to Claude Code (or whose
+/// curl appears) is noticed within a minute instead of up to 30.
+fn next_delay(outcome: &PollOutcome, consecutive_failures: u32) -> Duration {
+    match outcome {
+        PollOutcome::Success(_) | PollOutcome::NoCredentials | PollOutcome::NoCurl => {
+            POLL_INTERVAL
+        }
+        PollOutcome::Auth | PollOutcome::Transient => backoff_delay(consecutive_failures),
+    }
 }
 
 pub fn spawn() {
     std::thread::spawn(|| {
         let mut consecutive_failures: u32 = 0;
         loop {
-            match poll_once() {
+            let outcome = poll_once();
+            match &outcome {
                 PollOutcome::Success(rate_limits) => {
                     consecutive_failures = 0;
                     let state = State {
                         schema_version: SCHEMA_VERSION,
                         captured_at: now_rfc3339(),
-                        rate_limits: Some(rate_limits),
+                        rate_limits: Some(rate_limits.clone()),
                         model: None,
                         context_window: None,
                         session_id: None,
@@ -69,28 +100,35 @@ pub fn spawn() {
                 }
                 outcome => {
                     consecutive_failures = consecutive_failures.saturating_add(1);
-                    write_poll_error(match outcome {
-                        PollOutcome::Auth => "auth",
-                        _ => "network",
-                    });
+                    if let Some(kind) = error_kind(outcome) {
+                        write_poll_error(kind);
+                    }
                 }
             }
-            std::thread::sleep(backoff_delay(consecutive_failures));
+            std::thread::sleep(next_delay(&outcome, consecutive_failures));
         }
     });
 }
 
 fn poll_once() -> PollOutcome {
+    // curl.exe is the only transport; without it every request would fail in
+    // a way indistinguishable from a network outage. Only meaningful as an
+    // absolute path — a bare "curl.exe" (no SystemRoot) resolves via PATH at
+    // spawn time.
+    let curl = clawdometer_core::paths::system32_exe("curl.exe");
+    if curl.is_absolute() && !curl.exists() {
+        return PollOutcome::NoCurl;
+    }
     let cred_path = clawdometer_core::paths::claude_credentials_path();
-    // No readable credentials file means no sign-in: opening Claude Code
-    // creates it, so this is an auth-shaped failure, not a network one.
+    // No readable credentials file means no sign-in: installing/opening
+    // Claude Code creates it, so this is a local failure, not a network one.
     let Ok(raw) = std::fs::read_to_string(&cred_path) else {
-        return PollOutcome::Auth;
+        return PollOutcome::NoCredentials;
     };
     let Ok(mut creds) =
         serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}'))
     else {
-        return PollOutcome::Auth;
+        return PollOutcome::NoCredentials;
     };
     let mut refresh_attempted = false;
     if token_expired(&creds, unix_now_ms()) {
@@ -101,8 +139,10 @@ fn poll_once() -> PollOutcome {
         // Refresh failure falls through to try the stored token anyway —
         // expiresAt could be wrong, and a failed GET costs nothing extra.
     }
+    // File exists but has no OAuth token (e.g. API-key-only setup): signing
+    // in to Claude Code is the fix, same as a missing file.
     let Some(token) = access_token(&creds) else {
-        return PollOutcome::Auth;
+        return PollOutcome::NoCredentials;
     };
     match fetch(&token) {
         None => PollOutcome::Transient, // curl spawn failure or no response
@@ -148,9 +188,10 @@ fn refresh_and_persist(
     Some(fresh)
 }
 
-/// Failure marker for the HUD ({"kind": "auth" | "network"}), deleted on the
-/// next successful poll. Content is timestamp-free so repeated identical
-/// failures don't churn the state watcher.
+/// Failure marker for the HUD ({"kind": "auth" | "network" |
+/// "no-credentials" | "no-curl"}), deleted on the next successful poll.
+/// Content is timestamp-free so repeated identical failures don't churn the
+/// state watcher.
 fn write_poll_error(kind: &str) {
     let path = clawdometer_core::paths::poll_error_path();
     let Some(dir) = path.parent() else { return };
@@ -507,6 +548,28 @@ mod tests {
         assert_eq!(split_status("no trailing status"), None);
         assert_eq!(split_status("body\n000"), None); // curl: no response received
         assert_eq!(split_status(""), None);
+    }
+
+    #[test]
+    fn error_kind_names_each_failure_and_success_has_none() {
+        assert_eq!(error_kind(&PollOutcome::NoCredentials), Some("no-credentials"));
+        assert_eq!(error_kind(&PollOutcome::NoCurl), Some("no-curl"));
+        assert_eq!(error_kind(&PollOutcome::Auth), Some("auth"));
+        assert_eq!(error_kind(&PollOutcome::Transient), Some("network"));
+        let ok = PollOutcome::Success(RateLimits { five_hour: None, seven_day: None });
+        assert_eq!(error_kind(&ok), None);
+    }
+
+    #[test]
+    fn local_failures_poll_at_normal_interval_network_failures_back_off() {
+        // NoCredentials/NoCurl never touch the network, so backing off would
+        // only delay noticing the user's fix (e.g. signing in to Claude Code).
+        assert_eq!(next_delay(&PollOutcome::NoCredentials, 10), POLL_INTERVAL);
+        assert_eq!(next_delay(&PollOutcome::NoCurl, 10), POLL_INTERVAL);
+        assert_eq!(next_delay(&PollOutcome::Transient, 3), Duration::from_secs(240));
+        assert_eq!(next_delay(&PollOutcome::Auth, 10), MAX_BACKOFF);
+        let ok = PollOutcome::Success(RateLimits { five_hour: None, seven_day: None });
+        assert_eq!(next_delay(&ok, 0), POLL_INTERVAL);
     }
 
     #[test]

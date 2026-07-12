@@ -25,8 +25,9 @@ pub fn live_path() -> PathBuf {
     clawdometer_dir().join("live.json")
 }
 
-/// Poller failure kind (`{"kind": "auth" | "network"}`), written by the HUD's
-/// usage poller so the UI can hint at the right recovery. Deleted on success.
+/// Poller failure kind (`{"kind": "auth" | "network" | "no-credentials" |
+/// "no-curl"}`), written by the HUD's usage poller so the UI can hint at the
+/// right recovery. Deleted on success.
 pub fn poll_error_path() -> PathBuf {
     clawdometer_dir().join("poll_error.json")
 }

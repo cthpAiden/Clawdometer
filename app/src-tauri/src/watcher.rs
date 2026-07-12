@@ -81,18 +81,33 @@ pub fn spawn(app: AppHandle) {
     });
 }
 
-fn update_tooltip(app: &AppHandle, payload: &serde_json::Value) {
-    let text = match (
+/// Tray tooltip: percentages when there's data; otherwise the poller's own
+/// diagnosis (poll_error.json kind) so a hidden HUD isn't the only place a
+/// first-run failure is explained.
+fn tooltip_text(payload: &serde_json::Value) -> String {
+    match (
         payload.pointer("/state/rate_limits/five_hour/used_percentage").and_then(|v| v.as_i64()),
         payload.pointer("/state/rate_limits/seven_day/used_percentage").and_then(|v| v.as_i64()),
     ) {
         (Some(fh), Some(sd)) => format!("5h {fh}% · 7d {sd}%"),
         (Some(fh), None) => format!("5h {fh}%"),
         (None, Some(sd)) => format!("7d {sd}%"),
-        (None, None) => String::from("Clawdometer — waiting for data"),
-    };
+        (None, None) => {
+            let hint = match payload.get("poll_error").and_then(|v| v.as_str()) {
+                Some("no-credentials") => "open Claude Code and sign in",
+                Some("auth") => "sign-in expired, open Claude Code",
+                Some("no-curl") => "curl.exe missing (needs Windows 10 1803+)",
+                Some("network") => "offline, retrying",
+                _ => "waiting for data",
+            };
+            format!("Clawdometer — {hint}")
+        }
+    }
+}
+
+fn update_tooltip(app: &AppHandle, payload: &serde_json::Value) {
     if let Some(tray) = app.tray_by_id("main") {
-        let _ = tray.set_tooltip(Some(text));
+        let _ = tray.set_tooltip(Some(tooltip_text(payload)));
     }
 }
 
@@ -176,6 +191,30 @@ mod tests {
         assert_eq!(build_payload(&state, &live, &err)["poll_error"], "auth");
         std::fs::write(&err, "{ torn").unwrap();
         assert!(build_payload(&state, &live, &err)["poll_error"].is_null());
+    }
+
+    #[test]
+    fn tooltip_explains_why_data_is_missing() {
+        let t = |err: serde_json::Value| {
+            tooltip_text(&serde_json::json!({ "state": null, "poll_error": err }))
+        };
+        assert_eq!(t(serde_json::Value::Null), "Clawdometer — waiting for data");
+        assert_eq!(t("no-credentials".into()), "Clawdometer — open Claude Code and sign in");
+        assert_eq!(t("auth".into()), "Clawdometer — sign-in expired, open Claude Code");
+        assert_eq!(t("no-curl".into()), "Clawdometer — curl.exe missing (needs Windows 10 1803+)");
+        assert_eq!(t("network".into()), "Clawdometer — offline, retrying");
+    }
+
+    #[test]
+    fn tooltip_shows_percentages_when_present() {
+        let payload = serde_json::json!({
+            "state": { "rate_limits": {
+                "five_hour": { "used_percentage": 4 },
+                "seven_day": { "used_percentage": 16 },
+            }},
+            "poll_error": null,
+        });
+        assert_eq!(tooltip_text(&payload), "5h 4% · 7d 16%");
     }
 
     #[test]

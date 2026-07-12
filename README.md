@@ -153,9 +153,12 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
   restarts.
-- **Footer:** data age ("as of 1m ago"). If it turns red, the poll has been
-  failing for 10+ minutes; the message tells you whether it's the network
-  ("offline, retrying") or the sign-in ("sign-in expired, open Claude Code").
+- **Footer:** data age ("as of 1m ago"). If it turns red, the poll is
+  failing and the message names the fix: not signed in ("open Claude Code
+  and sign in"), an expired sign-in, a missing `curl.exe`, or the network
+  ("offline, retrying"). On a first run the same message appears immediately
+  in place of "waiting for usage data" (the tray tooltip shows it too), so a
+  machine without Claude Code isn't left staring at a blank card.
 
 ## CLI
 
