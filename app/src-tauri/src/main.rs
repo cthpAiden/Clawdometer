@@ -209,16 +209,26 @@ fn main() {
             if let (Some(win), Some(prefs)) =
                 (app.get_webview_window("hud"), ui_prefs::load(&ui_path()))
             {
+                // Require at least MIN_VISIBLE px of the window on some
+                // monitor — a bare top-left containment check accepts a
+                // position 1 px inside a monitor's bottom-right corner,
+                // leaving the HUD effectively off-screen.
+                const MIN_VISIBLE: i32 = 40;
+                let (w, h) = win
+                    .outer_size()
+                    .map(|s| (s.width as i32, s.height as i32))
+                    .unwrap_or((200, 112));
                 let on_a_monitor = win
                     .available_monitors()
                     .map(|monitors| {
                         monitors.iter().any(|m| {
                             let p = m.position();
                             let s = m.size();
-                            prefs.x >= p.x
-                                && prefs.x < p.x + s.width as i32
-                                && prefs.y >= p.y
-                                && prefs.y < p.y + s.height as i32
+                            let vis_w =
+                                (prefs.x + w).min(p.x + s.width as i32) - prefs.x.max(p.x);
+                            let vis_h =
+                                (prefs.y + h).min(p.y + s.height as i32) - prefs.y.max(p.y);
+                            vis_w >= MIN_VISIBLE.min(w) && vis_h >= MIN_VISIBLE.min(h)
                         })
                     })
                     .unwrap_or(true);

@@ -68,9 +68,11 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
     let (tx, rx) = std::sync::mpsc::channel();
     if let Some(mut stdout) = child.stdout.take() {
         std::thread::spawn(move || {
-            let mut out = String::new();
-            let _ = stdout.read_to_string(&mut out);
-            let _ = tx.send(out);
+            // Lossy: a wrapped command emitting OEM-codepage output would fail
+            // read_to_string and drop the user's statusline entirely.
+            let mut buf = Vec::new();
+            let _ = stdout.read_to_end(&mut buf);
+            let _ = tx.send(String::from_utf8_lossy(&buf).into_owned());
         });
     } else {
         let _ = tx.send(String::new());

@@ -32,18 +32,23 @@ pub fn poll_error_path() -> PathBuf {
     clawdometer_dir().join("poll_error.json")
 }
 
-pub fn claude_credentials_path() -> PathBuf {
+/// Claude Code's config dir: CLAUDE_CONFIG_DIR if set (Claude Code honors it
+/// to relocate ~/.claude), else ~/.claude.
+fn claude_config_dir() -> PathBuf {
+    if let Some(dir) = std::env::var_os("CLAUDE_CONFIG_DIR") {
+        return PathBuf::from(dir);
+    }
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".claude")
-        .join(".credentials.json")
+}
+
+pub fn claude_credentials_path() -> PathBuf {
+    claude_config_dir().join(".credentials.json")
 }
 
 pub fn default_claude_settings_path() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".claude")
-        .join("settings.json")
+    claude_config_dir().join("settings.json")
 }
 
 /// Absolute path to a System32 executable (cmd.exe, taskkill.exe, curl.exe).
