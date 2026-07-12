@@ -55,10 +55,26 @@ Those are the only two network requests in the entire application. The
 statusline hook and CLI are compiled under a `cargo-deny` ban on all HTTP/TLS
 crates and are provably network-free, and there is **no telemetry of any
 kind**. The token is never logged, never written anywhere except back to
-Claude Code's own credentials file, and never exposed to the HUD webview: the
-UI receives only usage percentages and reset times over one-way events, runs
-under a strict CSP, has no invokable backend commands, and no filesystem or
-shell capabilities.
+Claude Code's own credentials file, and never sent anywhere except
+`api.anthropic.com`. It is never exposed to the HUD webview: the UI receives
+only usage percentages and reset times over one-way events, runs under a
+strict CSP, has no invokable backend commands, and no filesystem or shell
+capabilities.
+
+**Don't trust — verify.** Everything above is checkable in this repository:
+
+- The *only* network code in the entire codebase is
+  [`app/src-tauri/src/usage_poller.rs`](app/src-tauri/src/usage_poller.rs)
+  (~400 lines including tests). Read it.
+- `cargo deny check bans` proves no HTTP/TLS crate is compiled into any
+  binary (config in [`deny.toml`](deny.toml)).
+- The webview's entire permission set is
+  [`app/src-tauri/capabilities/default.json`](app/src-tauri/capabilities/default.json)
+  — events and window-dragging, nothing else.
+- Release binaries are **not code-signed**. If you don't want to trust a
+  downloaded binary, build from source (below) — it takes one command.
+  Only download releases from this repository's official Releases page;
+  a binary from anywhere else could be a tampered copy.
 
 **Writes:** only `~/.clawdometer/`, the `statusLine` key of
 `~/.claude/settings.json` (during `install`/`uninstall`), and the credentials
@@ -80,6 +96,36 @@ writes the standard HKCU Run registry key, only when you click it.
 - Windows 10 1803+ (needs the bundled `curl.exe`) or Windows 11.
 - Claude Code installed and signed in (the HUD reads its OAuth token from
   `~/.claude/.credentials.json`; using Claude Code refreshes it).
+
+## Install
+
+### From GitHub Releases
+
+1. Download the installer (`Clawdometer_<version>_x64-setup.exe`) from the
+   [latest release](../../releases/latest).
+2. Run it. **Windows SmartScreen will warn you** ("Windows protected your
+   PC") because the binary is not code-signed — code-signing certificates
+   cost money this hobby project doesn't have. Click *More info* → *Run
+   anyway*, but only if you downloaded it from this repository's Releases
+   page. If that trust step bothers you (it should!), build from source
+   instead — see below.
+3. Launch **Clawdometer** from the Start menu. A tray icon appears and the
+   HUD window shows up; within a minute it displays live percentages — no
+   other setup needed, as long as Claude Code is installed and signed in.
+
+For the optional statusline integration you also need the CLI
+(`clawdometer.exe`): download it from the same release (if attached) or
+build it from source, then see "Getting started" below.
+
+### From source
+
+Requires Rust (the MSVC toolchain is pinned via `rust-toolchain.toml`) and
+[tauri-cli](https://tauri.app):
+
+```
+cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe (CLI)
+cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
+```
 
 ## Getting started
 
@@ -147,13 +193,11 @@ Everything lives in `~/.clawdometer/`:
 
 ## Building from source
 
-Rust (MSVC toolchain, pinned via `rust-toolchain.toml`) and
-[tauri-cli](https://tauri.app) are required.
+See "Install → From source" above. Additionally:
 
 ```
-cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe
-cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
-cargo test --workspace                     # full test suite
+cargo test --workspace     # full test suite
+cargo deny check bans      # verify the no-network-crates invariant
 ```
 
 ## Notes
@@ -223,10 +267,27 @@ CLI được biên dịch với lệnh cấm (qua `cargo-deny`) mọi crate HTTP
 chắc chắn không có khả năng truy cập mạng, và **hoàn toàn không có telemetry
 dưới bất kỳ hình thức nào**. Token không bao giờ bị ghi log, không bao giờ
 được ghi ra nơi nào khác ngoài chính file credentials của Claude Code, và
+không bao giờ được gửi tới đâu khác ngoài `api.anthropic.com`. Token cũng
 không bao giờ lộ ra webview của HUD: giao diện chỉ nhận phần trăm sử dụng và
 thời điểm reset qua sự kiện một chiều, chạy dưới CSP nghiêm ngặt, không có
 lệnh backend nào gọi được từ giao diện, và không có quyền truy cập file hay
 shell.
+
+**Đừng tin — hãy kiểm chứng.** Mọi điều ở trên đều kiểm tra được ngay trong
+repository này:
+
+- Đoạn code mạng *duy nhất* trong toàn bộ codebase là
+  [`app/src-tauri/src/usage_poller.rs`](app/src-tauri/src/usage_poller.rs)
+  (~400 dòng tính cả test). Hãy đọc nó.
+- `cargo deny check bans` chứng minh không crate HTTP/TLS nào được biên dịch
+  vào bất kỳ binary nào (cấu hình trong [`deny.toml`](deny.toml)).
+- Toàn bộ quyền của webview nằm trong
+  [`app/src-tauri/capabilities/default.json`](app/src-tauri/capabilities/default.json)
+  — chỉ sự kiện và kéo cửa sổ, không gì khác.
+- Binary phát hành **không được ký số (code-signed)**. Nếu bạn không muốn
+  tin một binary tải về, hãy tự biên dịch từ mã nguồn (bên dưới) — chỉ một
+  lệnh. Chỉ tải release từ trang Releases chính thức của repository này;
+  binary từ bất kỳ nơi nào khác có thể là bản đã bị can thiệp.
 
 **Ghi dữ liệu:** chỉ vào `~/.clawdometer/`, khóa `statusLine` trong
 `~/.claude/settings.json` (khi `install`/`uninstall`), và thao tác ghi-lại
@@ -249,6 +310,35 @@ ghi khóa registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 - Windows 10 1803+ (cần `curl.exe` đi kèm hệ điều hành) hoặc Windows 11.
 - Đã cài và đăng nhập Claude Code (HUD đọc OAuth token từ
   `~/.claude/.credentials.json`; dùng Claude Code sẽ làm mới token).
+
+## Cài đặt
+
+### Từ GitHub Releases
+
+1. Tải bộ cài (`Clawdometer_<version>_x64-setup.exe`) từ
+   [release mới nhất](../../releases/latest).
+2. Chạy nó. **Windows SmartScreen sẽ cảnh báo** ("Windows protected your
+   PC") vì binary chưa được ký số — chứng chỉ code-signing tốn tiền mà dự án
+   sở thích này không có. Bấm *More info* → *Run anyway*, nhưng chỉ khi bạn
+   tải từ trang Releases của chính repository này. Nếu bước tin tưởng đó làm
+   bạn lấn cấn (và nên thế!), hãy tự biên dịch từ mã nguồn — xem bên dưới.
+3. Mở **Clawdometer** từ Start menu. Biểu tượng khay xuất hiện cùng cửa sổ
+   HUD; trong vòng một phút nó hiển thị phần trăm trực tiếp — không cần
+   thiết lập gì thêm, miễn là Claude Code đã cài và đăng nhập.
+
+Để dùng tích hợp statusline (tùy chọn) bạn cần thêm CLI
+(`clawdometer.exe`): tải từ cùng release (nếu có đính kèm) hoặc tự biên
+dịch, rồi xem mục "Bắt đầu" bên dưới.
+
+### Từ mã nguồn
+
+Cần Rust (toolchain MSVC, ghim qua `rust-toolchain.toml`) và
+[tauri-cli](https://tauri.app):
+
+```
+cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe (CLI)
+cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSIS
+```
 
 ## Bắt đầu
 
@@ -315,13 +405,11 @@ Mọi thứ nằm trong `~/.clawdometer/`:
 
 ## Biên dịch từ mã nguồn
 
-Cần Rust (toolchain MSVC, ghim qua `rust-toolchain.toml`) và
-[tauri-cli](https://tauri.app).
+Xem "Cài đặt → Từ mã nguồn" ở trên. Ngoài ra:
 
 ```
-cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe
-cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSIS
-cargo test --workspace                     # toàn bộ bộ kiểm thử
+cargo test --workspace     # toàn bộ bộ kiểm thử
+cargo deny check bans      # kiểm chứng lệnh cấm crate mạng
 ```
 
 ## Ghi chú
