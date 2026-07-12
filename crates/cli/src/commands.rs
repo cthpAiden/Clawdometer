@@ -38,8 +38,9 @@ fn resolve_settings_path(args: &[String]) -> Option<PathBuf> {
 }
 
 fn backup_timestamp() -> String {
-    let fmt = time::format_description::parse("[year][month][day]-[hour][minute][second]")
-        .expect("static format");
+    let fmt =
+        time::format_description::parse_borrowed::<2>("[year][month][day]-[hour][minute][second]")
+            .expect("static format");
     time::OffsetDateTime::now_utc()
         .format(&fmt)
         .unwrap_or_else(|_| "unknown".into())

@@ -26,8 +26,11 @@ running. It shows them in a small always-on-top HUD and a system-tray tooltip
 Additionally, Claude Code sends usage data (percentages, reset times, model,
 context window) to your statusline command on every API response. Clawdometer
 installs itself as that statusline command and records the latest snapshot to
-`~/.clawdometer/state.json` — that's where the HUD's model name comes from.
-Whichever source is newer wins.
+`~/.clawdometer/state.json`. Whichever source is newer wins.
+
+The HUD header shows a countdown to the 5-hour window reset (limits are
+account-wide, so a model name would add nothing). The footer shows data age
+and turns red with a hint if polling has been failing for over 10 minutes.
 
 If you already had a statusline configured, Clawdometer preserves it and
 chains it: your original statusline still renders its output (with a 2-second

@@ -1,6 +1,6 @@
 // Default skin. Contract: the single `state-updated` event. No other IPC.
 const els = {
-  model: document.getElementById("model"),
+  title: document.getElementById("title"),
   bar5h: document.getElementById("bar5h"),
   bar7d: document.getElementById("bar7d"),
   txt5h: document.getElementById("txt5h"),
@@ -9,6 +9,16 @@ const els = {
 };
 
 let current = null; // last payload
+
+// Header: countdown to the 5h window reset — the limits are account-wide, so
+// this beats a model name (same numbers whatever model is running).
+function fmtCountdown(resetsAtEpochSec, nowMs) {
+  if (!Number.isFinite(resetsAtEpochSec)) return "";
+  const mins = Math.ceil((resetsAtEpochSec * 1000 - nowMs) / 60000);
+  if (mins <= 0) return "5h window resetting…";
+  if (mins < 60) return `5h resets in ${mins}m`;
+  return `5h resets in ${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
 
 function fmtReset(resetsAtEpochSec, nowMs) {
   if (!Number.isFinite(resetsAtEpochSec)) return "";
@@ -45,16 +55,24 @@ function render() {
   const nowMs = Date.now();
   const state = current && current.state;
   if (!state || !state.rate_limits) {
-    els.model.textContent = (state && state.model && state.model.display_name) || "Clawdometer";
+    els.title.textContent = "Clawdometer";
     renderWindow(null, els.bar5h, els.txt5h, nowMs);
     renderWindow(null, els.bar7d, els.txt7d, nowMs);
     els.footer.textContent = "waiting for usage data";
+    els.footer.classList.remove("stale");
     return;
   }
-  els.model.textContent = (state.model && state.model.display_name) || "Claude";
-  renderWindow(state.rate_limits.five_hour, els.bar5h, els.txt5h, nowMs);
+  const fh = state.rate_limits.five_hour;
+  els.title.textContent = (fh && fmtCountdown(fh.resets_at, nowMs)) || "Clawdometer";
+  renderWindow(fh, els.bar5h, els.txt5h, nowMs);
   renderWindow(state.rate_limits.seven_day, els.bar7d, els.txt7d, nowMs);
-  els.footer.textContent = fmtAge(state.captured_at, nowMs);
+  // Data older than ~10 missed polls means the poller is failing (network
+  // down or sign-in expired) — make that visible instead of silently aging.
+  const ageMs = nowMs - Date.parse(state.captured_at);
+  const stale = Number.isFinite(ageMs) && ageMs > 10 * 60000;
+  els.footer.textContent =
+    fmtAge(state.captured_at, nowMs) + (stale ? " — poll failing, open Claude Code" : "");
+  els.footer.classList.toggle("stale", stale);
 }
 
 window.__TAURI__.event.listen("state-updated", (event) => {

@@ -6,7 +6,8 @@ html, body { background: transparent; overflow: hidden; }
   border-radius: 10px; font: 12px/1.5 "Segoe UI", sans-serif;
   display: flex; flex-direction: column; gap: 4px;
 }
-#model { font-weight: 600; font-size: 12px; }
+#title { font-weight: 600; font-size: 12px; }
+#footer.stale { color: #f87171; }
 .row { display: flex; align-items: center; gap: 6px; }
 .label { width: 18px; color: #9a9aa2; }
 .bar { flex: 1; height: 8px; background: #35353c; border-radius: 4px; overflow: hidden; }
