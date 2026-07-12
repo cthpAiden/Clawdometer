@@ -5,12 +5,25 @@
 // (Back/Refresh/Save as/Print).
 window.addEventListener("contextmenu", (e) => e.preventDefault());
 
-// Double-click the panel to toggle compact size — same as the tray's "Compact
-// size" item. Detect it on mousedown with detail===2 (the way Tauri's own
-// drag-region handler does), so the native drag loop that the first click
-// starts doesn't swallow the gesture.
+// The whole panel is the grab target. Drag anywhere to move; double-click
+// anywhere to toggle compact size (same as the tray's "Compact size" item).
+// Start the native OS drag only once the pointer moves past a few pixels, so a
+// stationary double-click is never swallowed by the move loop and a plain click
+// stays inert.
+let dragOrigin = null;
 window.addEventListener("mousedown", (e) => {
-  if (e.button === 0 && e.detail === 2) window.__TAURI__.event.emit("toggle-compact");
+  if (e.button === 0) dragOrigin = { x: e.screenX, y: e.screenY };
+});
+window.addEventListener("mousemove", (e) => {
+  if (!dragOrigin || !(e.buttons & 1)) { dragOrigin = null; return; }
+  if (Math.abs(e.screenX - dragOrigin.x) > 4 || Math.abs(e.screenY - dragOrigin.y) > 4) {
+    dragOrigin = null;
+    window.__TAURI__.window.getCurrentWindow().startDragging();
+  }
+});
+window.addEventListener("mouseup", () => { dragOrigin = null; });
+window.addEventListener("dblclick", (e) => {
+  if (e.button === 0) window.__TAURI__.event.emit("toggle-compact");
 });
 
 const els = {
