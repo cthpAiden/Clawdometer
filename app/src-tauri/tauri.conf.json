@@ -31,6 +31,8 @@
     "active": true,
     "targets": ["nsis"],
     "publisher": "Phuc Chau",
+    "copyright": "Copyright (c) 2026 Phuc Chau",
+    "licenseFile": "../../LICENSE",
     "icon": ["icons/icon.ico"]
   }
 }
