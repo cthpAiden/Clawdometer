@@ -12,8 +12,8 @@
       {
         "label": "hud",
         "title": "Clawdometer",
-        "width": 260,
-        "height": 120,
+        "width": 200,
+        "height": 112,
         "decorations": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
@@ -27,6 +27,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "publisher": "Phuc Chau",
     "icon": ["icons/icon.ico"]
   }
 }

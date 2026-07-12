@@ -34,6 +34,8 @@ const els = {
   txt5h: document.getElementById("txt5h"),
   txt7d: document.getElementById("txt7d"),
   footer: document.getElementById("footer"),
+  age: document.getElementById("age"),
+  reset: document.getElementById("reset"),
 };
 
 let current = null; // last payload
@@ -82,6 +84,17 @@ function renderSecondary(win) {
   els.bar7d.style.background = barColor(win.used_percentage);
 }
 
+// Weekly reset day + local time, from the same seven_day.resets_at the poller
+// already stores (epoch seconds) — the exact field Claude's own UI renders as
+// "Resets Thu 10:00 AM". Regular size only; compact has no footer room.
+function fmtResetDay(resetsAtEpochSec) {
+  if (!Number.isFinite(resetsAtEpochSec)) return "";
+  const d = new Date(resetsAtEpochSec * 1000);
+  const day = d.toLocaleDateString([], { weekday: "short" });
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `${day} ${time}`;
+}
+
 function fmtAge(capturedAtIso, nowMs) {
   const t = Date.parse(capturedAtIso);
   if (Number.isNaN(t)) return "";
@@ -100,7 +113,8 @@ function render() {
     els.countdown.style.color = "";
     renderPrimary(null);
     renderSecondary(null);
-    els.footer.textContent = "waiting for usage data";
+    els.age.textContent = "waiting for usage data";
+    els.reset.textContent = "";
     els.footer.classList.remove("stale");
     document.body.classList.remove("critical");
     return;
@@ -119,9 +133,12 @@ function render() {
   // down or sign-in expired) — make that visible instead of silently aging.
   const ageMs = nowMs - Date.parse(state.captured_at);
   const stale = Number.isFinite(ageMs) && ageMs > 10 * 60000;
-  els.footer.textContent =
+  els.age.textContent =
     fmtAge(state.captured_at, nowMs) + (stale ? " — poll failing, open Claude Code" : "");
   els.footer.classList.toggle("stale", stale);
+  const sd = state.rate_limits.seven_day;
+  const resetDay = fmtResetDay(sd && sd.resets_at);
+  els.reset.innerHTML = resetDay ? `resets <b>${resetDay}</b>` : "";
 }
 
 window.__TAURI__.event.listen("state-updated", (event) => {

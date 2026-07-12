@@ -32,7 +32,7 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
 /// webview ready and after every tray change.
 fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
     if let Some(win) = app.get_webview_window("hud") {
-        let (w, h) = if prefs.compact { (150.0, 84.0) } else { (260.0, 120.0) };
+        let (w, h) = if prefs.compact { (120.0, 92.0) } else { (200.0, 112.0) };
         let _ = win.set_size(tauri::LogicalSize::new(w, h));
     }
     let _ = app.emit(
