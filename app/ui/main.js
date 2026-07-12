@@ -2,8 +2,12 @@
 // (opacity/compact) events in; `ui-ready` and `toggle-compact` events out.
 
 // The HUD is chrome, not a page — suppress WebView2's context menu
-// (Back/Refresh/Save as/Print).
-window.addEventListener("contextmenu", (e) => e.preventDefault());
+// (Back/Refresh/Save as/Print) and instead pop the native Opacity menu, so the
+// panel itself is a right-click target for opacity (same items as the tray).
+window.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  window.__TAURI__.event.emit("hud-context");
+});
 
 // The whole panel is the grab target. Drag anywhere to move; double-click
 // anywhere to toggle compact size (same as the tray's "Compact size" item).

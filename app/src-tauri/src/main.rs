@@ -4,7 +4,7 @@ mod ui_prefs;
 mod usage_poller;
 mod watcher;
 
-use tauri::menu::{CheckMenuItem, Menu, MenuItem, Submenu};
+use tauri::menu::{CheckMenuItem, ContextMenu, Menu, MenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Listener, Manager};
 
@@ -190,6 +190,17 @@ fn main() {
             app.listen("ui-ready", move |_| {
                 let p = current_prefs(&handle);
                 apply_prefs(&handle, &p);
+            });
+            // Right-clicking the HUD pops the native Opacity menu at the cursor
+            // (JS suppresses WebView2's own menu and emits "hud-context"). Items
+            // route through the same on_menu_event handler as the tray, so a
+            // pick saves + applies + syncs the tray checkmarks — no new logic.
+            let popup_handle = app.handle().clone();
+            let popup_menu = opacity_menu.clone();
+            app.listen("hud-context", move |_| {
+                if let Some(win) = popup_handle.get_webview_window("hud") {
+                    let _ = popup_menu.popup(win.as_ref().window());
+                }
             });
             // Double-clicking the HUD toggles compact size — same effect as the
             // tray's "Compact size" item, kept in sync (window resize + CSS via
