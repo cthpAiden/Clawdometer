@@ -19,6 +19,19 @@ pub fn wrapped_path() -> PathBuf {
     clawdometer_dir().join("wrapped.json")
 }
 
+/// Live-poll snapshot written by the HUD's usage poller (same State shape as
+/// state.json, rate_limits only).
+pub fn live_path() -> PathBuf {
+    clawdometer_dir().join("live.json")
+}
+
+pub fn claude_credentials_path() -> PathBuf {
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".claude")
+        .join(".credentials.json")
+}
+
 pub fn default_claude_settings_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))

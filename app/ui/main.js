@@ -11,6 +11,7 @@ const els = {
 let current = null; // last payload
 
 function fmtReset(resetsAtEpochSec, nowMs) {
+  if (!Number.isFinite(resetsAtEpochSec)) return "";
   if (resetsAtEpochSec * 1000 < nowMs) return "refresh pending";
   const d = new Date(resetsAtEpochSec * 1000);
   const hh = String(d.getHours()).padStart(2, "0");
@@ -47,7 +48,7 @@ function render() {
     els.model.textContent = (state && state.model && state.model.display_name) || "Clawdometer";
     renderWindow(null, els.bar5h, els.txt5h, nowMs);
     renderWindow(null, els.bar7d, els.txt7d, nowMs);
-    els.footer.textContent = "waiting for Claude Code activity";
+    els.footer.textContent = "waiting for usage data";
     return;
   }
   els.model.textContent = (state.model && state.model.display_name) || "Claude";

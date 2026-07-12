@@ -1,6 +1,7 @@
 #![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
 
 mod ui_prefs;
+mod usage_poller;
 mod watcher;
 
 use tauri::menu::{Menu, MenuItem};
@@ -62,17 +63,32 @@ fn main() {
                 })
                 .build(app)?;
             // Restore HUD position. Skip Windows' minimized-window sentinel
-            // (-32000, -32000) — restoring to it would leave the HUD
-            // permanently off-screen.
+            // (-32000, -32000) and positions outside every current monitor
+            // (e.g. a since-unplugged display) — restoring to either would
+            // leave the HUD permanently off-screen.
             let ui_path = clawdometer_core::paths::clawdometer_dir().join("ui.json");
             if let (Some(win), Some(prefs)) =
                 (app.get_webview_window("hud"), ui_prefs::load(&ui_path))
             {
-                if prefs.x > -30000 && prefs.y > -30000 {
+                let on_a_monitor = win
+                    .available_monitors()
+                    .map(|monitors| {
+                        monitors.iter().any(|m| {
+                            let p = m.position();
+                            let s = m.size();
+                            prefs.x >= p.x
+                                && prefs.x < p.x + s.width as i32
+                                && prefs.y >= p.y
+                                && prefs.y < p.y + s.height as i32
+                        })
+                    })
+                    .unwrap_or(true);
+                if prefs.x > -30000 && prefs.y > -30000 && on_a_monitor {
                     let _ = win.set_position(tauri::PhysicalPosition::new(prefs.x, prefs.y));
                 }
             }
             watcher::spawn(app.handle().clone());
+            usage_poller::spawn();
             Ok(())
         })
         .on_window_event(|window, event| {
