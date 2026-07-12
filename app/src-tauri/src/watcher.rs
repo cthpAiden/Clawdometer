@@ -95,7 +95,9 @@ fn update_tooltip(app: &AppHandle, payload: &serde_json::Value) {
         payload.pointer("/state/rate_limits/seven_day/used_percentage").and_then(|v| v.as_i64()),
     ) {
         (Some(fh), Some(sd)) => format!("5h {fh}% · 7d {sd}%"),
-        _ => String::from("Clawdometer — waiting for data"),
+        (Some(fh), None) => format!("5h {fh}%"),
+        (None, Some(sd)) => format!("7d {sd}%"),
+        (None, None) => String::from("Clawdometer — waiting for data"),
     };
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_tooltip(Some(text));

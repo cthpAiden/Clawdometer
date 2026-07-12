@@ -69,18 +69,27 @@ fn save_settings(path: &Path, root: &Value) -> Result<(), SettingsError> {
     atomic_write(path, body.as_bytes())
 }
 
-/// Raw-bytes backup; never overwrites an existing backup.
+/// Raw-bytes backup; never overwrites an existing backup. create_new makes
+/// the exists-check-then-write race-free against a concurrent install.
 fn backup(clawdometer_dir: &Path, timestamp: &str, raw: &[u8]) -> Result<PathBuf, SettingsError> {
     let dir = clawdometer_dir.join("backups");
     std::fs::create_dir_all(&dir)?;
-    let mut candidate = dir.join(format!("settings-{timestamp}.json"));
-    let mut n = 1;
-    while candidate.exists() {
-        candidate = dir.join(format!("settings-{timestamp}-{n}.json"));
-        n += 1;
+    let mut n = 0;
+    loop {
+        let candidate = if n == 0 {
+            dir.join(format!("settings-{timestamp}.json"))
+        } else {
+            dir.join(format!("settings-{timestamp}-{n}.json"))
+        };
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&candidate) {
+            Ok(mut f) => {
+                f.write_all(raw)?;
+                return Ok(candidate);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => n += 1,
+            Err(e) => return Err(e.into()),
+        }
     }
-    std::fs::write(&candidate, raw)?;
-    Ok(candidate)
 }
 
 fn is_ours(status_line: &Value, our_command: &str) -> bool {
@@ -183,7 +192,16 @@ pub fn uninstall(
     let Some(current) = root.get(STATUSLINE_KEY) else {
         return Ok(UninstallOutcome::NotInstalled);
     };
-    if !is_ours(current, our_command) {
+    // A stale clawdometer hook (e.g. exe moved since install) is still ours,
+    // even though its literal command string no longer matches our_command —
+    // mirrors the stale-self detection in install(), so a moved binary can
+    // still uninstall/restore instead of being mistaken for a user edit.
+    let is_stale_self = current
+        .get("command")
+        .and_then(|c| c.as_str())
+        .map(is_clawdometer_hook_command)
+        .unwrap_or(false);
+    if !is_ours(current, our_command) && !is_stale_self {
         // User edited statusLine after install: warn, touch nothing.
         return Ok(UninstallOutcome::NotOurs);
     }

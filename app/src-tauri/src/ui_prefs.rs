@@ -13,12 +13,18 @@ pub fn load(path: &Path) -> Option<UiPrefs> {
 }
 
 pub fn save(path: &Path, prefs: UiPrefs) {
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    if let Ok(body) = serde_json::to_string(&prefs) {
-        let _ = std::fs::write(path, body);
-    }
+    let Some(dir) = path.parent() else { return };
+    let _ = std::fs::create_dir_all(dir);
+    let Ok(body) = serde_json::to_string(&prefs) else { return };
+    // Atomic like every other write into ~/.clawdometer: save() fires on
+    // every window-move event, so a plain fs::write racing a crash could
+    // leave a torn ui.json.
+    let _ = tempfile::NamedTempFile::new_in(dir).and_then(|mut tmp| {
+        use std::io::Write as _;
+        tmp.write_all(body.as_bytes())?;
+        tmp.persist(path).map_err(|e| e.error)?;
+        Ok(())
+    });
 }
 
 #[cfg(test)]

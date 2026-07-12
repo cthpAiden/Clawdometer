@@ -155,6 +155,27 @@ fn hook_does_not_hang_when_wrapped_command_leaves_grandchild_holding_stdout() {
 }
 
 #[test]
+fn hook_does_not_hang_when_wrapped_command_ignores_large_stdin() {
+    let dir = tempfile::tempdir().unwrap();
+    // ping never reads stdin. With a payload larger than the pipe buffer, a
+    // synchronous stdin write in run_wrapped would block before the 2s
+    // wait_timeout ever starts, hanging the hook until ping exits (~29s).
+    write_wrapped(dir.path(), "ping -n 30 127.0.0.1");
+    let big = format!(
+        r#"{{"model":{{"id":"x","display_name":"X"}},"pad":"{}"}}"#,
+        "x".repeat(2_000_000)
+    );
+    let start = std::time::Instant::now();
+    let (line, code) = run_hook(&big, dir.path());
+    assert_eq!(code, 0);
+    assert_eq!(line, "[X] limits pending");
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(10),
+        "stdin write to a non-reading child must not defeat the 2s timeout"
+    );
+}
+
+#[test]
 fn hook_falls_back_when_wrapped_json_malformed() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path()).unwrap();

@@ -91,6 +91,27 @@ fn uninstall_aborts_on_malformed_settings() {
 }
 
 #[test]
+fn uninstall_recognizes_stale_clawdometer_hook_command_after_exe_move() {
+    // Installed from an old exe path, then the binary moved (e.g. reinstalled
+    // elsewhere) — the running exe's `our_command()` no longer matches the
+    // literal command string in settings.json, but it's still clearly a
+    // clawdometer hook. uninstall() must recognize that, not treat it as a
+    // user edit.
+    let e = env();
+    let original = r#"{"model":"opus","statusLine":{"command":"old.cmd"}}"#;
+    std::fs::write(&e.settings, original).unwrap();
+    let old_exe_ours = r#""C:\old path\clawdometer.exe" hook"#;
+    install(&e.settings, &e.claw, old_exe_ours, "20260712-000000").unwrap();
+
+    let new_exe_ours = r#""D:\new path\clawdometer.exe" hook"#;
+    let outcome = uninstall(&e.settings, &e.claw, new_exe_ours).unwrap();
+    assert_eq!(outcome, UninstallOutcome::Restored);
+
+    let before: serde_json::Value = serde_json::from_str(original).unwrap();
+    assert_eq!(read_json(&e.settings), before, "settings must round-trip deep-equal");
+}
+
+#[test]
 fn uninstall_with_malformed_wrapped_json_errors_and_touches_nothing() {
     let e = env();
     std::fs::write(&e.settings, r#"{"statusLine":{"command":"old.cmd"}}"#).unwrap();

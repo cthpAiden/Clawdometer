@@ -79,7 +79,11 @@ fn fetch(token: &str) -> Option<String> {
     let config = format!(
         "header = \"Authorization: Bearer {token}\"\nheader = \"anthropic-beta: oauth-2025-04-20\"\n"
     );
-    child.stdin.take()?.write_all(config.as_bytes()).ok()?;
+    // Ignore write errors (curl can exit before reading its config); the
+    // early `?` here used to skip wait_with_output, leaving the child unreaped.
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(config.as_bytes());
+    }
     let out = child.wait_with_output().ok()?;
     if !out.status.success() {
         return None;

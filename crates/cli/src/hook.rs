@@ -49,9 +49,15 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
         .stderr(Stdio::null())
         .spawn()
         .ok()?;
-    // Ignore write errors: the child may exit without reading stdin.
+    // Write stdin on a detached thread. A child that never reads stdin would
+    // otherwise block write_all once the payload exceeds the pipe buffer —
+    // before wait_timeout below ever starts. Write errors are ignored: the
+    // child may exit without reading stdin.
     if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(stdin_raw.as_bytes());
+        let raw = stdin_raw.to_string();
+        std::thread::spawn(move || {
+            let _ = stdin.write_all(raw.as_bytes());
+        });
     }
 
     // Drain stdout concurrently on a thread, started BEFORE we wait on the
