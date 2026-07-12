@@ -109,7 +109,13 @@ pub fn cmd_uninstall(args: &[String]) -> i32 {
     if code == 0 {
         if purge {
             match std::fs::remove_dir_all(&claw) {
-                Ok(()) => println!("purged {}", claw.display()),
+                Ok(()) => {
+                    println!("purged {}", claw.display());
+                    println!(
+                        "note: if the Clawdometer HUD is still running, quit it first — \
+                         its poller recreates the directory within a minute"
+                    );
+                }
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
                 Err(e) => eprintln!("warning: failed to purge {}: {e}", claw.display()),
             }

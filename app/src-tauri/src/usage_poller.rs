@@ -34,52 +34,182 @@ const CLIENT_ID: &str = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 /// (verified 2026-07-12); any explicit UA gets real status codes.
 const USER_AGENT: &str = concat!("clawdometer/", env!("CARGO_PKG_VERSION"));
 const POLL_INTERVAL: Duration = Duration::from_secs(60);
+const MAX_BACKOFF: Duration = Duration::from_secs(1800);
 /// Refresh slightly before expiry so a poll never races the deadline.
 const EXPIRY_MARGIN_MS: i64 = 60_000;
 
+/// Outcome of one poll cycle: drives backoff and the HUD's stale-data hint.
+enum PollOutcome {
+    Success(RateLimits),
+    /// Token rejected or unusable — opening Claude Code fixes it.
+    Auth,
+    /// Network down, 429/5xx, or malformed response — retrying fixes it.
+    Transient,
+}
+
 pub fn spawn() {
-    std::thread::spawn(|| loop {
-        if let Some(rate_limits) = poll_once() {
-            let state = State {
-                schema_version: SCHEMA_VERSION,
-                captured_at: now_rfc3339(),
-                rate_limits: Some(rate_limits),
-                model: None,
-                context_window: None,
-                session_id: None,
-                transcript_path: None,
-                cli_version: None,
-            };
-            let _ = write_state_atomic(&clawdometer_core::paths::live_path(), &state);
+    std::thread::spawn(|| {
+        let mut consecutive_failures: u32 = 0;
+        loop {
+            match poll_once() {
+                PollOutcome::Success(rate_limits) => {
+                    consecutive_failures = 0;
+                    let state = State {
+                        schema_version: SCHEMA_VERSION,
+                        captured_at: now_rfc3339(),
+                        rate_limits: Some(rate_limits),
+                        model: None,
+                        context_window: None,
+                        session_id: None,
+                        transcript_path: None,
+                        cli_version: None,
+                    };
+                    let _ = write_state_atomic(&clawdometer_core::paths::live_path(), &state);
+                    let _ = std::fs::remove_file(clawdometer_core::paths::poll_error_path());
+                }
+                outcome => {
+                    consecutive_failures = consecutive_failures.saturating_add(1);
+                    write_poll_error(match outcome {
+                        PollOutcome::Auth => "auth",
+                        _ => "network",
+                    });
+                }
+            }
+            std::thread::sleep(backoff_delay(consecutive_failures));
         }
-        std::thread::sleep(POLL_INTERVAL);
     });
 }
 
-fn poll_once() -> Option<RateLimits> {
+fn poll_once() -> PollOutcome {
     let cred_path = clawdometer_core::paths::claude_credentials_path();
-    let raw = std::fs::read_to_string(&cred_path).ok()?;
-    let mut creds: serde_json::Value =
-        serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()?;
-    let now_ms = unix_now_ms();
-    if token_expired(&creds, now_ms) {
-        if let Some(fresh) = refresh(&creds, now_ms) {
-            // Re-read + merge is unnecessary: Claude Code rewrites the whole
-            // file on its own refreshes, and we only refresh when the token
-            // is already expired (so Claude Code is not mid-session).
-            let _ = write_credentials_atomic(&cred_path, &fresh);
+    // No readable credentials file means no sign-in: opening Claude Code
+    // creates it, so this is an auth-shaped failure, not a network one.
+    let Ok(raw) = std::fs::read_to_string(&cred_path) else {
+        return PollOutcome::Auth;
+    };
+    let Ok(mut creds) =
+        serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}'))
+    else {
+        return PollOutcome::Auth;
+    };
+    let mut refresh_attempted = false;
+    if token_expired(&creds, unix_now_ms()) {
+        refresh_attempted = true;
+        if let Some(fresh) = refresh_and_persist(&cred_path, &creds) {
             creds = fresh;
         }
         // Refresh failure falls through to try the stored token anyway —
         // expiresAt could be wrong, and a failed GET costs nothing extra.
     }
-    let token = access_token(&creds)?;
-    let body = fetch(&token)?;
-    parse_usage(&body)
+    let Some(token) = access_token(&creds) else {
+        return PollOutcome::Auth;
+    };
+    match fetch(&token) {
+        None => PollOutcome::Transient, // curl spawn failure or no response
+        Some((200, body)) => match parse_usage(&body) {
+            Some(rl) => PollOutcome::Success(rl),
+            None => PollOutcome::Transient,
+        },
+        Some((401 | 403, _)) if !refresh_attempted => {
+            // The stored expiresAt lied (token revoked server-side, clock
+            // skew, credentials restored from backup): refresh once
+            // regardless of the clock, then retry the GET once.
+            let Some(fresh) = refresh_and_persist(&cred_path, &creds) else {
+                return PollOutcome::Auth;
+            };
+            let Some(token) = access_token(&fresh) else {
+                return PollOutcome::Auth;
+            };
+            match fetch(&token) {
+                Some((200, body)) => match parse_usage(&body) {
+                    Some(rl) => PollOutcome::Success(rl),
+                    None => PollOutcome::Transient,
+                },
+                Some((401 | 403, _)) => PollOutcome::Auth,
+                _ => PollOutcome::Transient,
+            }
+        }
+        Some((401 | 403, _)) => PollOutcome::Auth,
+        Some(_) => PollOutcome::Transient, // 429 / 5xx: back off and retry
+    }
+}
+
+/// Refresh the grant and write the rotated tokens back, but only if the file
+/// still holds the refresh token we consumed (see write_credentials_if_current).
+/// Returns the fresh credentials for in-memory use either way — a valid access
+/// token is valid regardless of who won the disk write.
+fn refresh_and_persist(
+    cred_path: &std::path::Path,
+    creds: &serde_json::Value,
+) -> Option<serde_json::Value> {
+    let consumed = creds.pointer("/claudeAiOauth/refreshToken")?.as_str()?.to_string();
+    let fresh = refresh(creds, unix_now_ms())?;
+    let _ = write_credentials_if_current(cred_path, &fresh, &consumed);
+    Some(fresh)
+}
+
+/// Failure marker for the HUD ({"kind": "auth" | "network"}), deleted on the
+/// next successful poll. Content is timestamp-free so repeated identical
+/// failures don't churn the state watcher.
+fn write_poll_error(kind: &str) {
+    let path = clawdometer_core::paths::poll_error_path();
+    let Some(dir) = path.parent() else { return };
+    let _ = std::fs::create_dir_all(dir);
+    let body = serde_json::json!({ "kind": kind }).to_string();
+    let _ = tempfile::NamedTempFile::new_in(dir).and_then(|mut tmp| {
+        tmp.write_all(body.as_bytes())?;
+        tmp.persist(&path).map_err(|e| e.error)?;
+        Ok(())
+    });
 }
 
 fn unix_now_ms() -> i64 {
     (time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64
+}
+
+/// Split curl's `--write-out "\n%{http_code}"` trailer off the response body.
+/// None when there is no parsable status or curl reported 000 (no response).
+fn split_status(stdout: &str) -> Option<(u16, String)> {
+    let (body, code) = stdout.rsplit_once('\n')?;
+    let code: u16 = code.trim().parse().ok()?;
+    if code == 0 {
+        return None;
+    }
+    Some((code, body.to_string()))
+}
+
+/// Sleep before the next poll: the normal interval after a success or first
+/// failure, doubling per consecutive failure, capped at 30 minutes. Keeps a
+/// dead refresh token from hammering the auth endpoint every minute forever.
+fn backoff_delay(consecutive_failures: u32) -> Duration {
+    let doublings = consecutive_failures.saturating_sub(1).min(6);
+    POLL_INTERVAL.saturating_mul(1 << doublings).min(MAX_BACKOFF)
+}
+
+/// Persist refreshed credentials only if the file still holds the refresh
+/// token we consumed — a compare-and-swap against Claude Code rotating the
+/// tokens itself between our read and this write. On mismatch (or an
+/// unreadable file, which may be Claude Code mid-write) nothing is written:
+/// the disk copy is newer than ours, and the next poll re-reads it.
+fn write_credentials_if_current(
+    path: &std::path::Path,
+    fresh: &serde_json::Value,
+    consumed_refresh_token: &str,
+) -> bool {
+    let on_disk = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|raw| {
+            serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}')).ok()
+        });
+    let unchanged = on_disk
+        .as_ref()
+        .and_then(|v| v.pointer("/claudeAiOauth/refreshToken"))
+        .and_then(|v| v.as_str())
+        == Some(consumed_refresh_token);
+    if !unchanged {
+        return false;
+    }
+    write_credentials_atomic(path, fresh).is_ok()
 }
 
 /// Expired (or about to) per the stored `expiresAt` (epoch millis). Missing
@@ -91,12 +221,19 @@ fn token_expired(creds: &serde_json::Value, now_ms: i64) -> bool {
         .is_some_and(|at| at <= now_ms + EXPIRY_MARGIN_MS)
 }
 
+/// The stored access token, rejected unless it is non-empty and confined to
+/// the JWT/base64url alphabet — it is interpolated into a quoted curl config
+/// directive, so a `"` or newline would escape into arbitrary curl config.
 fn access_token(creds: &serde_json::Value) -> Option<String> {
     let token = creds.pointer("/claudeAiOauth/accessToken")?.as_str()?;
-    if token.is_empty() {
-        None
-    } else {
+    let valid = !token.is_empty()
+        && token
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'~' | b'+' | b'/' | b'=' | b'-'));
+    if valid {
         Some(token.to_string())
+    } else {
+        None
     }
 }
 
@@ -154,6 +291,9 @@ fn post_token(body: &str) -> Option<String> {
     cmd.args([
         "--silent",
         "--fail",
+        "--proto",
+        "=https",
+        "--tlsv1.2",
         "--max-time",
         "15",
         "-A",
@@ -204,10 +344,27 @@ fn write_credentials_atomic(
 
 /// GET the usage endpoint. The token is passed to curl as a `--config -`
 /// header line on stdin, never on argv (argv is visible to every process on
-/// the machine).
-fn fetch(token: &str) -> Option<String> {
+/// the machine). Returns (http status, body): no `--fail`, so 401/429/5xx
+/// bodies come back with their real status instead of collapsing into one
+/// indistinguishable failure. The explicit UA matters here too — Cloudflare
+/// answers 429 instead of 401 to curl's default UA on bad-auth requests.
+fn fetch(token: &str) -> Option<(u16, String)> {
     let mut cmd = Command::new(clawdometer_core::paths::system32_exe("curl.exe"));
-    cmd.args(["--silent", "--fail", "--max-time", "15", "--config", "-", USAGE_URL]);
+    cmd.args([
+        "--silent",
+        "--proto",
+        "=https",
+        "--tlsv1.2",
+        "--max-time",
+        "15",
+        "-A",
+        USER_AGENT,
+        "--write-out",
+        "\n%{http_code}",
+        "--config",
+        "-",
+        USAGE_URL,
+    ]);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -231,7 +388,7 @@ fn fetch(token: &str) -> Option<String> {
     if !out.status.success() {
         return None;
     }
-    String::from_utf8(out.stdout).ok()
+    split_status(&String::from_utf8(out.stdout).ok()?)
 }
 
 /// Maps the endpoint's `{five_hour: {utilization, resets_at}, seven_day: …}`
@@ -337,6 +494,69 @@ mod tests {
         let out =
             apply_refresh(&c, r#"{"access_token": "new-a", "expires_in": 60}"#, 0).unwrap();
         assert_eq!(out.pointer("/claudeAiOauth/refreshToken").unwrap(), "old-r");
+    }
+
+    #[test]
+    fn splits_body_and_status_code() {
+        assert_eq!(split_status("{\"a\":1}\n200"), Some((200, "{\"a\":1}".to_string())));
+        assert_eq!(split_status("\n401"), Some((401, String::new())));
+    }
+
+    #[test]
+    fn split_status_rejects_missing_or_unreachable() {
+        assert_eq!(split_status("no trailing status"), None);
+        assert_eq!(split_status("body\n000"), None); // curl: no response received
+        assert_eq!(split_status(""), None);
+    }
+
+    #[test]
+    fn backoff_starts_at_poll_interval_doubles_and_caps() {
+        assert_eq!(backoff_delay(0), Duration::from_secs(60));
+        assert_eq!(backoff_delay(1), Duration::from_secs(60));
+        assert_eq!(backoff_delay(2), Duration::from_secs(120));
+        assert_eq!(backoff_delay(3), Duration::from_secs(240));
+        assert_eq!(backoff_delay(10), Duration::from_secs(1800));
+        assert_eq!(backoff_delay(u32::MAX), Duration::from_secs(1800));
+    }
+
+    #[test]
+    fn rejects_tokens_with_config_breaking_characters() {
+        // A token is interpolated into a curl config line; anything outside
+        // the base64url/JWT alphabet could escape the quoted directive.
+        for bad in ["tok\"123", "tok\n123", "tok 123", "tok\\123"] {
+            let c = creds(&format!(
+                r#"{{"claudeAiOauth": {{"accessToken": {}}}}}"#,
+                serde_json::json!(bad)
+            ));
+            assert!(access_token(&c).is_none(), "{bad:?} must be rejected");
+        }
+    }
+
+    #[test]
+    fn persists_only_when_disk_refresh_token_is_the_one_consumed() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        std::fs::write(
+            &path,
+            r#"{"claudeAiOauth": {"refreshToken": "old-r", "accessToken": "old-a"}}"#,
+        )
+        .unwrap();
+        let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r", "accessToken": "new-a"}}"#);
+        // Disk changed under us (Claude Code rotated first): must not clobber.
+        assert!(!write_credentials_if_current(&path, &fresh, "someone-elses-r"));
+        assert!(std::fs::read_to_string(&path).unwrap().contains("old-a"));
+        // Disk still holds the token we consumed: persist.
+        assert!(write_credentials_if_current(&path, &fresh, "old-r"));
+        assert!(std::fs::read_to_string(&path).unwrap().contains("new-a"));
+    }
+
+    #[test]
+    fn does_not_create_credentials_file_when_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".credentials.json");
+        let fresh = creds(r#"{"claudeAiOauth": {"refreshToken": "new-r"}}"#);
+        assert!(!write_credentials_if_current(&path, &fresh, "old-r"));
+        assert!(!path.exists());
     }
 
     #[test]

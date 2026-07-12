@@ -4,6 +4,9 @@ mod ui_prefs;
 mod usage_poller;
 mod watcher;
 
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
 use tauri::menu::{CheckMenuItem, ContextMenu, Menu, MenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Listener, Manager};
@@ -11,6 +14,28 @@ use tauri::{Emitter, Listener, Manager};
 /// Tray "Opacity" choices. Ids look like "opacity-70".
 const OPACITY_STEPS: [(&str, f64); 4] =
     [("opacity-100", 1.0), ("opacity-85", 0.85), ("opacity-70", 0.7), ("opacity-55", 0.55)];
+
+/// Windows fires Moved continuously during a drag (one event per pixel);
+/// saving ui.json on each would be a read+write+rename storm that also wakes
+/// the ~/.clawdometer watcher every time. Coalesce to one save per drag.
+static MOVE_DEBOUNCE: Mutex<ui_prefs::MoveDebouncer> = Mutex::new(ui_prefs::MoveDebouncer::new());
+const MOVE_SETTLE: Duration = Duration::from_millis(500);
+
+fn save_position(app: &tauri::AppHandle, x: i32, y: i32) {
+    let mut p = current_prefs(app);
+    p.x = x;
+    p.y = y;
+    ui_prefs::save(&ui_path(), p);
+}
+
+/// Persist any not-yet-settled drag position immediately (quit path — the
+/// flusher thread dies with the process).
+fn flush_pending_move(app: &tauri::AppHandle) {
+    let pos = MOVE_DEBOUNCE.lock().ok().and_then(|mut d| d.take_now());
+    if let Some((x, y)) = pos {
+        save_position(app, x, y);
+    }
+}
 
 fn ui_path() -> std::path::PathBuf {
     clawdometer_core::paths::clawdometer_dir().join("ui.json")
@@ -94,7 +119,15 @@ fn main() {
                 true,
                 &opacity_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>).collect::<Vec<_>>(),
             )?;
-            let autostart = MenuItem::with_id(app, "autostart", "Start with Windows", true, None::<&str>)?;
+            // Seed the checkmark from the actual Run-key state so the menu
+            // shows whether autostart is on instead of flipping blind.
+            let autostart_enabled = {
+                use tauri_plugin_autostart::ManagerExt;
+                app.autolaunch().is_enabled().unwrap_or(false)
+            };
+            let autostart = CheckMenuItem::with_id(
+                app, "autostart", "Start with Windows", true, autostart_enabled, None::<&str>,
+            )?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
@@ -120,6 +153,7 @@ fn main() {
                 .on_menu_event({
                     let compact_item = compact_item.clone();
                     let opacity_items = opacity_items.clone();
+                    let autostart_item = autostart.clone();
                     move |app, event| match event.id().as_ref() {
                         "toggle" => toggle_hud(app),
                         // CheckMenuItem toggles itself on click; read the new
@@ -147,13 +181,23 @@ fn main() {
                         }
                         "autostart" => {
                             // Explicit user action — the one write outside ~/.clawdometer
-                            // (HKCU Run key), documented in the README.
+                            // (HKCU Run key), documented in the README. CheckMenuItem
+                            // toggles itself on click; read the new state back rather
+                            // than flipping blind (same pattern as "compact").
                             use tauri_plugin_autostart::ManagerExt;
                             let mgr = app.autolaunch();
-                            let enabled = mgr.is_enabled().unwrap_or(false);
-                            let _ = if enabled { mgr.disable() } else { mgr.enable() };
+                            let want = autostart_item
+                                .is_checked()
+                                .unwrap_or(!mgr.is_enabled().unwrap_or(false));
+                            let _ = if want { mgr.enable() } else { mgr.disable() };
+                            // Re-sync the checkmark with what actually happened
+                            // (enable/disable can fail).
+                            let _ = autostart_item.set_checked(mgr.is_enabled().unwrap_or(want));
                         }
-                        "quit" => app.exit(0),
+                        "quit" => {
+                            flush_pending_move(app);
+                            app.exit(0);
+                        }
                         _ => {}
                     }
                 })
@@ -216,16 +260,37 @@ fn main() {
             });
             watcher::spawn(app.handle().clone());
             usage_poller::spawn();
+            // Flush the debounced drag position once the window settles.
+            let flush_handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_millis(250));
+                let pos = MOVE_DEBOUNCE
+                    .lock()
+                    .ok()
+                    .and_then(|mut d| d.take_if_settled(Instant::now(), MOVE_SETTLE));
+                if let Some((x, y)) = pos {
+                    save_position(&flush_handle, x, y);
+                }
+            });
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Moved(pos) = event {
-                if window.label() == "hud" && pos.x > -30000 && pos.y > -30000 {
-                    // Update position only — keep opacity/compact intact.
-                    let mut p = current_prefs(window.app_handle());
-                    p.x = pos.x;
-                    p.y = pos.y;
-                    ui_prefs::save(&ui_path(), p);
+                // The -30000 threshold catches Windows' minimized-park
+                // sentinel (-32000 physical). Belt-and-braces: also skip while
+                // minimized, in case a Windows version/DPI combo ever parks
+                // inside the threshold (a fresh launch has been observed
+                // parked-minimized in the wild, 2026-07-12).
+                if window.label() == "hud"
+                    && pos.x > -30000
+                    && pos.y > -30000
+                    && !window.is_minimized().unwrap_or(false)
+                {
+                    // Record only — the flusher thread saves once the drag
+                    // settles (position-only update; opacity/compact intact).
+                    if let Ok(mut d) = MOVE_DEBOUNCE.lock() {
+                        d.record(pos.x, pos.y, Instant::now());
+                    }
                 }
             }
         })

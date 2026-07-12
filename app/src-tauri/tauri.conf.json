@@ -8,6 +8,9 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "security": {
+      "csp": "default-src 'self'; style-src 'self'"
+    },
     "windows": [
       {
         "label": "hud",

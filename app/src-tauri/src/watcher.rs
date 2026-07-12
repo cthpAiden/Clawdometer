@@ -6,19 +6,28 @@ use tauri::{AppHandle, Emitter};
 
 pub const STATE_EVENT: &str = "state-updated";
 
-pub fn build_payload(state_path: &Path, live_path: &Path) -> serde_json::Value {
+pub fn build_payload(
+    state_path: &Path,
+    live_path: &Path,
+    poll_error_path: &Path,
+) -> serde_json::Value {
     let merged = merge(
         clawdometer_core::state::read_state(state_path),
         clawdometer_core::state::read_state(live_path),
     );
+    // The webview gets only what it renders: rate_limits + captured_at.
+    // session_id / transcript_path / model / cli_version stay on this side
+    // of the IPC boundary.
     let state = merged
-        .map(|s| serde_json::to_value(s).unwrap_or(serde_json::Value::Null))
+        .map(|s| serde_json::json!({ "captured_at": s.captured_at, "rate_limits": s.rate_limits }))
         .unwrap_or(serde_json::Value::Null);
-    let received_at_ms = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .unwrap_or(0);
-    serde_json::json!({ "state": state, "received_at_ms": received_at_ms })
+    let poll_error = std::fs::read_to_string(poll_error_path)
+        .ok()
+        .and_then(|raw| {
+            serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}')).ok()
+        })
+        .and_then(|v| v.get("kind").and_then(|k| k.as_str()).map(String::from));
+    serde_json::json!({ "state": state, "poll_error": poll_error })
 }
 
 /// notify watcher on ~/.clawdometer + 2s fallback poll. Emits only when the
@@ -29,6 +38,7 @@ pub fn spawn(app: AppHandle) {
     std::thread::spawn(move || {
         let state_path: PathBuf = clawdometer_core::paths::state_path();
         let live_path: PathBuf = clawdometer_core::paths::live_path();
+        let error_path: PathBuf = clawdometer_core::paths::poll_error_path();
         let dir = state_path.parent().map(Path::to_path_buf);
 
         let (tx, rx) = std::sync::mpsc::channel::<()>();
@@ -45,8 +55,8 @@ pub fn spawn(app: AppHandle) {
         });
 
         // initial emission so the UI renders immediately
-        let payload = build_payload(&state_path, &live_path);
-        let mut last_state = payload["state"].clone();
+        let payload = build_payload(&state_path, &live_path, &error_path);
+        let mut last_payload = payload.clone();
         let _ = app.emit(STATE_EVENT, &payload);
         update_tooltip(&app, &payload);
 
@@ -58,10 +68,12 @@ pub fn spawn(app: AppHandle) {
         loop {
             // wake on FS event or every 2s (debounce fallback poll)
             let _ = rx.recv_timeout(Duration::from_secs(2));
-            let payload = build_payload(&state_path, &live_path);
-            if startup_grace > 0 || payload["state"] != last_state {
+            let payload = build_payload(&state_path, &live_path, &error_path);
+            // Whole-payload compare so a poll_error change re-emits too. The
+            // payload is timestamp-free, so identical data never re-emits.
+            if startup_grace > 0 || payload != last_payload {
                 startup_grace = startup_grace.saturating_sub(1);
-                last_state = payload["state"].clone();
+                last_payload = payload.clone();
                 let _ = app.emit(STATE_EVENT, &payload);
                 update_tooltip(&app, &payload);
             }
@@ -115,9 +127,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("state.json");
         let live = dir.path().join("live.json");
-        assert!(build_payload(&missing, &live)["state"].is_null());
+        let err = dir.path().join("poll_error.json");
+        assert!(build_payload(&missing, &live, &err)["state"].is_null());
         std::fs::write(&missing, "{ torn").unwrap();
-        assert!(build_payload(&missing, &live)["state"].is_null());
+        assert!(build_payload(&missing, &live, &err)["state"].is_null());
     }
 
     #[test]
@@ -128,9 +141,41 @@ mod tests {
         let input = clawdometer_core::schema::parse_statusline_input(raw).unwrap();
         let state = clawdometer_core::state::State::from_input(&input, "t".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload = build_payload(&path, &dir.path().join("live.json"));
+        let payload =
+            build_payload(&path, &dir.path().join("live.json"), &dir.path().join("e.json"));
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 1);
         assert_eq!(payload["state"]["captured_at"], "t");
+    }
+
+    #[test]
+    fn payload_exposes_only_what_the_ui_renders() {
+        // The webview should never receive session_id / transcript_path /
+        // model / cli_version — it renders rate_limits + captured_at only.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("state.json");
+        let mut state = snapshot("t", Some(42));
+        state.session_id = Some("sess-secret".into());
+        state.transcript_path = Some("C:\\transcripts\\x.jsonl".into());
+        state.cli_version = Some("2.1.205".into());
+        clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
+        let payload =
+            build_payload(&path, &dir.path().join("live.json"), &dir.path().join("e.json"));
+        let obj = payload["state"].as_object().unwrap();
+        assert_eq!(obj.keys().collect::<Vec<_>>(), ["captured_at", "rate_limits"]);
+        assert!(payload.get("received_at_ms").is_none(), "dead field must be gone");
+    }
+
+    #[test]
+    fn payload_carries_poll_error_kind() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path().join("state.json");
+        let live = dir.path().join("live.json");
+        let err = dir.path().join("poll_error.json");
+        assert!(build_payload(&state, &live, &err)["poll_error"].is_null());
+        std::fs::write(&err, r#"{"kind": "auth"}"#).unwrap();
+        assert_eq!(build_payload(&state, &live, &err)["poll_error"], "auth");
+        std::fs::write(&err, "{ torn").unwrap();
+        assert!(build_payload(&state, &live, &err)["poll_error"].is_null());
     }
 
     #[test]

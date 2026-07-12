@@ -1,12 +1,24 @@
 // Default skin. Contract: `state-updated` (usage data) and `ui-prefs`
 // (opacity/compact) events in; `ui-ready` and `toggle-compact` events out.
 
+// If Tauri's bridge injection ever fails, show a hint instead of throwing
+// mid-setup (an uncaught throw here would also kill render/setInterval below).
+if (!window.__TAURI__) {
+  document.getElementById("age").textContent = "tauri bridge missing — restart the HUD";
+  throw new Error("__TAURI__ not injected");
+}
+
+// Every Tauri IPC call returns a promise; a rejection (e.g. a capability
+// narrowed in a future build) should land in the console, not as a silent
+// unhandledrejection in a hidden webview.
+const logRejection = (p) => p.catch(console.error);
+
 // The HUD is chrome, not a page — suppress WebView2's context menu
 // (Back/Refresh/Save as/Print) and instead pop the native Opacity menu, so the
 // panel itself is a right-click target for opacity (same items as the tray).
 window.addEventListener("contextmenu", (e) => {
   e.preventDefault();
-  window.__TAURI__.event.emit("hud-context");
+  logRejection(window.__TAURI__.event.emit("hud-context"));
 });
 
 // The whole panel is the grab target. Drag anywhere to move; double-click
@@ -22,12 +34,12 @@ window.addEventListener("mousemove", (e) => {
   if (!dragOrigin || !(e.buttons & 1)) { dragOrigin = null; return; }
   if (Math.abs(e.screenX - dragOrigin.x) > 4 || Math.abs(e.screenY - dragOrigin.y) > 4) {
     dragOrigin = null;
-    window.__TAURI__.window.getCurrentWindow().startDragging();
+    logRejection(window.__TAURI__.window.getCurrentWindow().startDragging());
   }
 });
 window.addEventListener("mouseup", () => { dragOrigin = null; });
 window.addEventListener("dblclick", (e) => {
-  if (e.button === 0) window.__TAURI__.event.emit("toggle-compact");
+  if (e.button === 0) logRejection(window.__TAURI__.event.emit("toggle-compact"));
 });
 
 const els = {
@@ -69,7 +81,14 @@ function renderPrimary(win) {
     return;
   }
   const pct = Math.max(0, Math.min(100, win.used_percentage));
-  els.txt5h.innerHTML = `${win.used_percentage}<span class="u">%</span>`;
+  // textContent + createElement, never innerHTML: the state files are the
+  // input here, and a template injection sink is one refactor away from XSS.
+  els.txt5h.textContent = "";
+  els.txt5h.append(String(win.used_percentage));
+  const unit = document.createElement("span");
+  unit.className = "u";
+  unit.textContent = "%";
+  els.txt5h.append(unit);
   els.txt5h.style.color = numColor(win.used_percentage);
   els.bar5h.style.width = pct + "%";
   els.bar5h.style.background = barColor(win.used_percentage);
@@ -133,33 +152,44 @@ function render() {
   document.body.classList.toggle("critical", critical);
   els.countdown.style.color = critical ? "#e5484d" : "";
 
-  // Data older than ~10 missed polls means the poller is failing (network
-  // down or sign-in expired) — make that visible instead of silently aging.
+  // Data older than ~10 missed polls means the poller is failing — make that
+  // visible instead of silently aging, with the poller's own diagnosis
+  // (poll_error.json) picking the right recovery hint.
   const ageMs = nowMs - Date.parse(state.captured_at);
   const stale = Number.isFinite(ageMs) && ageMs > 10 * 60000;
-  els.age.textContent =
-    fmtAge(state.captured_at, nowMs) + (stale ? " — poll failing, open Claude Code" : "");
+  const pollError = current && current.poll_error;
+  const hint =
+    pollError === "network" ? " — offline, retrying"
+    : pollError === "auth" ? " — sign-in expired, open Claude Code"
+    : " — poll failing, open Claude Code";
+  els.age.textContent = fmtAge(state.captured_at, nowMs) + (stale ? hint : "");
   els.footer.classList.toggle("stale", stale);
   const sd = state.rate_limits.seven_day;
   const resetDay = fmtResetDay(sd && sd.resets_at);
-  els.reset.innerHTML = resetDay ? `resets <b>${resetDay}</b>` : "";
+  els.reset.textContent = "";
+  if (resetDay) {
+    els.reset.append("resets ");
+    const day = document.createElement("b");
+    day.textContent = resetDay;
+    els.reset.append(day);
+  }
 }
 
-window.__TAURI__.event.listen("state-updated", (event) => {
+logRejection(window.__TAURI__.event.listen("state-updated", (event) => {
   current = event.payload;
   render();
-});
+}));
 
-window.__TAURI__.event.listen("ui-prefs", (event) => {
+logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   const p = event.payload || {};
   compactMode = !!p.compact;
   document.body.classList.toggle("compact", compactMode);
   els.card.style.opacity = typeof p.opacity === "number" ? p.opacity : 1;
   render();
-});
+}));
 // Ask the backend to (re)send prefs — emissions before this listener
 // attached were lost.
-window.__TAURI__.event.emit("ui-ready");
+logRejection(window.__TAURI__.event.emit("ui-ready"));
 
 // Age line ticks locally between updates.
 setInterval(render, 30000);
