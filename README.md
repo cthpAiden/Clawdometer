@@ -6,6 +6,10 @@ Unofficial Windows desktop HUD for Claude Code usage limits.
 
 > **Unofficial.** Not affiliated with or endorsed by Anthropic.
 
+<img width="261" height="158" alt="Screenshot 2026-07-13 001402" src="https://github.com/user-attachments/assets/7c10635c-367a-4fbc-bb94-ed330299fadb" />
+<img width="165" height="128" alt="Screenshot 2026-07-13 001412" src="https://github.com/user-attachments/assets/d8fbfe7c-52dc-4800-9cff-e2b85d1f4e62" />
+
+
 ## What it does
 
 Claude Code sends usage data (rate-limit percentages, reset times, model,
