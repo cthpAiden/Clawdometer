@@ -97,11 +97,43 @@ fn tail_indicates_generating(tail: &str) -> bool {
                     .is_some_and(is_terminal_stop_reason);
                 return !terminal;
             }
+            // A user entry is an in-flight turn — unless it's scaffolding Claude
+            // Code writes with no reply pending (the /compact summary, slash-
+            // command echoes). Those must not pin `working` on, so skip past them
+            // to the real last message.
+            Some("user") if is_synthetic_user_entry(&v) => continue,
             Some("user") => return true,
+            // Terminal system markers: the turn is over even if no assistant
+            // entry with a terminal stop_reason was written (turns can end on
+            // a tool_result). stop_hook_summary = stop hook ran after the turn;
+            // compact_boundary = compaction finished between turns.
+            Some("system")
+                if matches!(
+                    v.get("subtype").and_then(|s| s.as_str()),
+                    Some("stop_hook_summary" | "compact_boundary")
+                ) =>
+            {
+                return false
+            }
             _ => continue,
         }
     }
     false
+}
+
+/// A `user`-typed transcript entry that isn't a prompt awaiting a reply: the
+/// post-/compact summary, or a slash-command echo (`<command-name>`,
+/// `<local-command-*>`). These land after a turn completes, so treating them as
+/// mid-turn would blip the HUD on while idle.
+fn is_synthetic_user_entry(v: &serde_json::Value) -> bool {
+    if v.get("isCompactSummary").and_then(|b| b.as_bool()) == Some(true) {
+        return true;
+    }
+    v.pointer("/message/content")
+        .and_then(|c| c.as_str())
+        .is_some_and(|s| {
+            s.starts_with("<command-name>") || s.starts_with("<local-command-")
+        })
 }
 
 fn is_terminal_stop_reason(stop_reason: &str) -> bool {
@@ -331,6 +363,26 @@ mod tests {
     const USER_MSG: &str = r#"{"type":"user","message":{"role":"user","content":[{"type":"text"}]}}"#;
     const META_TITLE: &str = r#"{"type":"custom-title"}"#;
     const META_PROMPT: &str = r#"{"type":"last-prompt"}"#;
+    // Synthetic `user` entries Claude Code writes after /compact: the summary
+    // (isCompactSummary) and the slash-command echoes. None is an in-flight
+    // prompt — the previous turn already completed.
+    const COMPACT_SUMMARY: &str =
+        r#"{"type":"user","isCompactSummary":true,"message":{"role":"user","content":"This session is being continued..."}}"#;
+    const CMD_CAVEAT: &str =
+        r#"{"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"}}"#;
+    const CMD_NAME: &str =
+        r#"{"type":"user","message":{"role":"user","content":"<command-name>/compact</command-name>"}}"#;
+    const CMD_STDOUT: &str =
+        r#"{"type":"user","message":{"role":"user","content":"<local-command-stdout>Compacted </local-command-stdout>"}}"#;
+    // A tool result is `user`-typed with array content — mid-turn it means the
+    // assistant is about to continue, but a turn can also END on one (no
+    // terminal assistant entry ever written; observed in real transcripts).
+    const TOOL_RESULT: &str =
+        r#"{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_x","type":"tool_result","content":"ok"}]}}"#;
+    // Terminal system markers: turn is over / compaction finished.
+    const STOP_HOOK: &str = r#"{"type":"system","subtype":"stop_hook_summary","level":"suggestion"}"#;
+    const BOUNDARY: &str =
+        r#"{"type":"system","subtype":"compact_boundary","content":"Conversation compacted"}"#;
 
     #[test]
     fn terminal_stop_reasons() {
@@ -355,6 +407,42 @@ mod tests {
         assert!(!tail_indicates_generating(""));
         // a truncated (unparseable) leading fragment is skipped, not fatal
         assert!(tail_indicates_generating(&format!("{{\"type\":\"assi…broken\n{ASSISTANT_TOOL}\n")));
+    }
+
+    #[test]
+    fn idle_after_compact_despite_synthetic_user_entries() {
+        // After /compact the tail is the prior turn's end_turn, then the compact
+        // summary and the /compact command echoes — all `user`-typed, none an
+        // in-flight prompt. Must read idle, not blip on until the cap.
+        let tail = format!(
+            "{ASSISTANT_DONE}\n{COMPACT_SUMMARY}\n{CMD_CAVEAT}\n{CMD_NAME}\n{CMD_STDOUT}\n"
+        );
+        assert!(!tail_indicates_generating(&tail));
+    }
+
+    #[test]
+    fn genuine_prompt_after_compact_scaffolding_generates() {
+        // The user then sends a real prompt after the scaffolding: that IS an
+        // in-flight turn and must blip.
+        let real = r#"{"type":"user","message":{"role":"user","content":"why is it blipping"}}"#;
+        let tail = format!("{ASSISTANT_DONE}\n{COMPACT_SUMMARY}\n{CMD_STDOUT}\n{real}\n");
+        assert!(tail_indicates_generating(&tail));
+    }
+
+    #[test]
+    fn idle_after_compact_when_prior_turn_ended_on_tool_result() {
+        // Real shape from a live transcript: last turn ended on a tool_result
+        // (no end_turn assistant entry), then stop hook ran, then /compact.
+        // Walkback past the synthetics must stop at the system markers, not
+        // fall through to the tool_result and pin `working` on.
+        let tail = format!(
+            "{TOOL_RESULT}\n{STOP_HOOK}\n{BOUNDARY}\n{COMPACT_SUMMARY}\n{CMD_CAVEAT}\n{CMD_NAME}\n{CMD_STDOUT}\n"
+        );
+        assert!(!tail_indicates_generating(&tail));
+        // Stop hook alone (no compact) also marks the turn done.
+        assert!(!tail_indicates_generating(&format!("{TOOL_RESULT}\n{STOP_HOOK}\n")));
+        // But a bare trailing tool_result IS mid-turn — must still blip.
+        assert!(tail_indicates_generating(&format!("{ASSISTANT_TOOL}\n{TOOL_RESULT}\n")));
     }
 
     /// Write a one-project transcript with the given JSONL body; returns
