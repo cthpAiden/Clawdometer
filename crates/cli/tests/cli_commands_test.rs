@@ -118,14 +118,14 @@ fn uninstall_with_settings_flag_missing_value_exits_2_and_touches_nothing() {
     assert!(!claw.exists(), "no files must be written when --settings is rejected");
 }
 
-fn write_snapshot(path: &Path, captured_at: &str, pct: i64) {
+fn write_snapshot(path: &Path, captured_at: &str, pct: i64, resets_at: i64) {
     let state = clawdometer_core::state::State {
         schema_version: clawdometer_core::state::SCHEMA_VERSION,
         captured_at: captured_at.into(),
         rate_limits: Some(clawdometer_core::schema::RateLimits {
             five_hour: Some(clawdometer_core::schema::LimitWindow {
                 used_percentage: pct,
-                resets_at: 0,
+                resets_at,
             }),
             seven_day: None,
         }),
@@ -138,20 +138,47 @@ fn write_snapshot(path: &Path, captured_at: &str, pct: i64) {
     clawdometer_core::state::write_state_atomic(path, &state).unwrap();
 }
 
+/// Far enough in the future that a test run never crosses it.
+const FUTURE_RESET: i64 = 4_102_444_800; // 2100-01-01
+
 #[test]
-fn status_merges_newer_live_snapshot() {
-    // Same merge the HUD does: live.json (fresh poller data) must win over an
-    // older statusline snapshot, so `status` never reports hours-old numbers
-    // while the HUD shows fresh ones.
+fn status_reports_statusline_snapshot() {
     let tmp = tempfile::tempdir().unwrap();
     let claw = tmp.path().join("claw");
     std::fs::create_dir_all(&claw).unwrap();
-    write_snapshot(&claw.join("state.json"), "2026-07-12T00:00:00Z", 42);
-    write_snapshot(&claw.join("live.json"), "2026-07-12T01:00:00Z", 77);
+    write_snapshot(&claw.join("state.json"), "2026-07-12T00:00:00Z", 42, FUTURE_RESET);
+    let (stdout, _, code) = run(&["status"], &claw);
+    assert_eq!(code, 0);
+    assert!(stdout.contains("5h 42%"), "{stdout}");
+    assert!(stdout.contains("2026-07-12T00:00:00Z"), "{stdout}");
+}
+
+#[test]
+fn status_merges_newer_live_refresh_snapshot() {
+    // Same merge the HUD does: live.json (headless /usage refresh) must win
+    // over an older statusline snapshot.
+    let tmp = tempfile::tempdir().unwrap();
+    let claw = tmp.path().join("claw");
+    std::fs::create_dir_all(&claw).unwrap();
+    write_snapshot(&claw.join("state.json"), "2026-07-12T00:00:00Z", 42, FUTURE_RESET);
+    write_snapshot(&claw.join("live.json"), "2026-07-12T01:00:00Z", 77, FUTURE_RESET);
     let (stdout, _, code) = run(&["status"], &claw);
     assert_eq!(code, 0);
     assert!(stdout.contains("5h 77%"), "newer live.json must win: {stdout}");
     assert!(stdout.contains("2026-07-12T01:00:00Z"), "captured_at from live: {stdout}");
+}
+
+#[test]
+fn status_zeroes_window_whose_reset_time_passed() {
+    // Same derivation the HUD does: an expired window is 0% until the next
+    // request opens a new one — status must not report a dead window's usage.
+    let tmp = tempfile::tempdir().unwrap();
+    let claw = tmp.path().join("claw");
+    std::fs::create_dir_all(&claw).unwrap();
+    write_snapshot(&claw.join("state.json"), "2026-07-12T00:00:00Z", 42, 1_000);
+    let (stdout, _, code) = run(&["status"], &claw);
+    assert_eq!(code, 0);
+    assert!(stdout.contains("5h 0%"), "expired window must read 0%: {stdout}");
 }
 
 #[test]

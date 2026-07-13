@@ -65,10 +65,12 @@ const numColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f0b429" : "#63b
 // Header countdown to the 5h window reset. Account-wide limits, so this beats a
 // model name. Leading ↻ marks it as a reset countdown so the number isn't read as
 // usage; regular spells "resets in", compact drops the words to fit the pill.
+// Past the reset the backend derives 0% (the window is gone until the next
+// request opens one), so the label switches to a plain "reset".
 function fmtCountdown(resetsAtEpochSec, nowMs, compact) {
   if (!Number.isFinite(resetsAtEpochSec)) return "—";
   const mins = Math.ceil((resetsAtEpochSec * 1000 - nowMs) / 60000);
-  if (mins <= 0) return "↻ resetting…";
+  if (mins <= 0) return "↻ reset";
   const core = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
   return compact ? `↻ ${core}` : `↻ resets in ${core}`;
 }
@@ -108,8 +110,8 @@ function renderSecondary(win) {
   els.bar7d.style.background = barColor(win.used_percentage);
 }
 
-// Weekly reset day + local time, from the same seven_day.resets_at the poller
-// already stores (epoch seconds) — the exact field Claude's own UI renders as
+// Weekly reset day + local time, from the seven_day.resets_at the statusline
+// snapshot stores (epoch seconds) — the exact field Claude's own UI renders as
 // "Resets Thu 10:00 AM". Regular size only; compact has no footer room.
 function fmtResetDay(resetsAtEpochSec) {
   if (!Number.isFinite(resetsAtEpochSec)) return "";
@@ -130,29 +132,17 @@ function fmtAge(capturedAtIso, nowMs) {
   return `as of ${hours}h ${mins % 60}m ago`;
 }
 
-// Poller diagnosis (poll_error.json kind) → user-facing hint. Shown alone
-// before the first data ever arrives (a first run without Claude Code would
-// otherwise say "waiting" forever), and as a suffix once data goes stale.
-const pollErrorHints = {
-  "no-credentials": "open Claude Code and sign in",
-  "auth": "sign-in expired, open Claude Code",
-  "no-curl": "curl.exe missing (needs Windows 10 1803+)",
-  "network": "offline, retrying",
-};
-
 function render() {
   const nowMs = Date.now();
   const state = current && current.state;
-  const pollError = current && current.poll_error;
   if (!state || !state.rate_limits) {
     els.countdown.textContent = "—";
     els.countdown.style.color = "";
     renderPrimary(null);
     renderSecondary(null);
-    const hint = pollErrorHints[pollError];
-    els.age.textContent = hint || "waiting for usage data";
+    els.age.textContent = "waiting for data — open Claude Code";
     els.reset.textContent = "";
-    els.footer.classList.toggle("stale", !!hint);
+    els.footer.classList.remove("stale");
     document.body.classList.remove("critical");
     return;
   }
@@ -166,23 +156,28 @@ function render() {
   document.body.classList.toggle("critical", critical);
   els.countdown.style.color = critical ? "#e5484d" : "";
 
-  // Data older than ~10 missed polls means the poller is failing — make that
-  // visible instead of silently aging, with the poller's own diagnosis
-  // (poll_error.json) picking the right recovery hint.
+  // The statusline only delivers data while Claude Code runs, so aging is
+  // normal, not a failure — and the backend zeroes any window whose reset
+  // passed, which keeps an idle 5h number honest. Old data can still hide
+  // usage made elsewhere (claude.ai web/mobile), so past 30 minutes say how
+  // to refresh instead of silently aging.
   const ageMs = nowMs - Date.parse(state.captured_at);
   // Unparseable or future-stamped captured_at (clock stepped back) is as
   // untrustworthy as old data — never render it as fresh.
-  const stale = !Number.isFinite(ageMs) || ageMs > 10 * 60000 || ageMs < -60000;
+  const stale = !Number.isFinite(ageMs) || ageMs > 30 * 60000 || ageMs < -60000;
   const hint = " — " + (
     Number.isFinite(ageMs) && ageMs < -60000
       ? "check system clock"
-      : pollErrorHints[pollError] || "poll failing, open Claude Code");
+      : "open Claude Code to refresh");
   els.age.textContent = stale
     ? (fmtAge(state.captured_at, nowMs) || "stale data") + hint
     : fmtAge(state.captured_at, nowMs);
   els.footer.classList.toggle("stale", stale);
   const sd = state.rate_limits.seven_day;
-  const resetDay = fmtResetDay(sd && sd.resets_at);
+  // A weekly reset time in the past is no longer a schedule — drop the line
+  // (the backend has already zeroed the percentage).
+  const resetDay =
+    sd && sd.resets_at * 1000 > nowMs ? fmtResetDay(sd.resets_at) : "";
   els.reset.textContent = "";
   if (resetDay) {
     els.reset.append("resets ");

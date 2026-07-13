@@ -8,66 +8,63 @@ Unofficial Windows desktop HUD for Claude Code usage limits.
 
 ## What it does
 
-The HUD polls Anthropic's usage endpoint every 60 seconds, so the 5-hour and
-7-day rate-limit percentages stay fresh even when no Claude Code session is
-running. It shows them in a small always-on-top HUD and a system-tray tooltip
-(`5h X% · 7d Y%`).
-
-Additionally, Claude Code sends usage data (percentages, reset times, model,
+Claude Code sends usage data (rate-limit percentages, reset times, model,
 context window) to your statusline command on every API response. Clawdometer
-installs itself as that statusline command and records the latest snapshot to
-`~/.clawdometer/state.json`. Whichever source is newer wins — in the HUD and
-in `clawdometer status`.
+installs itself as that statusline command (automatically on first HUD launch
+if you have no statusline configured), records the latest snapshot to
+`~/.clawdometer/state.json`, and shows the 5-hour and 7-day percentages in a
+small always-on-top HUD and a system-tray tooltip (`5h X% · 7d Y%`).
+
+When the snapshot goes stale (you're using claude.ai web/mobile or the
+desktop app instead of a statusline-fed terminal session), the HUD refreshes
+by running the **official CLI headlessly** — `claude -p /usage` — and
+parsing the report Claude Code itself prints (about once a minute while no
+fresher data is coming in, or on demand via tray → *Refresh usage*).
+
+Those are the only two data sources, and both are official Claude Code
+surfaces — Clawdometer makes **zero network requests of its own** and never
+touches your credentials. (Earlier versions polled Anthropic's usage
+endpoint with Claude Code's OAuth token; that was removed: Anthropic's
+Consumer Terms of Service prohibit using OAuth tokens from Claude accounts
+in third-party tools, and this app should never put your account at risk.)
 
 The HUD header shows a countdown to the 5-hour window reset (limits are
-account-wide, so a model name would add nothing). The footer shows data age
-and turns red with a hint if polling has been failing for over 10 minutes —
-the hint distinguishes a network problem ("offline, retrying") from an
-expired sign-in ("sign-in expired, open Claude Code").
+account-wide, so a model name would add nothing). When a window's reset time
+passes while your machine is idle, the HUD derives the truthful 0% locally —
+no network needed. The footer shows data age; past 30 minutes it reminds you
+that opening Claude Code refreshes the numbers (usage made on claude.ai
+web/mobile only shows up on the next Claude Code response).
 
-If you already had a statusline configured, Clawdometer preserves it and
-chains it: your original statusline still renders its output (with a 2-second
-timeout), and `uninstall` restores it exactly.
+If you already had a statusline configured, the HUD leaves it alone —
+run `clawdometer install` (CLI) to chain it: your original statusline still
+renders its output (with a 2-second timeout), and `uninstall` restores it
+exactly.
 
-## Security: how the app handles your credential
+## Security
 
-Clawdometer never asks for or stores its own credential. Its live poller
-reuses the OAuth access token that Claude Code already keeps in
-`~/.claude/.credentials.json`:
+Clawdometer never asks for, reads, or stores any credential, and makes **no
+network requests of any kind** — every binary (hook, CLI, HUD) is compiled
+under a `cargo-deny` ban on all HTTP/TLS crates, so this is provable from the
+build, not a promise. There is **no telemetry**. Usage data arrives only via
+Claude Code's own surfaces: its statusline hook (Claude Code runs the hook
+and pipes it a JSON snapshot), and a periodic headless `claude -p /usage`
+run whose plain-text output the HUD parses — in both cases Claude Code
+itself fetches the numbers with its own sign-in, and the only process
+Clawdometer spawns for it is the official `claude` binary. The webview
+receives only usage percentages and reset times over
+one-way events, runs under a strict CSP, has no invokable backend commands,
+and no filesystem or shell capabilities.
 
-- Every 60 seconds it reads that file and shells out to Windows' bundled
-  `C:\Windows\System32\curl.exe` (absolute path — immune to PATH planting,
-  pinned to HTTPS + TLS 1.2) to make a single read-only
-  `GET https://api.anthropic.com/api/oauth/usage` with an
-  `Authorization: Bearer` header. The token is passed to curl **over stdin,
-  never on the command line**, so it is not visible in the process list.
-- If the stored token has expired (or the endpoint rejects it), it makes one
-  `POST https://api.anthropic.com/v1/oauth/token` (refresh-token grant using
-  Claude Code's public PKCE client id — not a secret) and writes the rotated
-  tokens back to `~/.claude/.credentials.json` atomically, so Claude Code's
-  own session keeps working. The write is compare-and-swap guarded: if Claude
-  Code rotated the tokens itself in the meantime, Clawdometer discards its
-  copy instead of clobbering the newer one.
-- On repeated failure the poller backs off exponentially (up to 30 minutes
-  between attempts) instead of hammering the auth endpoint.
-
-Those are the only two network requests in the entire application. The
-statusline hook and CLI are compiled under a `cargo-deny` ban on all HTTP/TLS
-crates and are provably network-free, and there is **no telemetry of any
-kind**. The token is never logged, never written anywhere except back to
-Claude Code's own credentials file, and never sent anywhere except
-`api.anthropic.com`. It is never exposed to the HUD webview: the UI receives
-only usage percentages and reset times over one-way events, runs under a
-strict CSP, has no invokable backend commands, and no filesystem or shell
-capabilities.
+This design is deliberate: Anthropic's Consumer Terms of Service prohibit
+using OAuth tokens from Claude Free/Pro/Max accounts in any third-party tool,
+so Clawdometer only consumes what Claude Code itself hands to its documented
+statusline interface — nothing is impersonated, nothing extra is requested.
 
 **Don't trust — verify.** Everything above is checkable in this repository:
 
-- The *only* network code in the entire codebase is
-  [`app/src-tauri/src/usage_poller.rs`](app/src-tauri/src/usage_poller.rs)
-  (~400 lines including tests). Read it.
 - `cargo deny check bans` proves no HTTP/TLS crate is compiled into any
-  binary (config in [`deny.toml`](deny.toml)).
+  binary (config in [`deny.toml`](deny.toml)) — and the source contains no
+  network code to begin with (`grep` it: no sockets, no curl, no URLs).
 - The webview's entire permission set is
   [`app/src-tauri/capabilities/default.json`](app/src-tauri/capabilities/default.json)
   — events and window-dragging, nothing else.
@@ -76,10 +73,11 @@ capabilities.
   Only download releases from this repository's official Releases page;
   a binary from anywhere else could be a tampered copy.
 
-**Writes:** only `~/.clawdometer/`, the `statusLine` key of
-`~/.claude/settings.json` (during `install`/`uninstall`), and the credentials
-write-back described above. Exception: the tray's "Start with Windows" toggle
-writes the standard HKCU Run registry key, only when you click it.
+**Writes:** only `~/.clawdometer/` and the `statusLine` key of
+`~/.claude/settings.json` (during `install`/`uninstall`, or the HUD's
+one-time auto-install when no statusline exists — a full backup is taken
+first either way). Exception: the tray's "Start with Windows" toggle writes
+the standard HKCU Run registry key, only when you click it.
 
 **Two things worth knowing:**
 
@@ -93,12 +91,12 @@ writes the standard HKCU Run registry key, only when you click it.
 
 ## Requirements
 
-- Windows 10 1803+ (needs the bundled `curl.exe`) or Windows 11.
+- Windows 10 or 11.
 - Microsoft Edge WebView2 runtime — preinstalled on Windows 11 and updated
   Windows 10. If missing, the installer downloads it, which needs internet.
-- Claude Code installed and signed in (the HUD reads its OAuth token from
-  `~/.claude/.credentials.json` — or `%CLAUDE_CONFIG_DIR%\.credentials.json`
-  if you've set that variable; using Claude Code refreshes it).
+- Claude Code installed and signed in — all data comes from its statusline
+  hook, so the HUD only updates while Claude Code is in use. (Clawdometer
+  honors `%CLAUDE_CONFIG_DIR%` if you've relocated `~/.claude`.)
 
 ## Install
 
@@ -113,12 +111,14 @@ writes the standard HKCU Run registry key, only when you click it.
    page. If that trust step bothers you (it should!), build from source
    instead — see below.
 3. Launch **Clawdometer** from the Start menu. A tray icon appears and the
-   HUD window shows up; within a minute it displays live percentages — no
-   other setup needed, as long as Claude Code is installed and signed in.
+   HUD window shows up. If you have no statusline configured, the HUD sets
+   itself up as Claude Code's statusline automatically (one-time, with a
+   settings backup) — from then on every Claude Code response updates the
+   HUD. Send any message in Claude Code and the percentages appear.
 
-For the optional statusline integration you also need the CLI
-(`clawdometer.exe`): download it from the same release (if attached) or
-build it from source, then see "Getting started" below.
+If you already have your own statusline, the HUD won't touch it — use the
+CLI (`clawdometer.exe`, from the same release if attached, or built from
+source) to chain it: see "Getting started" below.
 
 ### From source
 
@@ -133,13 +133,14 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
 ## Getting started
 
 1. **Run the HUD** (`Clawdometer.exe`). A tray icon appears and the HUD
-   window shows up. Within a minute it displays live percentages — no CLI
-   step required. Launching it a second time just brings the existing HUD to
-   the front (single instance).
-2. **Optional — statusline integration:** run `clawdometer install` in a
-   terminal. This sets Clawdometer as your Claude Code statusline command, so
-   every Claude Code response also updates the HUD instantly and your
-   statusline shows `[Model] 5h X% · 7d Y%`.
+   window shows up. If Claude Code has no statusline yet, the HUD claims it
+   automatically (one-time, settings backed up first) — no CLI step
+   required. Use Claude Code and the percentages appear with every response,
+   with your statusline showing `[Model] 5h X% · 7d Y%`. Launching the HUD a
+   second time just brings the existing one to the front (single instance).
+2. **Only if you already have a custom statusline:** run
+   `clawdometer install` in a terminal. This chains your original statusline
+   (its output still renders) while also feeding the HUD.
 
 ## HUD usage
 
@@ -147,27 +148,27 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
   settles and remembered across restarts (and sanity-checked against your
   current monitors, so an unplugged display can't strand it off-screen).
 - **Tray icon, left-click:** show/hide the HUD.
-- **Tray icon, right-click:** menu with *Show/Hide*, *Compact size*,
-  *Opacity*, *Start with Windows* (check mark reflects the actual HKCU Run
-  key state), and *Quit*.
+- **Tray icon, right-click:** menu with *Show/Hide*, *Refresh usage* (runs a
+  headless `claude /usage` now), *Compact size*, *Opacity*, *Start with
+  Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
 - **Compact size:** shrinks the card to roughly half width (bars and
   percentages only — no footer or reset times). Also toggled by
   double-clicking the card. Remembered across restarts.
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
   restarts.
-- **Footer:** data age ("as of 1m ago"). If it turns red, the poll is
-  failing and the message names the fix: not signed in ("open Claude Code
-  and sign in"), an expired sign-in, a missing `curl.exe`, or the network
-  ("offline, retrying"). On a first run the same message appears immediately
-  in place of "waiting for usage data" (the tray tooltip shows it too), so a
-  machine without Claude Code isn't left staring at a blank card.
+- **Footer:** data age ("as of 1m ago"). Data only arrives while Claude Code
+  is in use, so aging is normal; past 30 minutes the footer turns red with
+  "open Claude Code to refresh" — a reminder, not an error. When a limit
+  window's reset time passes, the HUD shows 0% for it on its own (derived
+  locally, no network). Before any data ever arrives, the card and the tray
+  tooltip say "waiting for data — open Claude Code".
 
 ## CLI
 
 ```
 clawdometer install      # backs up settings.json, sets/wraps statusLine
-clawdometer status       # print the current merged snapshot + capture time
+clawdometer status       # print the latest snapshot + capture time
 clawdometer uninstall    # restores the original statusLine (or removes the key)
 clawdometer uninstall --purge   # also deletes ~/.clawdometer/
 ```
@@ -179,8 +180,6 @@ clawdometer uninstall --purge   # also deletes ~/.clawdometer/
   stale path in place.
 - If you edited `statusLine` yourself after installing, `uninstall` refuses
   to touch it and tells you where your original is preserved.
-- `uninstall --purge`: quit the HUD first — a running HUD's poller recreates
-  `~/.clawdometer/` within a minute.
 - `--settings <path>` (for `install`/`uninstall`) targets a non-default
   settings.json — mainly for testing.
 - **Complete removal:** run `clawdometer uninstall --purge`, then uninstall
@@ -197,10 +196,10 @@ Everything lives in `~/.clawdometer/`:
 | File | Purpose |
 |------|---------|
 | `state.json` | last statusline snapshot (written by the hook) |
-| `live.json` | last poller snapshot (written by the HUD every 60s) |
-| `poll_error.json` | why the last poll failed (`auth`/`network`); deleted on success |
+| `live.json` | last refresh snapshot (written by the HUD after a headless `claude /usage` run) |
 | `wrapped.json` | your original statusline command, chained + restored on uninstall |
 | `ui.json` | HUD window position, opacity, compact mode |
+| `statusline-autoinstall.done` | marker: the HUD offered to claim a free statusLine once (so removing it later sticks) |
 | `backups/` | timestamped copies of settings.json taken before each install (may contain secrets from your settings — see Security) |
 
 ## Building from source
@@ -215,12 +214,12 @@ cargo deny check bans      # verify the no-network-crates invariant
 ## Notes
 
 - Percentages have 1% granularity — the same as `/usage` inside Claude Code.
-- The HUD footer shows how old the data is ("as of Xm ago"). With live
-  polling working it should never say more than a minute.
-- Live polling uses Windows' bundled `curl.exe`, which ignores the system
-  (WinHTTP/IE) proxy. Behind a corporate proxy, set the `HTTPS_PROXY`
-  environment variable (user level) so polls go through it; statusline-hook
-  data is unaffected.
+- Data updates with every Claude Code response; when that goes quiet the HUD
+  refreshes via a headless `claude /usage` about once a minute, so usage
+  made on claude.ai web/mobile still shows up. It also zeroes a window
+  locally once its reset time passes.
+- Clawdometer's own binaries are fully offline: proxies, VPNs, and firewalls
+  only matter to Claude Code itself.
 
 ## License
 
@@ -236,67 +235,67 @@ HUD không chính thức cho Windows, hiển thị giới hạn sử dụng củ
 
 ## Ứng dụng làm gì
 
-HUD truy vấn endpoint usage của Anthropic mỗi 60 giây, nên phần trăm giới
-hạn 5 giờ và 7 ngày luôn được cập nhật kể cả khi không có phiên Claude Code
-nào đang chạy. Số liệu hiển thị trong một cửa sổ HUD nhỏ luôn nổi trên cùng
-và trong tooltip ở khay hệ thống (`5h X% · 7d Y%`).
-
-Ngoài ra, Claude Code gửi dữ liệu sử dụng (phần trăm, thời điểm reset, model,
+Claude Code gửi dữ liệu sử dụng (phần trăm giới hạn, thời điểm reset, model,
 context window) tới lệnh statusline của bạn sau mỗi phản hồi API. Clawdometer
-tự cài mình làm lệnh statusline đó và ghi ảnh chụp mới nhất vào
-`~/.clawdometer/state.json`. Nguồn nào mới hơn sẽ thắng — cả trong HUD lẫn
-trong `clawdometer status`.
+tự cài mình làm lệnh statusline đó (tự động ở lần chạy HUD đầu tiên nếu bạn
+chưa cấu hình statusline nào), ghi ảnh chụp mới nhất vào
+`~/.clawdometer/state.json`, và hiển thị phần trăm 5 giờ / 7 ngày trong một
+cửa sổ HUD nhỏ luôn nổi trên cùng cùng tooltip ở khay hệ thống
+(`5h X% · 7d Y%`).
 
-Phần đầu HUD hiển thị đếm ngược tới lúc reset cửa sổ 5 giờ. Phần chân hiển
-thị tuổi của dữ liệu và chuyển sang màu đỏ kèm gợi ý nếu việc truy vấn thất
-bại quá 10 phút — gợi ý phân biệt lỗi mạng ("offline, retrying") với phiên
-đăng nhập hết hạn ("sign-in expired, open Claude Code").
+Khi ảnh chụp bị cũ (bạn đang dùng claude.ai web/mobile hoặc desktop app thay
+vì phiên terminal có statusline), HUD tự làm mới bằng cách chạy **CLI chính
+thức ở chế độ headless** — `claude -p /usage` — và parse báo cáo mà chính
+Claude Code in ra (khoảng mỗi phút một lần khi không có dữ liệu mới hơn,
+hoặc theo yêu cầu qua menu khay → *Refresh usage*).
 
-Nếu bạn đã có statusline cấu hình sẵn, Clawdometer sẽ giữ nguyên và nối
-chuỗi nó: statusline gốc vẫn hiển thị output của mình (với timeout 2 giây),
-và `uninstall` khôi phục lại chính xác.
+Đó là hai nguồn dữ liệu duy nhất, và cả hai đều là bề mặt chính thức của
+Claude Code — Clawdometer **không tự thực hiện request mạng nào** và không
+bao giờ động vào thông tin đăng nhập của bạn. (Các phiên bản trước truy vấn
+endpoint usage của Anthropic bằng OAuth token của Claude Code; tính năng đó
+đã bị gỡ bỏ: Điều khoản Dịch vụ Người dùng của Anthropic cấm dùng OAuth
+token của tài khoản Claude trong công cụ bên thứ ba, và app này không được
+phép đặt tài khoản của bạn vào rủi ro.)
 
-## Bảo mật: ứng dụng xử lý thông tin đăng nhập của bạn thế nào
+Phần đầu HUD hiển thị đếm ngược tới lúc reset cửa sổ 5 giờ. Khi thời điểm
+reset của một cửa sổ trôi qua trong lúc máy rảnh, HUD tự suy ra con số trung
+thực 0% ngay tại chỗ — không cần mạng. Phần chân hiển thị tuổi dữ liệu; quá
+30 phút nó nhắc bạn mở Claude Code để làm mới (mức sử dụng phát sinh trên
+claude.ai web/mobile chỉ hiện ra ở phản hồi Claude Code kế tiếp).
 
-Clawdometer không bao giờ yêu cầu hay tự lưu trữ thông tin đăng nhập riêng.
-Bộ poller tái sử dụng OAuth access token mà Claude Code đã lưu sẵn trong
-`~/.claude/.credentials.json`:
+Nếu bạn đã có statusline cấu hình sẵn, HUD sẽ không động vào — hãy chạy
+`clawdometer install` (CLI) để nối chuỗi: statusline gốc vẫn hiển thị output
+của mình (với timeout 2 giây), và `uninstall` khôi phục lại chính xác.
 
-- Mỗi 60 giây, nó đọc file đó rồi gọi `C:\Windows\System32\curl.exe` có sẵn
-  của Windows (đường dẫn tuyệt đối — miễn nhiễm với chiêu cài binary giả qua
-  PATH, ghim HTTPS + TLS 1.2) để thực hiện đúng một request chỉ-đọc
-  `GET https://api.anthropic.com/api/oauth/usage` với header
-  `Authorization: Bearer`. Token được truyền cho curl **qua stdin, không bao
-  giờ qua dòng lệnh**, nên không hiện trong danh sách tiến trình.
-- Nếu token đã hết hạn (hoặc bị endpoint từ chối), nó thực hiện một request
-  `POST https://api.anthropic.com/v1/oauth/token` (refresh-token grant, dùng
-  PKCE client id công khai của Claude Code — không phải bí mật) và ghi token
-  mới trở lại `~/.claude/.credentials.json` một cách nguyên tử, để phiên của
-  chính Claude Code vẫn hoạt động. Thao tác ghi có kiểm tra compare-and-swap:
-  nếu Claude Code đã tự xoay vòng token trong lúc đó, Clawdometer bỏ bản của
-  mình thay vì ghi đè lên bản mới hơn.
-- Khi thất bại liên tiếp, poller giãn thời gian thử lại theo cấp số nhân
-  (tối đa 30 phút giữa các lần) thay vì dồn dập gọi endpoint xác thực.
+## Bảo mật
 
-Đó là hai request mạng duy nhất trong toàn bộ ứng dụng. Hook statusline và
-CLI được biên dịch với lệnh cấm (qua `cargo-deny`) mọi crate HTTP/TLS nên
-chắc chắn không có khả năng truy cập mạng, và **hoàn toàn không có telemetry
-dưới bất kỳ hình thức nào**. Token không bao giờ bị ghi log, không bao giờ
-được ghi ra nơi nào khác ngoài chính file credentials của Claude Code, và
-không bao giờ được gửi tới đâu khác ngoài `api.anthropic.com`. Token cũng
-không bao giờ lộ ra webview của HUD: giao diện chỉ nhận phần trăm sử dụng và
-thời điểm reset qua sự kiện một chiều, chạy dưới CSP nghiêm ngặt, không có
-lệnh backend nào gọi được từ giao diện, và không có quyền truy cập file hay
-shell.
+Clawdometer không bao giờ yêu cầu, đọc, hay lưu trữ bất kỳ thông tin đăng
+nhập nào, và thực hiện **zero request mạng dưới mọi hình thức** — mọi binary
+(hook, CLI, HUD) đều được biên dịch với lệnh cấm (qua `cargo-deny`) toàn bộ
+crate HTTP/TLS, nên điều này chứng minh được từ chính bản build, không phải
+lời hứa. **Hoàn toàn không có telemetry.** Dữ liệu sử dụng chỉ đến qua các
+bề mặt của chính Claude Code: hook statusline (Claude Code chạy hook và
+truyền cho nó một ảnh chụp JSON), và lần chạy `claude -p /usage` headless
+định kỳ mà HUD parse output dạng text — trong cả hai trường hợp, chính
+Claude Code lấy số liệu bằng đăng nhập của nó, và tiến trình duy nhất
+Clawdometer khởi chạy cho việc này là binary `claude` chính thức. Webview
+chỉ nhận phần trăm sử dụng và thời điểm reset qua sự kiện một chiều,
+chạy dưới CSP nghiêm ngặt, không có lệnh backend nào gọi được từ giao diện,
+và không có quyền truy cập file hay shell.
+
+Thiết kế này là chủ đích: Điều khoản Dịch vụ Người dùng của Anthropic cấm
+dùng OAuth token của tài khoản Claude Free/Pro/Max trong bất kỳ công cụ bên
+thứ ba nào, nên Clawdometer chỉ tiêu thụ những gì Claude Code tự trao cho
+giao diện statusline được tài liệu hóa của nó — không giả danh gì, không
+request thêm gì.
 
 **Đừng tin — hãy kiểm chứng.** Mọi điều ở trên đều kiểm tra được ngay trong
 repository này:
 
-- Đoạn code mạng *duy nhất* trong toàn bộ codebase là
-  [`app/src-tauri/src/usage_poller.rs`](app/src-tauri/src/usage_poller.rs)
-  (~400 dòng tính cả test). Hãy đọc nó.
 - `cargo deny check bans` chứng minh không crate HTTP/TLS nào được biên dịch
-  vào bất kỳ binary nào (cấu hình trong [`deny.toml`](deny.toml)).
+  vào bất kỳ binary nào (cấu hình trong [`deny.toml`](deny.toml)) — và mã
+  nguồn vốn không chứa dòng code mạng nào (`grep` thử: không socket, không
+  curl, không URL).
 - Toàn bộ quyền của webview nằm trong
   [`app/src-tauri/capabilities/default.json`](app/src-tauri/capabilities/default.json)
   — chỉ sự kiện và kéo cửa sổ, không gì khác.
@@ -305,10 +304,11 @@ repository này:
   lệnh. Chỉ tải release từ trang Releases chính thức của repository này;
   binary từ bất kỳ nơi nào khác có thể là bản đã bị can thiệp.
 
-**Ghi dữ liệu:** chỉ vào `~/.clawdometer/`, khóa `statusLine` trong
-`~/.claude/settings.json` (khi `install`/`uninstall`), và thao tác ghi-lại
-credentials mô tả ở trên. Ngoại lệ: nút "Start with Windows" trong menu khay
-ghi khóa registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
+**Ghi dữ liệu:** chỉ vào `~/.clawdometer/` và khóa `statusLine` trong
+`~/.claude/settings.json` (khi `install`/`uninstall`, hoặc khi HUD tự cài
+một-lần-duy-nhất lúc chưa có statusline nào — cả hai đều sao lưu toàn bộ
+settings trước). Ngoại lệ: nút "Start with Windows" trong menu khay ghi khóa
+registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 
 **Hai điều nên biết:**
 
@@ -323,12 +323,12 @@ ghi khóa registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 
 ## Yêu cầu
 
-- Windows 10 1803+ (cần `curl.exe` đi kèm hệ điều hành) hoặc Windows 11.
+- Windows 10 hoặc 11.
 - Microsoft Edge WebView2 runtime — có sẵn trên Windows 11 và Windows 10 đã
   cập nhật. Nếu thiếu, trình cài đặt sẽ tải về, việc này cần internet.
-- Đã cài và đăng nhập Claude Code (HUD đọc OAuth token từ
-  `~/.claude/.credentials.json` — hoặc `%CLAUDE_CONFIG_DIR%\.credentials.json`
-  nếu bạn đã đặt biến đó; dùng Claude Code sẽ làm mới token).
+- Đã cài và đăng nhập Claude Code — toàn bộ dữ liệu đến từ hook statusline
+  của nó, nên HUD chỉ cập nhật khi Claude Code đang được dùng. (Clawdometer
+  tôn trọng `%CLAUDE_CONFIG_DIR%` nếu bạn đã di dời `~/.claude`.)
 
 ## Cài đặt
 
@@ -342,12 +342,14 @@ ghi khóa registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
    tải từ trang Releases của chính repository này. Nếu bước tin tưởng đó làm
    bạn lấn cấn (và nên thế!), hãy tự biên dịch từ mã nguồn — xem bên dưới.
 3. Mở **Clawdometer** từ Start menu. Biểu tượng khay xuất hiện cùng cửa sổ
-   HUD; trong vòng một phút nó hiển thị phần trăm trực tiếp — không cần
-   thiết lập gì thêm, miễn là Claude Code đã cài và đăng nhập.
+   HUD. Nếu bạn chưa cấu hình statusline nào, HUD tự đặt mình làm statusline
+   của Claude Code (một lần duy nhất, có sao lưu settings) — từ đó mỗi phản
+   hồi của Claude Code đều cập nhật HUD. Gửi bất kỳ tin nhắn nào trong
+   Claude Code là phần trăm hiện ra.
 
-Để dùng tích hợp statusline (tùy chọn) bạn cần thêm CLI
-(`clawdometer.exe`): tải từ cùng release (nếu có đính kèm) hoặc tự biên
-dịch, rồi xem mục "Bắt đầu" bên dưới.
+Nếu bạn đã có statusline riêng, HUD sẽ không động vào — hãy dùng CLI
+(`clawdometer.exe`, tải từ cùng release nếu có đính kèm hoặc tự biên dịch)
+để nối chuỗi: xem mục "Bắt đầu" bên dưới.
 
 ### Từ mã nguồn
 
@@ -362,13 +364,14 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
 ## Bắt đầu
 
 1. **Chạy HUD** (`Clawdometer.exe`). Biểu tượng khay xuất hiện cùng cửa sổ
-   HUD. Trong vòng một phút nó hiển thị phần trăm trực tiếp — không cần bước
-   CLI nào. Chạy lần thứ hai chỉ đưa HUD hiện có lên trước (một phiên bản
-   duy nhất).
-2. **Tùy chọn — tích hợp statusline:** chạy `clawdometer install` trong
-   terminal. Lệnh này đặt Clawdometer làm lệnh statusline của Claude Code,
-   để mỗi phản hồi của Claude Code cũng cập nhật HUD tức thì và statusline
-   hiển thị `[Model] 5h X% · 7d Y%`.
+   HUD. Nếu Claude Code chưa có statusline, HUD tự nhận vị trí đó (một lần
+   duy nhất, sao lưu settings trước) — không cần bước CLI nào. Dùng Claude
+   Code là phần trăm hiện ra theo từng phản hồi, statusline hiển thị
+   `[Model] 5h X% · 7d Y%`. Chạy HUD lần thứ hai chỉ đưa HUD hiện có lên
+   trước (một phiên bản duy nhất).
+2. **Chỉ khi bạn đã có statusline riêng:** chạy `clawdometer install` trong
+   terminal. Lệnh này nối chuỗi statusline gốc của bạn (output của nó vẫn
+   hiển thị) đồng thời cấp dữ liệu cho HUD.
 
 ## Sử dụng HUD
 
@@ -376,23 +379,28 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
   dừng lại và được nhớ qua các lần khởi động (có kiểm tra với các màn hình
   hiện tại, nên màn hình đã rút không thể làm HUD kẹt ngoài vùng nhìn thấy).
 - **Biểu tượng khay, chuột trái:** ẩn/hiện HUD.
-- **Biểu tượng khay, chuột phải:** menu gồm *Show/Hide*, *Compact size*,
-  *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa
-  HKCU Run hiện tại), và *Quit*.
+- **Biểu tượng khay, chuột phải:** menu gồm *Show/Hide*, *Refresh usage*
+  (chạy `claude /usage` headless ngay lập tức), *Compact size*, *Opacity*,
+  *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa HKCU Run
+  hiện tại), và *Quit*.
 - **Compact size:** thu thẻ còn khoảng nửa chiều rộng (chỉ thanh và phần
   trăm — không có chân và thời điểm reset). Cũng bật/tắt được bằng cách
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
 - **Opacity:** 100/85/70/55% — giúp thẻ luôn-nổi-trên-cùng bớt che khuất.
   Cũng mở được bằng chuột phải vào thẻ. Được nhớ qua các lần khởi động.
-- **Chân HUD:** tuổi dữ liệu ("as of 1m ago"). Nếu chuyển đỏ, việc truy vấn
-  đã thất bại hơn 10 phút; thông báo cho biết do mạng ("offline, retrying")
-  hay do đăng nhập ("sign-in expired, open Claude Code").
+- **Chân HUD:** tuổi dữ liệu ("as of 1m ago"). Dữ liệu chỉ đến khi Claude
+  Code đang được dùng, nên dữ liệu cũ dần là bình thường; quá 30 phút phần
+  chân chuyển đỏ với "open Claude Code to refresh" — một lời nhắc, không
+  phải lỗi. Khi thời điểm reset của một cửa sổ giới hạn trôi qua, HUD tự
+  hiển thị 0% cho nó (suy ra tại chỗ, không cần mạng). Trước khi có dữ liệu
+  lần đầu, thẻ và tooltip khay hiển thị "waiting for data — open Claude
+  Code".
 
 ## CLI
 
 ```
 clawdometer install      # sao lưu settings.json, đặt/nối chuỗi statusLine
-clawdometer status       # in ảnh chụp gộp hiện tại + thời điểm ghi nhận
+clawdometer status       # in ảnh chụp mới nhất + thời điểm ghi nhận
 clawdometer uninstall    # khôi phục statusLine gốc (hoặc xóa khóa)
 clawdometer uninstall --purge   # đồng thời xóa ~/.clawdometer/
 ```
@@ -404,8 +412,6 @@ clawdometer uninstall --purge   # đồng thời xóa ~/.clawdometer/
   đường dẫn cũ tại chỗ.
 - Nếu bạn tự sửa `statusLine` sau khi cài, `uninstall` sẽ từ chối động vào
   và cho biết bản gốc được lưu ở đâu.
-- `uninstall --purge`: hãy thoát HUD trước — poller của HUD đang chạy sẽ tạo
-  lại `~/.clawdometer/` trong vòng một phút.
 - `--settings <path>` (cho `install`/`uninstall`) nhắm tới settings.json
   không mặc định — chủ yếu để kiểm thử.
 - **Gỡ bỏ hoàn toàn:** chạy `clawdometer uninstall --purge`, rồi gỡ app HUD
@@ -422,10 +428,10 @@ Mọi thứ nằm trong `~/.clawdometer/`:
 | File | Mục đích |
 |------|----------|
 | `state.json` | ảnh chụp statusline mới nhất (do hook ghi) |
-| `live.json` | ảnh chụp poller mới nhất (HUD ghi mỗi 60 giây) |
-| `poll_error.json` | lý do lần truy vấn cuối thất bại (`auth`/`network`); xóa khi thành công |
+| `live.json` | ảnh chụp refresh mới nhất (HUD ghi sau mỗi lần chạy `claude /usage` headless) |
 | `wrapped.json` | lệnh statusline gốc của bạn, được nối chuỗi + khôi phục khi gỡ |
 | `ui.json` | vị trí cửa sổ HUD, độ mờ, chế độ compact |
+| `statusline-autoinstall.done` | đánh dấu: HUD đã đề nghị nhận khóa statusLine trống một lần (nên gỡ ra sau đó sẽ được tôn trọng) |
 | `backups/` | bản sao settings.json có dấu thời gian trước mỗi lần cài (có thể chứa bí mật từ settings — xem mục Bảo mật) |
 
 ## Biên dịch từ mã nguồn
@@ -440,12 +446,12 @@ cargo deny check bans      # kiểm chứng lệnh cấm crate mạng
 ## Ghi chú
 
 - Phần trăm có độ chi tiết 1% — giống `/usage` bên trong Claude Code.
-- Chân HUD hiển thị tuổi dữ liệu ("as of Xm ago"). Khi poller hoạt động bình
-  thường, con số này không bao giờ quá một phút.
-- Poller dùng `curl.exe` đi kèm Windows, vốn bỏ qua proxy hệ thống
-  (WinHTTP/IE). Nếu ở sau proxy công ty, hãy đặt biến môi trường
-  `HTTPS_PROXY` (mức người dùng) để poller đi qua proxy; dữ liệu từ
-  statusline hook không bị ảnh hưởng.
+- Dữ liệu cập nhật theo từng phản hồi của Claude Code; khi im ắng, HUD tự
+  làm mới qua `claude /usage` headless khoảng mỗi phút một lần, nên mức sử
+  dụng trên claude.ai web/mobile vẫn hiện ra. HUD cũng tự đưa một cửa sổ về 0%
+  khi thời điểm reset của nó trôi qua.
+- Các binary của Clawdometer hoàn toàn offline: proxy, VPN, firewall chỉ
+  liên quan tới chính Claude Code.
 
 ## Giấy phép
 

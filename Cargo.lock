@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clawdometer-core",
  "notify",
@@ -490,29 +490,30 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tempfile",
  "time",
+ "wait-timeout",
 ]
 
 [[package]]
 name = "clawdometer-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clawdometer-core",
  "serde_json",
  "tempfile",
  "time",
- "wait-timeout",
- "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "clawdometer-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dirs 6.0.0",
  "serde",
  "serde_json",
  "tempfile",
  "time",
+ "wait-timeout",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2206,6 +2207,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_threads"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "objc2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3725,7 +3735,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18dfaaeddcb932337b5e7866ee7d0ce9b76d2fd092997146f187ec09b4558a50"
 dependencies = [
  "deranged",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde_core",
  "time-core",

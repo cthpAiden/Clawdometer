@@ -1,7 +1,7 @@
 #![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
 
 mod ui_prefs;
-mod usage_poller;
+mod usage_refresher;
 mod watcher;
 
 use std::sync::Mutex;
@@ -78,12 +78,76 @@ fn toggle_hud(app: &tauri::AppHandle) {
     }
 }
 
+/// Statusline auto-install so the HUD works standalone (no CLI download):
+/// with no live poller, Claude Code's statusline hook is the only data
+/// source. Conservative about consent — install only when the `statusLine`
+/// key is free to claim or already a clawdometer hook (repairing a stale exe
+/// path is idempotent). A user's own statusline is never touched: chaining it
+/// stays an explicit `clawdometer install` (CLI) decision. The marker makes
+/// the no-key claim a one-time offer, so removing our key afterwards sticks.
+fn should_autoinstall(settings_path: &std::path::Path, marker: &std::path::Path) -> bool {
+    let root = match std::fs::read_to_string(settings_path) {
+        Ok(raw) => {
+            match serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}')) {
+                Ok(v) => v,
+                Err(_) => return false, // malformed settings: never auto-edit
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => serde_json::json!({}),
+        Err(_) => return false,
+    };
+    match root.get(clawdometer_core::settings::STATUSLINE_KEY) {
+        Some(sl) => sl
+            .get("command")
+            .and_then(|c| c.as_str())
+            .map(clawdometer_core::settings::is_clawdometer_hook_command)
+            .unwrap_or(false),
+        None => !marker.exists(),
+    }
+}
+
+fn autoinstall_statusline() {
+    let settings = clawdometer_core::paths::default_claude_settings_path();
+    let claw = clawdometer_core::paths::clawdometer_dir();
+    let marker = claw.join("statusline-autoinstall.done");
+    if !should_autoinstall(&settings, &marker) {
+        return;
+    }
+    let Ok(exe) = std::env::current_exe() else { return };
+    let command = format!("\"{}\" hook", exe.display());
+    let fmt = time::format_description::parse_borrowed::<2>(
+        "[year][month][day]-[hour][minute][second]",
+    )
+    .expect("static format");
+    let timestamp = time::OffsetDateTime::now_utc()
+        .format(&fmt)
+        .unwrap_or_else(|_| "unknown".into());
+    // Best-effort: same backup + wrap-safety as the CLI's install. Failure
+    // just means the HUD waits for data until the user runs the CLI install.
+    let _ = clawdometer_core::settings::install(&settings, &claw, &command, &timestamp);
+    let _ = std::fs::create_dir_all(&claw);
+    let _ = std::fs::write(&marker, b"");
+}
+
 fn main() {
+    // `clawdometer-app.exe hook` — the same statusline hook the CLI exposes,
+    // so the HUD binary alone can serve as the statusline command it
+    // auto-installs. Must run before any Tauri init: a hook invocation is a
+    // short-lived child of Claude Code, not a second HUD (the single-instance
+    // plugin would otherwise front the running HUD and exit non-zero).
+    if std::env::args().nth(1).as_deref() == Some("hook") {
+        let line = std::panic::catch_unwind(clawdometer_core::hook::run_hook)
+            .unwrap_or_else(|_| String::from("clawdometer"));
+        use std::io::Write as _;
+        let _ = writeln!(std::io::stdout(), "{line}");
+        return;
+    }
+    autoinstall_statusline();
     tauri::Builder::default()
         // Must be the first registered plugin (per its docs). A second launch
         // (autostart already running + manual start) would otherwise mean two
-        // tray icons, two HUDs, and two pollers racing on live.json/ui.json —
-        // instead the new process exits and the existing HUD is shown.
+        // tray icons and two HUDs racing on ui.json — instead the new process
+        // exits and the existing HUD is shown.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(win) = app.get_webview_window("hud") {
                 let _ = win.show();
@@ -97,6 +161,8 @@ fn main() {
         .setup(|app| {
             let prefs = current_prefs(app.handle());
             let show_hide = MenuItem::with_id(app, "toggle", "Show/Hide", true, None::<&str>)?;
+            let refresh =
+                MenuItem::with_id(app, "refresh-usage", "Refresh usage", true, None::<&str>)?;
             let compact_item = CheckMenuItem::with_id(
                 app, "compact", "Compact size", true, prefs.compact, None::<&str>,
             )?;
@@ -131,7 +197,7 @@ fn main() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
-                &[&show_hide, &compact_item, &opacity_menu, &autostart, &quit],
+                &[&show_hide, &refresh, &compact_item, &opacity_menu, &autostart, &quit],
             )?;
 
             TrayIconBuilder::with_id("main")
@@ -156,6 +222,7 @@ fn main() {
                     let autostart_item = autostart.clone();
                     move |app, event| match event.id().as_ref() {
                         "toggle" => toggle_hud(app),
+                        "refresh-usage" => usage_refresher::request_refresh(),
                         // CheckMenuItem toggles itself on click; read the new
                         // state back rather than flipping blind.
                         "compact" => {
@@ -268,8 +335,14 @@ fn main() {
                 apply_prefs(&compact_handle, &p);
                 let _ = compact_toggle.set_checked(p.compact);
             });
+            // Leftover from versions whose OAuth-token poller wrote this file
+            // (the poller was removed — Anthropic's Consumer ToS prohibits
+            // reusing Claude Code's OAuth token in third-party tools).
+            let _ = std::fs::remove_file(
+                clawdometer_core::paths::clawdometer_dir().join("poll_error.json"),
+            );
             watcher::spawn(app.handle().clone());
-            usage_poller::spawn();
+            usage_refresher::spawn();
             // Flush the debounced drag position once the window settles.
             let flush_handle = app.handle().clone();
             std::thread::spawn(move || loop {
@@ -306,4 +379,47 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("failed to run clawdometer app");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_autoinstall;
+
+    fn dirs() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = dir.path().join("settings.json");
+        let marker = dir.path().join("statusline-autoinstall.done");
+        (dir, settings, marker)
+    }
+
+    #[test]
+    fn claims_missing_settings_or_missing_key_once() {
+        let (_d, settings, marker) = dirs();
+        assert!(should_autoinstall(&settings, &marker), "no settings file: claim");
+        std::fs::write(&settings, r#"{"model": "opus"}"#).unwrap();
+        assert!(should_autoinstall(&settings, &marker), "no statusLine key: claim");
+        std::fs::write(&marker, b"").unwrap();
+        assert!(!should_autoinstall(&settings, &marker), "already offered once: respect removal");
+    }
+
+    #[test]
+    fn repairs_own_hook_even_after_marker_but_never_touches_foreign_statusline() {
+        let (_d, settings, marker) = dirs();
+        std::fs::write(&marker, b"").unwrap();
+        std::fs::write(
+            &settings,
+            r#"{"statusLine": {"command": "\"C:\\old\\clawdometer-app.exe\" hook"}}"#,
+        )
+        .unwrap();
+        assert!(should_autoinstall(&settings, &marker), "own stale hook: repair");
+        std::fs::write(&settings, r#"{"statusLine": {"command": "my-own-line.cmd"}}"#).unwrap();
+        assert!(!should_autoinstall(&settings, &marker), "user's statusline: hands off");
+    }
+
+    #[test]
+    fn never_edits_malformed_settings() {
+        let (_d, settings, marker) = dirs();
+        std::fs::write(&settings, "{ torn").unwrap();
+        assert!(!should_autoinstall(&settings, &marker));
+    }
 }

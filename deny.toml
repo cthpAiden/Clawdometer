@@ -1,8 +1,7 @@
 # Safety invariant 1: NO network crates anywhere in the workspace.
-# Any crate capable of opening a socket to the internet is banned, so the
-# hook/CLI are provably offline. The HUD's single outbound request (the
-# 60s usage poll to api.anthropic.com) shells out to Windows' bundled
-# curl.exe instead of linking an HTTP stack — see app usage_poller.rs.
+# Any crate capable of opening a socket to the internet is banned, so every
+# binary (hook, CLI, HUD) is provably offline. The app makes zero network
+# requests: usage data arrives only via Claude Code's own statusline hook.
 
 # v1 is Windows-only. Tauri pulls reqwest/hyper on non-Windows targets
 # (they never compile into our binaries); scoping the graph to the shipped

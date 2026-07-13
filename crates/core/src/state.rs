@@ -72,11 +72,12 @@ pub fn read_state(path: &Path) -> Option<State> {
     serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()
 }
 
-/// Merge the statusline snapshot (state.json) with the live-poll snapshot
-/// (live.json). rate_limits + captured_at come from whichever snapshot is
-/// newer AND actually has rate_limits; model/context only ever exist in the
-/// statusline snapshot. captured_at strings are RFC3339 UTC from the same
-/// formatter, so lexicographic comparison is chronological.
+/// Merge the statusline snapshot (state.json) with the refresh snapshot
+/// (live.json, from a headless `claude /usage` run). rate_limits +
+/// captured_at come from whichever snapshot is newer AND actually has
+/// rate_limits; model/context only ever exist in the statusline snapshot.
+/// captured_at strings are RFC3339 UTC from the same formatter, so
+/// lexicographic comparison is chronological.
 pub fn merge(state: Option<State>, live: Option<State>) -> Option<State> {
     match (state, live) {
         (Some(s), Some(l)) => {
@@ -89,6 +90,22 @@ pub fn merge(state: Option<State>, live: Option<State>) -> Option<State> {
             }
         }
         (s, l) => s.or(l),
+    }
+}
+
+/// A window whose reset time has passed no longer exists server-side: until
+/// the next request opens a new one, true usage is 0%. Data only arrives via
+/// the statusline hook and periodic /usage refreshes, so an idle machine
+/// would otherwise show the last snapshot's percentage forever. Zeroes such
+/// windows in place; resets_at is kept so the UI can label the value as
+/// post-reset.
+pub fn zero_expired_windows(rate_limits: &mut RateLimits, now_epoch_secs: i64) {
+    for w in [&mut rate_limits.five_hour, &mut rate_limits.seven_day] {
+        if let Some(w) = w.as_mut() {
+            if w.resets_at <= now_epoch_secs {
+                w.used_percentage = 0;
+            }
+        }
     }
 }
 

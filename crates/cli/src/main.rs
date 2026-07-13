@@ -1,11 +1,10 @@
 mod commands;
-mod hook;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let code = match args.first().map(String::as_str) {
         Some("hook") => {
-            let line = std::panic::catch_unwind(hook::run_hook)
+            let line = std::panic::catch_unwind(clawdometer_core::hook::run_hook)
                 .unwrap_or_else(|_| String::from("clawdometer"));
             use std::io::Write;
             let _ = writeln!(std::io::stdout(), "{line}");

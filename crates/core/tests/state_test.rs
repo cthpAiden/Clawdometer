@@ -76,7 +76,28 @@ fn write_creates_parent_dir() {
     assert!(read_state(&path).is_some());
 }
 
-use clawdometer_core::state::render_statusline;
+use clawdometer_core::state::{render_statusline, zero_expired_windows};
+
+#[test]
+fn zero_expired_windows_zeroes_only_past_resets() {
+    let input = parse_statusline_input(FULL).unwrap();
+    let mut state = State::from_input(&input, "t".into());
+    let rl = state.rate_limits.as_mut().unwrap();
+    rl.five_hour.as_mut().unwrap().resets_at = 1_000;
+    rl.seven_day.as_mut().unwrap().resets_at = 2_000;
+
+    // Before either reset: untouched.
+    zero_expired_windows(rl, 999);
+    assert_eq!(rl.five_hour.as_ref().unwrap().used_percentage, 1);
+    // 5h reset passed (boundary inclusive), 7d still ahead.
+    zero_expired_windows(rl, 1_000);
+    assert_eq!(rl.five_hour.as_ref().unwrap().used_percentage, 0);
+    assert_eq!(rl.five_hour.as_ref().unwrap().resets_at, 1_000, "resets_at kept for UI label");
+    assert_eq!(rl.seven_day.as_ref().unwrap().used_percentage, 5);
+    // Both passed.
+    zero_expired_windows(rl, 2_001);
+    assert_eq!(rl.seven_day.as_ref().unwrap().used_percentage, 0);
+}
 
 #[test]
 fn renders_line_with_limits() {

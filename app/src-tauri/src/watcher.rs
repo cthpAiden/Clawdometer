@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use clawdometer_core::state::merge;
+use clawdometer_core::state::{merge, zero_expired_windows};
 use tauri::{AppHandle, Emitter};
 
 pub const STATE_EVENT: &str = "state-updated";
@@ -9,36 +9,45 @@ pub const STATE_EVENT: &str = "state-updated";
 pub fn build_payload(
     state_path: &Path,
     live_path: &Path,
-    poll_error_path: &Path,
+    now_epoch_secs: i64,
 ) -> serde_json::Value {
-    let merged = merge(
+    // state.json (statusline hook) merged with live.json (headless /usage
+    // refresh) — whichever snapshot is newer wins.
+    let state = merge(
         clawdometer_core::state::read_state(state_path),
         clawdometer_core::state::read_state(live_path),
-    );
+    )
+    .map(|mut s| {
+        // A window whose reset time has passed is 0% until the next request
+        // opens a new one — without this, an idle machine would show the last
+        // snapshot's percentage forever.
+        if let Some(rl) = s.rate_limits.as_mut() {
+            zero_expired_windows(rl, now_epoch_secs);
+        }
+        s
+    });
     // The webview gets only what it renders: rate_limits + captured_at.
     // session_id / transcript_path / model / cli_version stay on this side
     // of the IPC boundary.
-    let state = merged
+    let state = state
         .map(|s| serde_json::json!({ "captured_at": s.captured_at, "rate_limits": s.rate_limits }))
         .unwrap_or(serde_json::Value::Null);
-    let poll_error = std::fs::read_to_string(poll_error_path)
-        .ok()
-        .and_then(|raw| {
-            serde_json::from_str::<serde_json::Value>(raw.trim_start_matches('\u{feff}')).ok()
-        })
-        .and_then(|v| v.get("kind").and_then(|k| k.as_str()).map(String::from));
-    serde_json::json!({ "state": state, "poll_error": poll_error })
+    serde_json::json!({ "state": state })
+}
+
+fn now_epoch_secs() -> i64 {
+    time::OffsetDateTime::now_utc().unix_timestamp()
 }
 
 /// notify watcher on ~/.clawdometer + 2s fallback poll. Emits only when the
 /// serialized payload's state differs from the last emission (poll path) or
-/// the FS reports a change (watch path). Never panics the app: watch setup
-/// failure degrades to poll-only.
+/// the FS reports a change (watch path) — zeroing makes the payload cross a
+/// window's reset time exactly once, so that transition re-emits too. Never
+/// panics the app: watch setup failure degrades to poll-only.
 pub fn spawn(app: AppHandle) {
     std::thread::spawn(move || {
         let state_path: PathBuf = clawdometer_core::paths::state_path();
         let live_path: PathBuf = clawdometer_core::paths::live_path();
-        let error_path: PathBuf = clawdometer_core::paths::poll_error_path();
         let dir = state_path.parent().map(Path::to_path_buf);
 
         let (tx, rx) = std::sync::mpsc::channel::<()>();
@@ -55,7 +64,7 @@ pub fn spawn(app: AppHandle) {
         });
 
         // initial emission so the UI renders immediately
-        let payload = build_payload(&state_path, &live_path, &error_path);
+        let payload = build_payload(&state_path, &live_path, now_epoch_secs());
         let mut last_payload = payload.clone();
         let _ = app.emit(STATE_EVENT, &payload);
         update_tooltip(&app, &payload);
@@ -68,9 +77,8 @@ pub fn spawn(app: AppHandle) {
         loop {
             // wake on FS event or every 2s (debounce fallback poll)
             let _ = rx.recv_timeout(Duration::from_secs(2));
-            let payload = build_payload(&state_path, &live_path, &error_path);
-            // Whole-payload compare so a poll_error change re-emits too. The
-            // payload is timestamp-free, so identical data never re-emits.
+            let payload = build_payload(&state_path, &live_path, now_epoch_secs());
+            // The payload is timestamp-free, so identical data never re-emits.
             if startup_grace > 0 || payload != last_payload {
                 startup_grace = startup_grace.saturating_sub(1);
                 last_payload = payload.clone();
@@ -81,9 +89,9 @@ pub fn spawn(app: AppHandle) {
     });
 }
 
-/// Tray tooltip: percentages when there's data; otherwise the poller's own
-/// diagnosis (poll_error.json kind) so a hidden HUD isn't the only place a
-/// first-run failure is explained.
+/// Tray tooltip: percentages when there's data; otherwise how to get some —
+/// the statusline hook only delivers data while Claude Code runs, so a hidden
+/// HUD isn't the only place a first run is explained.
 fn tooltip_text(payload: &serde_json::Value) -> String {
     match (
         payload.pointer("/state/rate_limits/five_hour/used_percentage").and_then(|v| v.as_i64()),
@@ -92,16 +100,7 @@ fn tooltip_text(payload: &serde_json::Value) -> String {
         (Some(fh), Some(sd)) => format!("5h {fh}% · 7d {sd}%"),
         (Some(fh), None) => format!("5h {fh}%"),
         (None, Some(sd)) => format!("7d {sd}%"),
-        (None, None) => {
-            let hint = match payload.get("poll_error").and_then(|v| v.as_str()) {
-                Some("no-credentials") => "open Claude Code and sign in",
-                Some("auth") => "sign-in expired, open Claude Code",
-                Some("no-curl") => "curl.exe missing (needs Windows 10 1803+)",
-                Some("network") => "offline, retrying",
-                _ => "waiting for data",
-            };
-            format!("Clawdometer — {hint}")
-        }
+        (None, None) => "Clawdometer — waiting for data, open Claude Code".into(),
     }
 }
 
@@ -117,12 +116,12 @@ mod tests {
     use clawdometer_core::schema::{LimitWindow, RateLimits};
     use clawdometer_core::state::{State, SCHEMA_VERSION};
 
-    fn snapshot(captured_at: &str, pct: Option<i64>) -> State {
+    fn snapshot(captured_at: &str, pct: Option<i64>, resets_at: i64) -> State {
         State {
             schema_version: SCHEMA_VERSION,
             captured_at: captured_at.into(),
             rate_limits: pct.map(|p| RateLimits {
-                five_hour: Some(LimitWindow { used_percentage: p, resets_at: 0 }),
+                five_hour: Some(LimitWindow { used_percentage: p, resets_at }),
                 seven_day: None,
             }),
             model: None,
@@ -133,19 +132,14 @@ mod tests {
         }
     }
 
-    fn five_hour_pct(s: &State) -> Option<i64> {
-        s.rate_limits.as_ref()?.five_hour.as_ref().map(|w| w.used_percentage)
-    }
-
     #[test]
     fn payload_is_null_state_when_file_missing_or_torn() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("state.json");
         let live = dir.path().join("live.json");
-        let err = dir.path().join("poll_error.json");
-        assert!(build_payload(&missing, &live, &err)["state"].is_null());
+        assert!(build_payload(&missing, &live, 0)["state"].is_null());
         std::fs::write(&missing, "{ torn").unwrap();
-        assert!(build_payload(&missing, &live, &err)["state"].is_null());
+        assert!(build_payload(&missing, &live, 0)["state"].is_null());
     }
 
     #[test]
@@ -156,10 +150,23 @@ mod tests {
         let input = clawdometer_core::schema::parse_statusline_input(raw).unwrap();
         let state = clawdometer_core::state::State::from_input(&input, "t".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload =
-            build_payload(&path, &dir.path().join("live.json"), &dir.path().join("e.json"));
+        let payload = build_payload(&path, &dir.path().join("live.json"), 0);
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 1);
         assert_eq!(payload["state"]["captured_at"], "t");
+    }
+
+    #[test]
+    fn newer_live_refresh_snapshot_wins() {
+        let dir = tempfile::tempdir().unwrap();
+        let state_path = dir.path().join("state.json");
+        let live_path = dir.path().join("live.json");
+        let s = snapshot("2026-07-12T00:00:00Z", Some(97), 9_999_999_999);
+        let l = snapshot("2026-07-12T00:05:00Z", Some(99), 9_999_999_999);
+        clawdometer_core::state::write_state_atomic(&state_path, &s).unwrap();
+        clawdometer_core::state::write_state_atomic(&live_path, &l).unwrap();
+        let payload = build_payload(&state_path, &live_path, 0);
+        assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 99);
+        assert_eq!(payload["state"]["captured_at"], "2026-07-12T00:05:00Z");
     }
 
     #[test]
@@ -168,41 +175,41 @@ mod tests {
         // model / cli_version — it renders rate_limits + captured_at only.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("state.json");
-        let mut state = snapshot("t", Some(42));
+        let mut state = snapshot("t", Some(42), 9_999_999_999);
         state.session_id = Some("sess-secret".into());
         state.transcript_path = Some("C:\\transcripts\\x.jsonl".into());
         state.cli_version = Some("2.1.205".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload =
-            build_payload(&path, &dir.path().join("live.json"), &dir.path().join("e.json"));
+        let payload = build_payload(&path, &dir.path().join("live.json"), 0);
         let obj = payload["state"].as_object().unwrap();
         assert_eq!(obj.keys().collect::<Vec<_>>(), ["captured_at", "rate_limits"]);
-        assert!(payload.get("received_at_ms").is_none(), "dead field must be gone");
+        assert!(payload.get("poll_error").is_none(), "dead field must be gone");
     }
 
     #[test]
-    fn payload_carries_poll_error_kind() {
+    fn payload_zeroes_window_once_its_reset_time_passes() {
         let dir = tempfile::tempdir().unwrap();
-        let state = dir.path().join("state.json");
+        let path = dir.path().join("state.json");
         let live = dir.path().join("live.json");
-        let err = dir.path().join("poll_error.json");
-        assert!(build_payload(&state, &live, &err)["poll_error"].is_null());
-        std::fs::write(&err, r#"{"kind": "auth"}"#).unwrap();
-        assert_eq!(build_payload(&state, &live, &err)["poll_error"], "auth");
-        std::fs::write(&err, "{ torn").unwrap();
-        assert!(build_payload(&state, &live, &err)["poll_error"].is_null());
+        let state = snapshot("t", Some(42), 1_000);
+        clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
+        // before the reset: the snapshot's percentage
+        let before = build_payload(&path, &live, 999);
+        assert_eq!(before["state"]["rate_limits"]["five_hour"]["used_percentage"], 42);
+        // at/after the reset: derived 0%, resets_at kept for the UI label
+        let after = build_payload(&path, &live, 1_000);
+        assert_eq!(after["state"]["rate_limits"]["five_hour"]["used_percentage"], 0);
+        assert_eq!(after["state"]["rate_limits"]["five_hour"]["resets_at"], 1_000);
+        // the transition changes the payload exactly once, so the watcher
+        // loop's compare re-emits at the boundary
+        assert_ne!(before, after);
+        assert_eq!(after, build_payload(&path, &live, 2_000));
     }
 
     #[test]
-    fn tooltip_explains_why_data_is_missing() {
-        let t = |err: serde_json::Value| {
-            tooltip_text(&serde_json::json!({ "state": null, "poll_error": err }))
-        };
-        assert_eq!(t(serde_json::Value::Null), "Clawdometer — waiting for data");
-        assert_eq!(t("no-credentials".into()), "Clawdometer — open Claude Code and sign in");
-        assert_eq!(t("auth".into()), "Clawdometer — sign-in expired, open Claude Code");
-        assert_eq!(t("no-curl".into()), "Clawdometer — curl.exe missing (needs Windows 10 1803+)");
-        assert_eq!(t("network".into()), "Clawdometer — offline, retrying");
+    fn tooltip_explains_how_to_get_data() {
+        let t = tooltip_text(&serde_json::json!({ "state": null }));
+        assert_eq!(t, "Clawdometer — waiting for data, open Claude Code");
     }
 
     #[test]
@@ -212,46 +219,7 @@ mod tests {
                 "five_hour": { "used_percentage": 4 },
                 "seven_day": { "used_percentage": 16 },
             }},
-            "poll_error": null,
         });
         assert_eq!(tooltip_text(&payload), "5h 4% · 7d 16%");
-    }
-
-    #[test]
-    fn newer_live_rate_limits_win() {
-        let s = snapshot("2026-07-12T00:00:00Z", Some(97));
-        let l = snapshot("2026-07-12T00:05:00Z", Some(99));
-        let m = merge(Some(s), Some(l)).unwrap();
-        assert_eq!(five_hour_pct(&m), Some(99));
-        assert_eq!(m.captured_at, "2026-07-12T00:05:00Z");
-    }
-
-    #[test]
-    fn newer_statusline_wins_over_older_live() {
-        let s = snapshot("2026-07-12T00:10:00Z", Some(97));
-        let l = snapshot("2026-07-12T00:05:00Z", Some(99));
-        let m = merge(Some(s), Some(l)).unwrap();
-        assert_eq!(five_hour_pct(&m), Some(97));
-    }
-
-    #[test]
-    fn live_fills_in_when_statusline_has_no_limits_yet() {
-        let s = snapshot("2026-07-12T00:10:00Z", None);
-        let l = snapshot("2026-07-12T00:05:00Z", Some(99));
-        let m = merge(Some(s), Some(l)).unwrap();
-        assert_eq!(five_hour_pct(&m), Some(99));
-    }
-
-    #[test]
-    fn either_side_alone_passes_through() {
-        assert_eq!(
-            five_hour_pct(&merge(None, Some(snapshot("t", Some(4)))).unwrap()),
-            Some(4)
-        );
-        assert_eq!(
-            five_hour_pct(&merge(Some(snapshot("t", Some(7))), None).unwrap()),
-            Some(7)
-        );
-        assert!(merge(None, None).is_none());
     }
 }

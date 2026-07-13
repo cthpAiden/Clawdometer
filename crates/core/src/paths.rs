@@ -19,17 +19,12 @@ pub fn wrapped_path() -> PathBuf {
     clawdometer_dir().join("wrapped.json")
 }
 
-/// Live-poll snapshot written by the HUD's usage poller (same State shape as
-/// state.json, rate_limits only).
+/// Refresh snapshot written by the HUD after a headless `claude -p /usage`
+/// run (same State shape as state.json, rate_limits only). The official CLI
+/// fetches the numbers with its own credentials; Clawdometer only parses the
+/// text it prints.
 pub fn live_path() -> PathBuf {
     clawdometer_dir().join("live.json")
-}
-
-/// Poller failure kind (`{"kind": "auth" | "network" | "no-credentials" |
-/// "no-curl"}`), written by the HUD's usage poller so the UI can hint at the
-/// right recovery. Deleted on success.
-pub fn poll_error_path() -> PathBuf {
-    clawdometer_dir().join("poll_error.json")
 }
 
 /// Claude Code's config dir: CLAUDE_CONFIG_DIR if set (Claude Code honors it
@@ -43,20 +38,15 @@ fn claude_config_dir() -> PathBuf {
         .join(".claude")
 }
 
-pub fn claude_credentials_path() -> PathBuf {
-    claude_config_dir().join(".credentials.json")
-}
-
 pub fn default_claude_settings_path() -> PathBuf {
     claude_config_dir().join("settings.json")
 }
 
-/// Absolute path to a System32 executable (cmd.exe, taskkill.exe, curl.exe).
+/// Absolute path to a System32 executable (cmd.exe, taskkill.exe).
 /// Spawning by bare name lets Windows resolve via the application directory
-/// and PATH before System32 — an absolute path removes that planting surface
-/// (the curl call carries the OAuth token). Falls back to the bare name
-/// (normal search) only if SystemRoot is unset, which effectively never
-/// happens on Windows.
+/// and PATH before System32 — an absolute path removes that planting surface.
+/// Falls back to the bare name (normal search) only if SystemRoot is unset,
+/// which effectively never happens on Windows.
 pub fn system32_exe(name: &str) -> PathBuf {
     match std::env::var_os("SystemRoot") {
         Some(root) => PathBuf::from(root).join("System32").join(name),

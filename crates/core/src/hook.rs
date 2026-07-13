@@ -3,9 +3,9 @@ use std::io::Write as _;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-use clawdometer_core::paths;
-use clawdometer_core::schema::parse_statusline_input;
-use clawdometer_core::state::{now_rfc3339, render_statusline, write_state_atomic, State};
+use crate::paths;
+use crate::schema::parse_statusline_input;
+use crate::state::{now_rfc3339, render_statusline, write_state_atomic, State};
 use wait_timeout::ChildExt;
 
 const FALLBACK_LINE: &str = "clawdometer: waiting";
@@ -37,7 +37,7 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
     let value: serde_json::Value =
         serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()?;
     let command = value.get("command")?.as_str()?.to_string();
-    if clawdometer_core::settings::is_clawdometer_hook_command(&command) {
+    if crate::settings::is_clawdometer_hook_command(&command) {
         // Never chain a stale clawdometer hook command into itself.
         return None;
     }
@@ -106,11 +106,15 @@ fn run_wrapped(wrapped_path: &std::path::Path, stdin_raw: &str) -> Option<String
 /// ping.exe). child.kill() only kills cmd.exe; the grandchild can survive
 /// holding that inherited handle open, so the caller never sees EOF. Kill
 /// the whole process tree first.
-fn kill_tree(child: &mut std::process::Child) {
+pub fn kill_tree(child: &mut std::process::Child) {
     #[cfg(windows)]
     {
+        use std::os::windows::process::CommandExt;
         let _ = Command::new(paths::system32_exe("taskkill.exe"))
             .args(["/PID", &child.id().to_string(), "/T", "/F"])
+            // CREATE_NO_WINDOW: callers include the windowless HUD, where a
+            // console child would flash a window.
+            .creation_flags(0x0800_0000)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();

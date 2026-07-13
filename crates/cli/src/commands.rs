@@ -4,7 +4,7 @@ use clawdometer_core::paths;
 use clawdometer_core::settings::{
     install, uninstall, InstallOutcome, UninstallOutcome,
 };
-use clawdometer_core::state::{merge, read_state, render_statusline};
+use clawdometer_core::state::{merge, read_state, render_statusline, zero_expired_windows};
 
 /// `"<absolute exe path>" hook` — quoted because install paths contain spaces.
 fn our_command() -> String {
@@ -111,10 +111,6 @@ pub fn cmd_uninstall(args: &[String]) -> i32 {
             match std::fs::remove_dir_all(&claw) {
                 Ok(()) => {
                     println!("purged {}", claw.display());
-                    println!(
-                        "note: if the Clawdometer HUD is still running, quit it first — \
-                         its poller recreates the directory within a minute"
-                    );
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
                 Err(e) => eprintln!("warning: failed to purge {}: {e}", claw.display()),
@@ -127,10 +123,15 @@ pub fn cmd_uninstall(args: &[String]) -> i32 {
 }
 
 pub fn cmd_status() -> i32 {
-    // Same merge the HUD does: live.json (poller) can be fresher than the
-    // last statusline snapshot.
+    // Same merge the HUD does: live.json (headless /usage refresh) can be
+    // fresher than the last statusline snapshot.
     match merge(read_state(&paths::state_path()), read_state(&paths::live_path())) {
-        Some(state) => {
+        Some(mut state) => {
+            // Same derivation the HUD does: a window whose reset time has
+            // passed is 0% until the next request opens a new one.
+            if let Some(rl) = state.rate_limits.as_mut() {
+                zero_expired_windows(rl, time::OffsetDateTime::now_utc().unix_timestamp());
+            }
             println!("{}", render_statusline(&state));
             println!("captured_at: {}", state.captured_at);
             0

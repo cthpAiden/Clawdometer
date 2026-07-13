@@ -98,9 +98,11 @@ fn is_ours(status_line: &Value, our_command: &str) -> bool {
 
 /// True if `cmd` looks like a clawdometer hook invocation, i.e. `"<path>" hook`
 /// (quoted, our own format) or `<path> hook` (unquoted), where the path's file
-/// stem is "clawdometer" (case-insensitive). Used to detect a stale
-/// clawdometer command left over from an install at a different exe path, so
-/// we never wrap it (which would make the hook chain-call itself).
+/// stem starts with "clawdometer" (case-insensitive) — covers both the CLI
+/// (`clawdometer.exe`) and the HUD binary (`clawdometer-app.exe`), which can
+/// each install the hook. Used to detect a stale clawdometer command left over
+/// from an install at a different exe path, so we never wrap it (which would
+/// make the hook chain-call itself).
 pub fn is_clawdometer_hook_command(cmd: &str) -> bool {
     let cmd = cmd.trim();
     let Some(rest) = cmd.strip_suffix(" hook") else {
@@ -118,7 +120,7 @@ pub fn is_clawdometer_hook_command(cmd: &str) -> bool {
     Path::new(path_str)
         .file_stem()
         .and_then(|s| s.to_str())
-        .map(|stem| stem.eq_ignore_ascii_case("clawdometer"))
+        .map(|stem| stem.to_ascii_lowercase().starts_with("clawdometer"))
         .unwrap_or(false)
 }
 
