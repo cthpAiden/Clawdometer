@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-app"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clawdometer-core",
  "notify",
@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clawdometer-core",
  "serde_json",
@@ -505,7 +505,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "dirs 6.0.0",
  "serde",
