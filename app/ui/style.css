@@ -60,22 +60,23 @@ body.critical #card { animation: pulse 1.8s ease-in-out infinite; }
   50%      { box-shadow: inset 0 0 0 2.5px rgba(229, 72, 77, 0.85); }
 }
 
-/* Working: the HUD breathes while Claude burns tokens. The scale animation
-   stays assigned and is only paused when idle, so it freezes in place instead
-   of snapping to frame 0. Scale never exceeds 1, so the card can't clip the
-   transparent window sized to it. A green "active" ring is gated on body.working
-   so it appears/vanishes cleanly with the state rather than freezing mid-pulse.
-   Base hook for future skin animations. */
-#card { animation: breathe 2.2s ease-in-out infinite; animation-play-state: paused; }
-body.working #card {
-  animation-play-state: running;
-  box-shadow: inset 0 0 0 1.5px rgba(99, 179, 95, 0.55);
+/* Working: the main bar flows with drifting diagonal stripes while Claude
+   burns tokens, plus a green "active" ring. The card itself never moves, so
+   the HUD doesn't jitter. Regular and compact sizes share .bar.main, so this
+   covers both. The stripes/ring are gated on body.working, so they appear and
+   vanish cleanly with the state — idle falls back to the solid green fill.
+   Base hook for future skin animations: skins override this block. */
+body.working #card { box-shadow: inset 0 0 0 1.5px rgba(99, 179, 95, 0.55); }
+body.working .bar.main .fill {
+  background-image: repeating-linear-gradient(115deg, #4a7c47 0 10px, #5c9257 10px 20px);
+  background-size: 28px 100%;
+  animation: flow 0.9s linear infinite;
 }
-@keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(0.94); }
+@keyframes flow {
+  0%   { background-position: 0 0; }
+  100% { background-position: 28px 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* No motion: drop the breathe, keep "working" as the static ring only. */
-  #card { animation: none; }
+  /* No motion: drop the flowing stripes, keep "working" as the static ring only. */
+  body.working .bar.main .fill { background-image: none; animation: none; }
 }
