@@ -6,11 +6,26 @@ use tauri::{AppHandle, Emitter};
 
 pub const STATE_EVENT: &str = "state-updated";
 
+// A transcript is only inspected if it was touched within this many secs — a
+// bound so a session abandoned mid-turn can't pin `working` on forever. Set
+// well above the longest realistic tool-free "thinking" stretch, since that
+// writes nothing to the transcript until it completes.
+const ACTIVE_CAP_SECS: i64 = 300;
+// Bytes read from a transcript's tail to find its last message entry. Ample for
+// any single JSONL line; a partial leading fragment just fails to parse.
+const TAIL_BYTES: u64 = 512 * 1024;
+
 pub fn build_payload(
     state_path: &Path,
     live_path: &Path,
+    transcripts_dir: &Path,
     now_epoch_secs: i64,
 ) -> serde_json::Value {
+    // `working` = some Claude Code session is mid-turn, judged by the turn state
+    // in its transcript (not by file age — a transcript is silent during a long
+    // tool-free "thinking" stretch). Fires on every client, GUIs included, and
+    // never keys off live.json's 60s /usage poll.
+    let working = any_session_generating(transcripts_dir, now_epoch_secs);
     // state.json (statusline hook) merged with live.json (headless /usage
     // refresh) — whichever snapshot is newer wins.
     let state = merge(
@@ -32,7 +47,85 @@ pub fn build_payload(
     let state = state
         .map(|s| serde_json::json!({ "captured_at": s.captured_at, "rate_limits": s.rate_limits }))
         .unwrap_or(serde_json::Value::Null);
-    serde_json::json!({ "state": state })
+    serde_json::json!({ "state": state, "working": working })
+}
+
+/// True while some Claude Code session is mid-turn. Scans transcripts under
+/// `dir` (`<project>/<session>.jsonl`); a file is inspected only if touched
+/// within ACTIVE_CAP_SECS (cheap stat first), then judged structurally by its
+/// last message. Reads file contents locally to derive one bool — never over
+/// the network, never exposed past this process.
+fn any_session_generating(dir: &Path, now_epoch_secs: i64) -> bool {
+    let Ok(projects) = std::fs::read_dir(dir) else { return false };
+    for proj in projects.flatten() {
+        let Ok(files) = std::fs::read_dir(proj.path()) else { continue };
+        for f in files.flatten() {
+            let path = f.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                continue;
+            }
+            let Some(m) = mtime_secs(&f) else { continue };
+            // stale beyond the cap, or a future mtime (clock skew) => skip
+            if !(0..=ACTIVE_CAP_SECS).contains(&(now_epoch_secs - m)) {
+                continue;
+            }
+            if tail_indicates_generating(&read_tail(&path, TAIL_BYTES)) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Scan a transcript tail newest-line-first for the last real message entry
+/// (client metadata lines like `last-prompt`/`custom-title`, and any truncated
+/// leading fragment, are skipped). A completed assistant turn (terminal
+/// stop_reason) is idle; an unanswered user/tool_result or an assistant still
+/// paused on a tool is generating.
+fn tail_indicates_generating(tail: &str) -> bool {
+    for line in tail.lines().rev() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        match v.get("type").and_then(|t| t.as_str()) {
+            Some("assistant") => {
+                let terminal = v
+                    .pointer("/message/stop_reason")
+                    .and_then(|s| s.as_str())
+                    .is_some_and(is_terminal_stop_reason);
+                return !terminal;
+            }
+            Some("user") => return true,
+            _ => continue,
+        }
+    }
+    false
+}
+
+fn is_terminal_stop_reason(stop_reason: &str) -> bool {
+    matches!(stop_reason, "end_turn" | "stop_sequence" | "max_tokens")
+}
+
+/// Last `max_bytes` of a file as lossy UTF-8 (empty on any IO error). Seeking to
+/// the end avoids reading multi-MB transcripts in full every poll.
+fn read_tail(path: &Path, max_bytes: u64) -> String {
+    use std::io::{Read, Seek, SeekFrom};
+    let Ok(mut f) = std::fs::File::open(path) else { return String::new() };
+    let len = f.metadata().map(|m| m.len()).unwrap_or(0);
+    if f.seek(SeekFrom::Start(len.saturating_sub(max_bytes))).is_err() {
+        return String::new();
+    }
+    let mut buf = Vec::new();
+    let _ = f.take(max_bytes).read_to_end(&mut buf);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+fn mtime_secs(entry: &std::fs::DirEntry) -> Option<i64> {
+    let modified = entry.metadata().ok()?.modified().ok()?;
+    let secs = modified.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs();
+    Some(secs as i64)
 }
 
 fn now_epoch_secs() -> i64 {
@@ -48,6 +141,7 @@ pub fn spawn(app: AppHandle) {
     std::thread::spawn(move || {
         let state_path: PathBuf = clawdometer_core::paths::state_path();
         let live_path: PathBuf = clawdometer_core::paths::live_path();
+        let transcripts_dir: PathBuf = clawdometer_core::paths::projects_dir();
         let dir = state_path.parent().map(Path::to_path_buf);
 
         let (tx, rx) = std::sync::mpsc::channel::<()>();
@@ -64,7 +158,7 @@ pub fn spawn(app: AppHandle) {
         });
 
         // initial emission so the UI renders immediately
-        let payload = build_payload(&state_path, &live_path, now_epoch_secs());
+        let payload = build_payload(&state_path, &live_path, &transcripts_dir, now_epoch_secs());
         let mut last_payload = payload.clone();
         let _ = app.emit(STATE_EVENT, &payload);
         update_tooltip(&app, &payload);
@@ -77,7 +171,7 @@ pub fn spawn(app: AppHandle) {
         loop {
             // wake on FS event or every 2s (debounce fallback poll)
             let _ = rx.recv_timeout(Duration::from_secs(2));
-            let payload = build_payload(&state_path, &live_path, now_epoch_secs());
+            let payload = build_payload(&state_path, &live_path, &transcripts_dir, now_epoch_secs());
             // The payload is timestamp-free, so identical data never re-emits.
             if startup_grace > 0 || payload != last_payload {
                 startup_grace = startup_grace.saturating_sub(1);
@@ -137,9 +231,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("state.json");
         let live = dir.path().join("live.json");
-        assert!(build_payload(&missing, &live, 0)["state"].is_null());
+        let noproj = dir.path().join("noproj");
+        assert!(build_payload(&missing, &live, &noproj, 0)["state"].is_null());
         std::fs::write(&missing, "{ torn").unwrap();
-        assert!(build_payload(&missing, &live, 0)["state"].is_null());
+        assert!(build_payload(&missing, &live, &noproj, 0)["state"].is_null());
     }
 
     #[test]
@@ -150,7 +245,7 @@ mod tests {
         let input = clawdometer_core::schema::parse_statusline_input(raw).unwrap();
         let state = clawdometer_core::state::State::from_input(&input, "t".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload = build_payload(&path, &dir.path().join("live.json"), 0);
+        let payload = build_payload(&path, &dir.path().join("live.json"), &dir.path().join("noproj"), 0);
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 1);
         assert_eq!(payload["state"]["captured_at"], "t");
     }
@@ -164,7 +259,7 @@ mod tests {
         let l = snapshot("2026-07-12T00:05:00Z", Some(99), 9_999_999_999);
         clawdometer_core::state::write_state_atomic(&state_path, &s).unwrap();
         clawdometer_core::state::write_state_atomic(&live_path, &l).unwrap();
-        let payload = build_payload(&state_path, &live_path, 0);
+        let payload = build_payload(&state_path, &live_path, &dir.path().join("noproj"), 0);
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 99);
         assert_eq!(payload["state"]["captured_at"], "2026-07-12T00:05:00Z");
     }
@@ -180,10 +275,13 @@ mod tests {
         state.transcript_path = Some("C:\\transcripts\\x.jsonl".into());
         state.cli_version = Some("2.1.205".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload = build_payload(&path, &dir.path().join("live.json"), 0);
+        let payload = build_payload(&path, &dir.path().join("live.json"), &dir.path().join("noproj"), 0);
         let obj = payload["state"].as_object().unwrap();
         assert_eq!(obj.keys().collect::<Vec<_>>(), ["captured_at", "rate_limits"]);
         assert!(payload.get("poll_error").is_none(), "dead field must be gone");
+        // top level carries only the render state + the activity flag
+        let top = payload.as_object().unwrap();
+        assert_eq!(top.keys().collect::<Vec<_>>(), ["state", "working"]);
     }
 
     #[test]
@@ -191,19 +289,20 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("state.json");
         let live = dir.path().join("live.json");
+        let noproj = dir.path().join("noproj");
         let state = snapshot("t", Some(42), 1_000);
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
         // before the reset: the snapshot's percentage
-        let before = build_payload(&path, &live, 999);
+        let before = build_payload(&path, &live, &noproj, 999);
         assert_eq!(before["state"]["rate_limits"]["five_hour"]["used_percentage"], 42);
         // at/after the reset: derived 0%, resets_at kept for the UI label
-        let after = build_payload(&path, &live, 1_000);
+        let after = build_payload(&path, &live, &noproj, 1_000);
         assert_eq!(after["state"]["rate_limits"]["five_hour"]["used_percentage"], 0);
         assert_eq!(after["state"]["rate_limits"]["five_hour"]["resets_at"], 1_000);
         // the transition changes the payload exactly once, so the watcher
         // loop's compare re-emits at the boundary
         assert_ne!(before, after);
-        assert_eq!(after, build_payload(&path, &live, 2_000));
+        assert_eq!(after, build_payload(&path, &live, &noproj, 2_000));
     }
 
     #[test]
@@ -221,5 +320,107 @@ mod tests {
             }},
         });
         assert_eq!(tooltip_text(&payload), "5h 4% · 7d 16%");
+    }
+
+    // Representative transcript entries. stop_reason + type are standard
+    // Anthropic/Claude Code fields; the metadata types are client chrome we skip.
+    const ASSISTANT_DONE: &str =
+        r#"{"type":"assistant","message":{"role":"assistant","stop_reason":"end_turn","content":[{"type":"text"}]}}"#;
+    const ASSISTANT_TOOL: &str =
+        r#"{"type":"assistant","message":{"role":"assistant","stop_reason":"tool_use","content":[{"type":"tool_use"}]}}"#;
+    const USER_MSG: &str = r#"{"type":"user","message":{"role":"user","content":[{"type":"text"}]}}"#;
+    const META_TITLE: &str = r#"{"type":"custom-title"}"#;
+    const META_PROMPT: &str = r#"{"type":"last-prompt"}"#;
+
+    #[test]
+    fn terminal_stop_reasons() {
+        assert!(is_terminal_stop_reason("end_turn"));
+        assert!(is_terminal_stop_reason("stop_sequence"));
+        assert!(is_terminal_stop_reason("max_tokens"));
+        assert!(!is_terminal_stop_reason("tool_use"));
+        assert!(!is_terminal_stop_reason(""));
+    }
+
+    #[test]
+    fn generating_iff_last_real_message_is_unfinished() {
+        // completed turn, even with trailing client metadata after it => idle
+        let done = format!("{USER_MSG}\n{ASSISTANT_DONE}\n{META_PROMPT}\n{META_TITLE}\n");
+        assert!(!tail_indicates_generating(&done));
+        // assistant paused on a tool call => generating
+        assert!(tail_indicates_generating(&format!("{ASSISTANT_TOOL}\n{META_TITLE}\n")));
+        // user prompt not yet answered (long think, nothing written yet) => generating
+        assert!(tail_indicates_generating(&format!("{ASSISTANT_DONE}\n{USER_MSG}\n")));
+        // only metadata / empty => idle
+        assert!(!tail_indicates_generating(&format!("{META_TITLE}\n")));
+        assert!(!tail_indicates_generating(""));
+        // a truncated (unparseable) leading fragment is skipped, not fatal
+        assert!(tail_indicates_generating(&format!("{{\"type\":\"assi…broken\n{ASSISTANT_TOOL}\n")));
+    }
+
+    /// Write a one-project transcript with the given JSONL body; returns
+    /// (projects_root, transcript_mtime_secs). Tests drive `working` by choosing
+    /// the `now` they pass to build_payload rather than backdating the file.
+    fn transcript(body: &str) -> (tempfile::TempDir, i64) {
+        let root = tempfile::tempdir().unwrap();
+        let proj = root.path().join("F--proj");
+        std::fs::create_dir_all(&proj).unwrap();
+        let f = proj.join("sess.jsonl");
+        std::fs::write(&f, body).unwrap();
+        let m = std::fs::metadata(&f)
+            .unwrap()
+            .modified()
+            .unwrap()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        (root, m)
+    }
+
+    fn working_at(root: &Path, now: i64) -> bool {
+        let dir = tempfile::tempdir().unwrap();
+        build_payload(&dir.path().join("state.json"), &dir.path().join("live.json"), root, now)
+            ["working"]
+            == true
+    }
+
+    #[test]
+    fn working_true_while_a_session_is_mid_turn() {
+        // prior turn done, new prompt sent, Claude thinking (nothing written yet)
+        let (root, m) = transcript(&format!("{ASSISTANT_DONE}\n{USER_MSG}\n"));
+        assert!(working_at(root.path(), m));
+    }
+
+    #[test]
+    fn working_false_the_instant_the_turn_completes() {
+        // No time-window: a completed assistant turn reads idle immediately,
+        // even though the file was just written — this is what kills the tail.
+        let (root, m) = transcript(&format!("{USER_MSG}\n{ASSISTANT_DONE}\n{META_TITLE}\n"));
+        assert!(!working_at(root.path(), m));
+    }
+
+    #[test]
+    fn working_false_when_a_mid_turn_session_is_stale_beyond_the_cap() {
+        // abandoned/crashed mid-turn: not touched within ACTIVE_CAP_SECS => idle
+        let (root, m) = transcript(&format!("{USER_MSG}\n"));
+        assert!(working_at(root.path(), m + ACTIVE_CAP_SECS)); // within cap: counts
+        assert!(!working_at(root.path(), m + ACTIVE_CAP_SECS + 1)); // past cap: idle
+    }
+
+    #[test]
+    fn working_false_when_only_live_json_is_fresh() {
+        // live.json is the 60s /usage poll; with no transcript there's no turn to
+        // be mid, so `working` stays false though the merged snapshot renders it.
+        let dir = tempfile::tempdir().unwrap();
+        let live_path = dir.path().join("live.json");
+        let l = snapshot("2026-07-12T00:00:00Z", Some(88), 9_999_999_999);
+        clawdometer_core::state::write_state_atomic(&live_path, &l).unwrap();
+        let payload = build_payload(
+            &dir.path().join("state.json"),
+            &live_path,
+            &dir.path().join("noproj"),
+            4_000_000_000,
+        );
+        assert_eq!(payload["working"], false);
+        assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 88);
     }
 }

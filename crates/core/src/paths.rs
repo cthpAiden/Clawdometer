@@ -42,6 +42,14 @@ pub fn default_claude_settings_path() -> PathBuf {
     claude_config_dir().join("settings.json")
 }
 
+/// Claude Code's transcript root: <config>/projects, holding one
+/// <encoded-cwd>/<session>.jsonl per session. Claude Code appends to these as a
+/// session generates — on every client, including GUIs that never invoke the
+/// statusline hook — so their mtime is the HUD's cross-client activity signal.
+pub fn projects_dir() -> PathBuf {
+    claude_config_dir().join("projects")
+}
+
 /// Absolute path to a System32 executable (cmd.exe, taskkill.exe).
 /// Spawning by bare name lets Windows resolve via the application directory
 /// and PATH before System32 — an absolute path removes that planting surface.

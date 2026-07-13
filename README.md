@@ -57,7 +57,14 @@ itself fetches the numbers with its own sign-in, and the only process
 Clawdometer spawns for it is the official `claude` binary. The webview
 receives only usage percentages and reset times over
 one-way events, runs under a strict CSP, has no invokable backend commands,
-and no filesystem or shell capabilities.
+and no filesystem or shell capabilities. (The webview also receives a single
+`working` boolean for the activity animation — the backend derives it locally
+and it carries no usage data.)
+
+For that activity flag the HUD also **reads** (never writes) Claude Code's
+transcript files under `~/.claude/projects/`, to tell when a session is
+generating. It inspects only the last message's turn state locally — no network,
+nothing leaves the process.
 
 This design is deliberate: Anthropic's Consumer Terms of Service prohibit
 using OAuth tokens from Claude Free/Pro/Max accounts in any third-party tool,
@@ -161,6 +168,13 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
   restarts.
+- **Activity animation:** the card gently breathes and shows a green ring while
+  any Claude Code session is generating, and freezes when everything is idle.
+  Unlike the usage numbers, this doesn't depend on the statusline hook (so it
+  works even in GUI clients that don't run it): the HUD reads the turn state
+  from Claude Code's transcript files under `~/.claude/projects/` — locally, no
+  network — and stays lit through long "thinking" pauses, stopping the moment a
+  turn completes. Respects `prefers-reduced-motion` (static ring, no motion).
 - **Footer:** data age ("as of 1m ago"). Data only arrives while Claude Code
   is in use, so aging is normal; past 30 minutes the footer turns red with
   "open Claude Code to refresh" — a reminder, not an error. When a limit
@@ -285,7 +299,14 @@ Claude Code lấy số liệu bằng đăng nhập của nó, và tiến trình 
 Clawdometer khởi chạy cho việc này là binary `claude` chính thức. Webview
 chỉ nhận phần trăm sử dụng và thời điểm reset qua sự kiện một chiều,
 chạy dưới CSP nghiêm ngặt, không có lệnh backend nào gọi được từ giao diện,
-và không có quyền truy cập file hay shell.
+và không có quyền truy cập file hay shell. (Webview cũng nhận một biến boolean
+`working` cho hiệu ứng hoạt động — backend suy ra tại chỗ và nó không mang dữ
+liệu sử dụng nào.)
+
+Cho cờ hoạt động đó, HUD còn **đọc** (không bao giờ ghi) các file transcript
+của Claude Code trong `~/.claude/projects/`, để biết khi nào một phiên đang tạo
+phản hồi. Nó chỉ xem trạng thái lượt của tin nhắn cuối tại chỗ — không mạng,
+không gì rời khỏi tiến trình.
 
 Thiết kế này là chủ đích: Điều khoản Dịch vụ Người dùng của Anthropic cấm
 dùng OAuth token của tài khoản Claude Free/Pro/Max trong bất kỳ công cụ bên
@@ -392,6 +413,13 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
 - **Opacity:** 100/85/70/55% — giúp thẻ luôn-nổi-trên-cùng bớt che khuất.
   Cũng mở được bằng chuột phải vào thẻ. Được nhớ qua các lần khởi động.
+- **Hiệu ứng hoạt động:** thẻ khẽ "thở" và hiện vòng viền xanh khi bất kỳ phiên
+  Claude Code nào đang tạo phản hồi, và đứng yên khi mọi thứ rảnh. Khác với các
+  con số sử dụng, hiệu ứng này không phụ thuộc hook statusline (nên chạy được cả
+  trên client GUI không gọi hook): HUD đọc trạng thái lượt (turn) từ các file
+  transcript của Claude Code trong `~/.claude/projects/` — tại chỗ, không mạng —
+  và vẫn sáng suốt các quãng "suy nghĩ" dài, dừng ngay khi một lượt kết thúc.
+  Tôn trọng `prefers-reduced-motion` (chỉ vòng viền tĩnh, không chuyển động).
 - **Chân HUD:** tuổi dữ liệu ("as of 1m ago"). Dữ liệu chỉ đến khi Claude
   Code đang được dùng, nên dữ liệu cũ dần là bình thường; quá 30 phút phần
   chân chuyển đỏ với "open Claude Code to refresh" — một lời nhắc, không

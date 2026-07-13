@@ -134,6 +134,10 @@ function fmtAge(capturedAtIso, nowMs) {
 
 function render() {
   const nowMs = Date.now();
+  // Animate while the statusline hook is actively rewriting state.json; the
+  // backend derives this flag (see watcher::state_is_working) so idle live.json
+  // refreshes never trip it.
+  document.body.classList.toggle("working", !!(current && current.working));
   const state = current && current.state;
   if (!state || !state.rate_limits) {
     els.countdown.textContent = "—";
