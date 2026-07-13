@@ -102,6 +102,10 @@ fn tail_indicates_generating(tail: &str) -> bool {
             // command echoes). Those must not pin `working` on, so skip past them
             // to the real last message.
             Some("user") if is_synthetic_user_entry(&v) => continue,
+            // Esc mid-turn: the interrupt marker terminates the turn — no
+            // reply is coming. Return, don't skip: the entry underneath is
+            // the interrupted (mid-turn) one and would pin `working` on.
+            Some("user") if is_interrupt_entry(&v) => return false,
             Some("user") => return true,
             // Terminal system markers: the turn is over even if no assistant
             // entry with a terminal stop_reason was written (turns can end on
@@ -134,6 +138,22 @@ fn is_synthetic_user_entry(v: &serde_json::Value) -> bool {
         .is_some_and(|s| {
             s.starts_with("<command-name>") || s.starts_with("<local-command-")
         })
+}
+
+/// A `user`-typed entry Claude Code writes when the user interrupts a turn
+/// (Esc). Text is "[Request interrupted by user]" or the "... for tool use]"
+/// variant, either as a bare string or as a text block in an array (possibly
+/// after a tool_result block).
+fn is_interrupt_entry(v: &serde_json::Value) -> bool {
+    const MARKER: &str = "[Request interrupted by user";
+    match v.pointer("/message/content") {
+        Some(serde_json::Value::String(s)) => s.starts_with(MARKER),
+        Some(serde_json::Value::Array(blocks)) => blocks.iter().any(|b| {
+            b.get("type").and_then(|t| t.as_str()) == Some("text")
+                && b.get("text").and_then(|t| t.as_str()).is_some_and(|s| s.starts_with(MARKER))
+        }),
+        _ => false,
+    }
 }
 
 fn is_terminal_stop_reason(stop_reason: &str) -> bool {
@@ -383,6 +403,13 @@ mod tests {
     const STOP_HOOK: &str = r#"{"type":"system","subtype":"stop_hook_summary","level":"suggestion"}"#;
     const BOUNDARY: &str =
         r#"{"type":"system","subtype":"compact_boundary","content":"Conversation compacted"}"#;
+    // Esc mid-turn: Claude Code records the interrupt as a `user` entry. No
+    // reply is coming, so it terminates the turn. Real shapes: a lone text
+    // block, or a tool_result followed by the tool-use variant of the marker.
+    const INTERRUPT: &str =
+        r#"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}"#;
+    const INTERRUPT_TOOL: &str =
+        r#"{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_x","type":"tool_result","content":"ok"},{"type":"text","text":"[Request interrupted by user for tool use]"}]}}"#;
 
     #[test]
     fn terminal_stop_reasons() {
@@ -443,6 +470,19 @@ mod tests {
         assert!(!tail_indicates_generating(&format!("{TOOL_RESULT}\n{STOP_HOOK}\n")));
         // But a bare trailing tool_result IS mid-turn — must still blip.
         assert!(tail_indicates_generating(&format!("{ASSISTANT_TOOL}\n{TOOL_RESULT}\n")));
+    }
+
+    #[test]
+    fn idle_after_user_interrupts_mid_turn() {
+        // The user pressed Esc mid-turn: the interrupt entry is the last real
+        // message (trailing client metadata after it). Must read idle, not pin
+        // `working` on until the cap — the walkback must also NOT skip past it
+        // to the mid-turn assistant entry underneath.
+        let tail = format!("{ASSISTANT_TOOL}\n{INTERRUPT}\n{META_PROMPT}\n{META_TITLE}\n");
+        assert!(!tail_indicates_generating(&tail));
+        // Tool-use variant: tool_result + interrupt text in one entry.
+        let tail = format!("{ASSISTANT_TOOL}\n{INTERRUPT_TOOL}\n");
+        assert!(!tail_indicates_generating(&tail));
     }
 
     /// Write a one-project transcript with the given JSONL body; returns

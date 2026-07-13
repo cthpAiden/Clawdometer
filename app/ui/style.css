@@ -24,7 +24,8 @@ html, body { background: transparent; overflow: hidden; }
 .wbar { grid-area: wbar; display: flex; align-items: center; gap: 8px; }
 .bar { background: #2c2c32; border-radius: 4px; overflow: hidden; }
 .bar.thin { flex: 1; height: 4px; border-radius: 2px; }
-.fill { height: 100%; width: 0%; background: #4a7c47; border-radius: inherit; transition: width .3s; }
+.fill { height: 100%; width: 0%; background: #4a7c47; border-radius: inherit; transition: width .3s;
+  position: relative; overflow: hidden; }
 .pct { min-width: 34px; text-align: right; color: #a8a8b0; font-variant-numeric: tabular-nums; }
 #footer { grid-area: footer; align-self: end; display: flex; justify-content: space-between;
   gap: 8px; color: #6a6a72; font-size: 10px; white-space: nowrap; }
@@ -67,16 +68,23 @@ body.critical #card { animation: pulse 1.8s ease-in-out infinite; }
    vanish cleanly with the state — idle falls back to the solid green fill.
    Base hook for future skin animations: skins override this block. */
 body.working #card { box-shadow: inset 0 0 0 1.5px rgba(99, 179, 95, 0.55); }
-body.working .bar.main .fill {
-  background-image: repeating-linear-gradient(115deg, #4a7c47 0 10px, #5c9257 10px 20px);
-  background-size: 28px 100%;
+/* The stripes live on a pseudo-element moved with transform: translateX, not
+   an animated background-position — background animations run on the main
+   thread and this transparent WebView2 window never repaints for them (the
+   stripes froze). Transform animates on the compositor, like the old breathe
+   did. 22.07px = one horizontal period of the 20px pattern at 115deg
+   (20 / sin 115deg), so the loop wraps seamlessly; the extra left overhang
+   keeps the fill covered mid-cycle, and .fill's overflow:hidden stops the
+   stripes leaking past its right edge into the empty track. */
+body.working .bar.main .fill::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -22.07px; right: 0;
+  background: repeating-linear-gradient(115deg, #4a7c47 0 10px, #5c9257 10px 20px);
   animation: flow 0.9s linear infinite;
 }
 @keyframes flow {
-  0%   { background-position: 0 0; }
-  100% { background-position: 28px 0; }
+  to { transform: translateX(22.07px); }
 }
 @media (prefers-reduced-motion: reduce) {
   /* No motion: drop the flowing stripes, keep "working" as the static ring only. */
-  body.working .bar.main .fill { background-image: none; animation: none; }
+  body.working .bar.main .fill::after { display: none; }
 }
