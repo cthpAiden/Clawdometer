@@ -1,0 +1,47 @@
+name: release
+
+# Tag a release (e.g. `git tag v0.4.0 && git push origin v0.4.0`) and this
+# builds the signed NSIS installer, publishes a GitHub Release, and uploads
+# `latest.json` — the manifest the in-app updater polls.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # latest.json's version comes from tauri.conf.json, not the tag — a
+      # forgotten bump would publish a release whose manifest still says the
+      # old version, which every installed app ignores. Fail fast instead.
+      - name: Tag must match tauri.conf.json version
+        shell: bash
+        run: |
+          conf_version=$(python -c "import json; print(json.load(open('app/src-tauri/tauri.conf.json'))['version'])")
+          if [ "${GITHUB_REF_NAME}" != "v${conf_version}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} != tauri.conf.json version v${conf_version} — bump the version before tagging"
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: "Clawdometer ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          uploadUpdaterJson: true

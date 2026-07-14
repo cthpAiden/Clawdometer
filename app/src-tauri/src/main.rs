@@ -2,6 +2,7 @@
 
 mod audio;
 mod ui_prefs;
+mod updater;
 mod usage_refresher;
 mod watcher;
 
@@ -182,6 +183,8 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let prefs = current_prefs(app.handle());
             let show_hide = MenuItem::with_id(app, "toggle", "Show/Hide", true, None::<&str>)?;
@@ -420,6 +423,9 @@ fn main() {
             );
             watcher::spawn(app.handle().clone());
             usage_refresher::spawn();
+            // Ask GitHub for a newer release and, on the user's OK, install it
+            // in the background. Silent when offline or already current.
+            updater::check_on_startup(app.handle());
             // Flush the debounced drag position once the window settles.
             let flush_handle = app.handle().clone();
             std::thread::spawn(move || loop {

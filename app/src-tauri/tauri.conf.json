@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Clawdometer",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "identifier": "io.github.clawdometer",
   "build": {
     "frontendDist": "../ui"
@@ -27,9 +27,21 @@
       }
     ]
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUzODg2OEFCQkJCMUY3RUUKUldUdTk3RzdxMmlJVXlXWDM3TURxcElUMWR4S3RtVGVTbHZmWEx3bnc3dDBQMmZHb1dLaWZFWU8K",
+      "endpoints": [
+        "https://github.com/cthpAiden/Clawdometer/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "publisher": "Phuc Chau",
     "copyright": "Copyright (c) 2026 Phuc Chau",
     "licenseFile": "../../LICENSE",
