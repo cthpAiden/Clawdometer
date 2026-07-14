@@ -2,7 +2,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+// Not Copy: `rice` is a String. Callers pass &UiPrefs to save().
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UiPrefs {
     pub x: i32,
     pub y: i32,
@@ -11,20 +12,29 @@ pub struct UiPrefs {
     pub opacity: f64,
     #[serde(default)]
     pub compact: bool,
+    // Selected "rice" skin profile: "classic" (the default card),
+    // "audiowave_orb" (ring, bars only), or "audiowave_orb_peak" (ring with
+    // peak-hold caps). serde default keeps pre-rice ui.json files loading.
+    #[serde(default = "default_rice")]
+    pub rice: String,
 }
 
 fn default_opacity() -> f64 {
     1.0
 }
 
+pub fn default_rice() -> String {
+    "classic".to_string()
+}
+
 pub fn load(path: &Path) -> Option<UiPrefs> {
     serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()
 }
 
-pub fn save(path: &Path, prefs: UiPrefs) {
+pub fn save(path: &Path, prefs: &UiPrefs) {
     let Some(dir) = path.parent() else { return };
     let _ = std::fs::create_dir_all(dir);
-    let Ok(body) = serde_json::to_string(&prefs) else { return };
+    let Ok(body) = serde_json::to_string(prefs) else { return };
     // Atomic like every other write into ~/.clawdometer: save() fires on
     // every window-move event, so a plain fs::write racing a crash could
     // leave a torn ui.json.
@@ -110,8 +120,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("ui.json");
         assert!(load(&path).is_none());
-        let prefs = UiPrefs { x: -100, y: 2000, opacity: 0.7, compact: true };
-        save(&path, prefs);
+        let prefs = UiPrefs { x: -100, y: 2000, opacity: 0.7, compact: true, rice: "audiowave_orb".into() };
+        save(&path, &prefs);
         assert_eq!(load(&path), Some(prefs));
         std::fs::write(&path, "garbage").unwrap();
         assert!(load(&path).is_none());
@@ -128,5 +138,6 @@ mod tests {
         assert_eq!((p.x, p.y), (40, 60));
         assert_eq!(p.opacity, 1.0);
         assert!(!p.compact);
+        assert_eq!(p.rice, "classic");
     }
 }

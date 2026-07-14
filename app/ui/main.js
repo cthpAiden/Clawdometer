@@ -199,7 +199,25 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   const p = event.payload || {};
   compactMode = !!p.compact;
   document.body.classList.toggle("compact", compactMode);
-  els.card.style.opacity = typeof p.opacity === "number" ? p.opacity : 1;
+  const opacity = typeof p.opacity === "number" ? p.opacity : 1;
+  els.card.style.opacity = opacity;
+  const orb = document.getElementById("orb");
+  if (orb) orb.style.opacity = opacity;
+  // Switch skins: Classic card vs Audiowave Orb. The orb's animation loop only
+  // runs while it's the active skin (the backend likewise gates audio capture
+  // on it), so Classic costs nothing extra.
+  const rice = typeof p.rice === "string" ? p.rice : "classic";
+  document.body.dataset.rice = rice;
+  if (window.Orb) {
+    // Two orb variants share the "audiowave_orb" prefix: plain "Bars" and
+    // "audiowave_orb_peak" (bars + peak-hold caps).
+    if (rice.startsWith("audiowave_orb")) {
+      window.Orb.setPeak(rice === "audiowave_orb_peak");
+      window.Orb.start();
+    } else {
+      window.Orb.stop();
+    }
+  }
   render();
 }));
 // Ask the backend to (re)send prefs — emissions before this listener

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — Audiowave Orb · 10 layout designs (same engine + settings)</title>
+<!--
+  DESIGN MOCKUP — 10 DIFFERENT visualizer LAYOUTS, all driven by the SAME
+  shipped engine + settings (fake spectrum for preview; open in a browser).
+  Engine = v3 anti-sticky, locked at the shipped tuning:
+    SPRING = JIT = 1.0 (100/100), RESPONSE = 1.82, BOUNCE = 1.56,
+    no +0.03 floor, jitter gated by per-bar envelope (silence = still).
+  The physics live in ONE step() fn shared by every design — only the
+  geometry/render differs. Sibling of audio-reactive-visualizer.html
+  (which varied bar TIP style on one ring topology; this varies TOPOLOGY).
+-->
+<style>
+  html,body{margin:0;background:#0d1015;color:#e9edf2}
+  body{padding:20px;font-family:ui-sans-serif,system-ui,sans-serif}
+  .board{max-width:640px;margin:0 auto}
+  .head{text-align:center;padding-bottom:12px}
+  .head h1{font-size:15px;margin:0 0 6px;font-weight:800;letter-spacing:.2px}
+  .badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .b{font-size:10px;font-weight:700;color:#c8e05a;background:rgba(200,224,90,.1);
+     border:1px solid rgba(200,224,90,.25);border-radius:20px;padding:3px 9px}
+  .b.mut{color:#9aa0a8;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+  .ctrls{display:flex;gap:8px;align-items:center;justify-content:center;padding:12px 0 16px;font-size:12px;color:#9aa0a8}
+  .ctrls select{background:#181b22;color:#e9edf2;border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:4px 8px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
+        border-radius:14px;padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .tag{font-size:10px;letter-spacing:.3px;color:#8a8f98;font-weight:700}
+  .stage{position:relative;width:170px;height:170px}
+  .ring{position:absolute;inset:0}
+  .bar{position:absolute;transform-origin:center bottom;border-radius:2px;background:#c8e05a}
+  .co{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100px;height:100px;border-radius:50%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
+      background:radial-gradient(circle at 50% 45%,rgba(18,22,28,.82),rgba(18,22,28,0) 74%)}
+  .st{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .st.s2{margin-top:8px}
+  .st .k{font-size:9.5px;color:#828994;font-weight:700;letter-spacing:.3px}
+  .st .k b{color:#eef1f5;font-weight:800}
+  .st .k b.g{color:#c8e05a}
+  .track{width:56px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:2px}
+  .reset{font-size:7.5px;color:#6b727b;font-weight:700;letter-spacing:.4px;margin-top:7px;text-transform:uppercase}
+  .cap{font-size:9px;color:#828994;font-weight:700}
+  .cap b{color:#c8e05a}
+  .foot{text-align:center;font-size:10px;color:#7f8791;padding-top:14px}
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="head">
+    <h1>Audiowave Orb — 10 layout designs</h1>
+    <div class="badges">
+      <span class="b">Spring 100</span><span class="b">Jitter 100</span>
+      <span class="b">RESPONSE 1.82</span><span class="b">BOUNCE 1.56</span>
+      <span class="b mut">v3 anti-sticky · one shared engine</span>
+    </div>
+  </div>
+  <div class="ctrls">
+    <label>Track
+      <select id="trk"><option value="0">house</option><option value="1">trap</option><option value="2">lofi</option><option value="3">dubstep</option></select>
+    </label>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="foot">Every design shares the exact shipped physics + settings — only the geometry differs. Fake spectrum (design preview only).</div>
+</div>
+<script>
+(function(){
+  // ── Locked shipped settings (identical across all 10 designs) ─────────────
+  var SPRING=1.0, JIT=1.0, RESPONSE=1.82, BOUNCE=1.56;
+  var N=36;
+  function fold(x){x=x%1;if(x<0)x+=1;return x<0.5?x*2:(1-x)*2;}
+  function col(a){return 'hsl('+(60+fold(a)*110).toFixed(0)+',82%,56%)';}
+
+  // Fresh per-bar physics state (matches orb.js build()).
+  function mkBar(i,cnt){return {y:0,v:0,env:0,
+    binA:((i*13)%cnt)/cnt, binB:((i*29+7)%cnt)/cnt, binC:((i*7+3)%cnt)/cnt,
+    phase:i*2.399, oscf:3.5+(i%9)*0.85,
+    attack:0.30+(i%6)*0.06, release:0.18+(i%8)*0.035,
+    decay:0.74+(i%9)*0.02, k:0.14+(i%7)*0.018, i:i};}
+
+  // THE shared engine step — byte-for-byte the shipped orb.js frame() math.
+  function step(b,t,spec){
+    var a=lerpBin(fold(b.binA+t*0.05),spec), c=lerpBin(b.binB,spec), dd=lerpBin(fold(b.binC-t*0.03),spec);
+    var osc=Math.sin(b.phase+t*b.oscf)*0.5+0.5;
+    var tgt=Math.min(1,(a*0.40+c*0.30*osc+dd*0.20)*RESPONSE);
+    if(tgt>b.env)b.env+=(tgt-b.env)*b.attack; else b.env+=(tgt-b.env)*(b.release+SPRING*0.15);
+    var force=(b.env-b.y)*b.k*(1+SPRING*1.3)*BOUNCE;
+    b.v=(b.v+force)*(b.decay-SPRING*0.06); b.y+=b.v; if(b.y<0){b.y=0;b.v*=-0.3;}
+    var jj=JIT*0.06*Math.sin(t*(9+b.i*1.3)+b.phase)*b.env;
+    return Math.max(0.04,Math.min(1.25,b.y+jj));
+  }
+
+  var spec=new Float32Array(N);
+  function lerpBin(fr,s){var x=fr*N,i=Math.floor(x),a=s[(i%N+N)%N],b=s[((i+1)%N+N)%N];return a+(b-a)*(x-i);}
+  function fillSpec(t,trk){for(var i=0;i<N;i++){var f=i/N,v;
+    if(trk===0){var bass=Math.max(0,Math.sin(t*2)*.5+.5)*(1-f)*1.1,kick=Math.pow(Math.max(0,Math.sin(t*3.14159)),8)*(f<.15?1:0),mid=Math.max(0,Math.sin(t*1.3+f*8))*.4*(f>.2&&f<.7?1:.3),hat=(Math.sin(t*11+i)*.5+.5)*.25*(f>.7?1:.2);v=bass+kick+mid+hat;}
+    else if(trk===1){var k2=Math.pow(Math.max(0,Math.sin(t*4.2)),6)*(f<.2?1.2:0),snare=Math.pow(Math.max(0,Math.sin(t*2.1+1.5)),4)*(f>.3&&f<.5?1:.1),hh=(Math.sin(t*23+i*2)*.5+.5)*.4*(f>.6?1:.15);v=k2+snare+hh+.05;}
+    else if(trk===2){var warm=Math.max(0,Math.sin(t*.9+f*5))*.5*(1-f*.5),vinyl=(Math.sin(t*7+i)*.5+.5)*.12;v=warm+vinyl+.1;}
+    else{var wob=Math.abs(Math.sin(t*3+Math.sin(t*1.3)*3))*(1-f)*1.2,drop=Math.pow(Math.max(0,Math.sin(t*.7)),3)*.6,gr=(Math.sin(t*17+i*3)*.5+.5)*.3*(f>.5?1:.3);v=wob+drop+gr;}
+    spec[i]=Math.min(1,v);}}
+
+  var SVGNS='http://www.w3.org/2000/svg';
+  function svg(){var s=document.createElementNS(SVGNS,'svg');s.setAttribute('viewBox','0 0 170 170');s.style.cssText='position:absolute;inset:0;width:100%;height:100%';return s;}
+  function svgEl(n,attrs){var e=document.createElementNS(SVGNS,n);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+  // Center usage disc (layout D) — reused by every circular design.
+  function centerDisc(stage){
+    var co=document.createElement('div');co.className='co';
+    co.innerHTML='<div class="st"><span class="k">5H · <b class="g">63%</b></span><div class="track"><i style="width:63%;background:#c8e05a"></i></div></div>'+
+      '<div class="st s2"><span class="k">7D · <b>41%</b></span><div class="track"><i style="width:41%;background:#cfd4da"></i></div></div>'+
+      '<div class="reset">resets 2h 14m</div>';
+    stage.appendChild(co);
+  }
+  function caption(cell,html){var c=document.createElement('div');c.className='cap';c.innerHTML=html;cell.appendChild(c);}
+
+  // ── 10 designs. Each: build(stage,cell)->bars[], render(bars,t)  ──────────
+  var W=170, CX=85, CY=85;
+  var DESIGNS=[
+
+  // 1 · RING — the shipped radial layout (54 thin bars, center disc).
+  {n:'1 · ring (shipped)', build:function(stage){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=54,bars=[];for(var i=0;i<cnt;i++){var ang=i/cnt*360;
+      var sp=document.createElement('div');sp.style.cssText='position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate('+ang+'deg)';
+      var d=document.createElement('div');d.className='bar';d.style.cssText='position:absolute;bottom:55px;left:-1px;width:2px;height:24px';
+      sp.appendChild(d);ring.appendChild(sp);var b=mkBar(i,cnt);b.el=d;bars.push(b);}
+    centerDisc(stage);return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec);var el=bars[i].el;
+     el.style.transform='scaleY('+f+')';el.style.opacity=(0.4+f*0.55).toFixed(2);el.style.background=col(bars[i].binA+f*0.35);}}},
+
+  // 2 · EQ — classic linear equalizer, 40 bars anchored at the baseline.
+  {n:'2 · linear EQ', build:function(stage,cell){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=40,bars=[],gap=W/cnt;for(var i=0;i<cnt;i++){
+      var d=document.createElement('div');d.className='bar';
+      d.style.cssText='position:absolute;bottom:34px;left:'+(i*gap+gap*0.2)+'px;width:'+(gap*0.6)+'px;height:96px';
+      ring.appendChild(d);var b=mkBar(i,cnt);b.el=d;bars.push(b);}
+    caption(cell,'5H <b>63%</b> · 7D 41% · resets 2h 14m');return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec)/1.25;var el=bars[i].el;
+     el.style.transform='scaleY('+Math.max(0.03,f)+')';el.style.opacity=(0.4+f*0.6).toFixed(2);el.style.background=col(bars[i].binA+f*0.35);}}},
+
+  // 3 · MIRROR — bars grow up AND down from a center horizontal axis.
+  {n:'3 · mirror EQ', build:function(stage,cell){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=40,bars=[],gap=W/cnt;for(var i=0;i<cnt;i++){
+      var up=document.createElement('div');up.className='bar';up.style.cssText='position:absolute;bottom:85px;left:'+(i*gap+gap*0.2)+'px;width:'+(gap*0.6)+'px;height:60px';
+      var dn=document.createElement('div');dn.className='bar';dn.style.cssText='position:absolute;top:85px;left:'+(i*gap+gap*0.2)+'px;width:'+(gap*0.6)+'px;height:60px;transform-origin:center top';
+      ring.appendChild(up);ring.appendChild(dn);var b=mkBar(i,cnt);b.up=up;b.dn=dn;bars.push(b);}
+    caption(cell,'5H <b>63%</b> · 7D 41% · resets 2h 14m');return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec)/1.25;var c=col(bars[i].binA+f*0.35);
+     bars[i].up.style.transform='scaleY('+Math.max(0.03,f)+')';bars[i].up.style.background=c;bars[i].up.style.opacity=(0.4+f*0.6).toFixed(2);
+     bars[i].dn.style.transform='scaleY('+Math.max(0.03,f*0.7)+')';bars[i].dn.style.background=c;bars[i].dn.style.opacity=(0.25+f*0.4).toFixed(2);}}},
+
+  // 4 · DUAL RING — outer bars point OUT, inner bars point IN (offset phase).
+  {n:'4 · dual ring', build:function(stage){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var out=48,inn=32,bars=[];
+    for(var i=0;i<out;i++){var ang=i/out*360;var sp=document.createElement('div');sp.style.cssText='position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate('+ang+'deg)';
+      var d=document.createElement('div');d.className='bar';d.style.cssText='position:absolute;bottom:60px;left:-1px;width:2px;height:22px';
+      sp.appendChild(d);ring.appendChild(sp);var b=mkBar(i,out);b.el=d;b.inner=false;bars.push(b);}
+    for(var j=0;j<inn;j++){var ang2=j/inn*360+5;var sp2=document.createElement('div');sp2.style.cssText='position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate('+ang2+'deg)';
+      var d2=document.createElement('div');d2.className='bar';d2.style.cssText='position:absolute;top:20px;left:-1px;width:2px;height:18px;transform-origin:center top';
+      sp2.appendChild(d2);ring.appendChild(sp2);var b2=mkBar(j+7,inn);b2.el=d2;b2.inner=true;bars.push(b2);}
+    centerDisc(stage);return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec);var el=bars[i].el;
+     el.style.transform='scaleY('+(bars[i].inner?f*0.7:f)+')';el.style.opacity=(0.4+f*0.55).toFixed(2);
+     el.style.background=col(bars[i].binA+f*0.35);}}},
+
+  // 5 · SCOPE — oscilloscope: bar tips become a filled waveform sweep.
+  {n:'5 · oscilloscope', build:function(stage,cell){var s=svg();var area=svgEl('path',{fill:'rgba(200,224,90,.14)'});var line=svgEl('path',{fill:'none',stroke:'#c8e05a','stroke-width':'2','stroke-linejoin':'round'});
+    s.appendChild(area);s.appendChild(line);stage.appendChild(s);
+    var cnt=48,bars=[];for(var i=0;i<cnt;i++)bars.push(mkBar(i,cnt));bars._area=area;bars._line=line;
+    caption(cell,'5H <b>63%</b> · 7D 41% · resets 2h 14m');return bars;},
+   render:function(bars,t){var cnt=bars.length,pts='';for(var i=0;i<cnt;i++){var f=step(bars[i],t,spec)/1.25;
+     var x=(i/(cnt-1))*W, y=150-f*120;pts+=(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' ';}
+     bars._line.setAttribute('d',pts);bars._area.setAttribute('d',pts+'L'+W+' 150 L0 150 Z');}},
+
+  // 6 · VU — 8 fat segmented columns (chunky LED meter).
+  {n:'6 · VU columns', build:function(stage,cell){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=8,bars=[],gap=W/cnt;for(var i=0;i<cnt;i++){
+      var d=document.createElement('div');d.className='bar';
+      d.style.cssText='position:absolute;bottom:34px;left:'+(i*gap+gap*0.18)+'px;width:'+(gap*0.64)+'px;height:100px;border-radius:3px;'+
+        'background:repeating-linear-gradient(to top,#c8e05a 0 6px,transparent 6px 9px)';
+      ring.appendChild(d);var b=mkBar(i,cnt);b.el=d;bars.push(b);}
+    caption(cell,'5H <b>63%</b> · 7D 41% · resets 2h 14m');return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec)/1.25;var el=bars[i].el;
+     el.style.transform='scaleY('+Math.max(0.05,f)+')';el.style.opacity=(0.5+f*0.5).toFixed(2);}}},
+
+  // 7 · BLOB — radial polygon morphing with the spectrum (filled orb).
+  {n:'7 · blob', build:function(stage){var s=svg();var poly=svgEl('path',{fill:'rgba(200,224,90,.16)',stroke:'#c8e05a','stroke-width':'1.6','stroke-linejoin':'round'});
+    s.appendChild(poly);stage.appendChild(s);
+    var cnt=44,bars=[];for(var i=0;i<cnt;i++)bars.push(mkBar(i,cnt));bars._poly=poly;centerDisc(stage);return bars;},
+   render:function(bars,t){var cnt=bars.length,d='';for(var i=0;i<cnt;i++){var f=step(bars[i],t,spec);
+     var ang=i/cnt*Math.PI*2, r=52+f*22;var x=CX+Math.cos(ang)*r, y=CY+Math.sin(ang)*r;d+=(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' ';}
+     bars._poly.setAttribute('d',d+'Z');}},
+
+  // 8 · GAUGE — half-circle arc of bars over a big usage number.
+  {n:'8 · half gauge', build:function(stage){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=30,bars=[];for(var i=0;i<cnt;i++){var ang=-90+(i/(cnt-1))*180;
+      var sp=document.createElement('div');sp.style.cssText='position:absolute;left:50%;top:82%;width:0;height:0;transform:rotate('+ang+'deg)';
+      var d=document.createElement('div');d.className='bar';d.style.cssText='position:absolute;bottom:60px;left:-1.5px;width:3px;height:26px';
+      sp.appendChild(d);ring.appendChild(sp);var b=mkBar(i,cnt);b.el=d;bars.push(b);}
+    var big=document.createElement('div');big.style.cssText='position:absolute;left:50%;top:60%;transform:translate(-50%,-50%);text-align:center';
+    big.innerHTML='<div style="font-size:30px;font-weight:800;color:#c8e05a;line-height:1">63<span style="font-size:16px">%</span></div>'+
+      '<div style="font-size:8px;color:#828994;font-weight:700;letter-spacing:.4px;margin-top:3px">5H · 7D 41% · 2h 14m</div>';
+    stage.appendChild(big);return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec);var el=bars[i].el;
+     el.style.transform='scaleY('+f+')';el.style.opacity=(0.4+f*0.55).toFixed(2);el.style.background=col(bars[i].binA+f*0.35);}}},
+
+  // 9 · DOTS — particle ring: dots pushed outward from the center by frac.
+  {n:'9 · dot particles', build:function(stage){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=48,bars=[];for(var i=0;i<cnt;i++){var ang=i/cnt*360;
+      var sp=document.createElement('div');sp.style.cssText='position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate('+ang+'deg)';
+      var d=document.createElement('div');d.className='bar';d.style.cssText='position:absolute;bottom:56px;left:-2.5px;width:5px;height:5px;border-radius:50%';
+      sp.appendChild(d);ring.appendChild(sp);var b=mkBar(i,cnt);b.el=d;bars.push(b);}
+    centerDisc(stage);return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec);var el=bars[i].el;
+     el.style.transform='translateY('+(-f*30)+'px) scale('+(0.6+f*0.9)+')';el.style.opacity=(0.35+f*0.65).toFixed(2);
+     el.style.background=col(bars[i].binA+f*0.35);}}},
+
+  // 10 · SPIRAL — phyllotaxis: golden-angle spokes at growing radius.
+  {n:'10 · spiral', build:function(stage){var ring=document.createElement('div');ring.className='ring';stage.appendChild(ring);
+    var cnt=60,bars=[];for(var i=0;i<cnt;i++){var ang=i*137.508, ir=14+i*0.95;
+      var sp=document.createElement('div');sp.style.cssText='position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate('+ang+'deg)';
+      var d=document.createElement('div');d.className='bar';d.style.cssText='position:absolute;bottom:'+ir+'px;left:-1px;width:2px;height:14px';
+      sp.appendChild(d);ring.appendChild(sp);var b=mkBar(i,cnt);b.el=d;bars.push(b);}
+    return bars;},
+   render:function(bars,t){for(var i=0;i<bars.length;i++){var f=step(bars[i],t,spec);var el=bars[i].el;
+     el.style.transform='scaleY('+f+')';el.style.opacity=(0.35+f*0.6).toFixed(2);el.style.background=col(bars[i].binA+f*0.35);}}}
+
+  ];
+
+  var grid=document.getElementById('grid'),live=[];
+  DESIGNS.forEach(function(D){
+    var cell=document.createElement('div');cell.className='cell';
+    var tag=document.createElement('div');tag.className='tag';tag.textContent=D.n;cell.appendChild(tag);
+    var stage=document.createElement('div');stage.className='stage';cell.appendChild(stage);
+    grid.appendChild(cell);
+    live.push({D:D,bars:D.build(stage,cell)});
+  });
+
+  var trk=0,t=0;
+  document.getElementById('trk').onchange=function(e){trk=+e.target.value;};
+  function frame(){t+=0.016;fillSpec(t,trk);for(var i=0;i<live.length;i++)live[i].D.render(live[i].bars,t);requestAnimationFrame(frame);}
+  frame();
+})();
+</script>
+</body>
+</html>

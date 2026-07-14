@@ -1,6 +1,6 @@
 [package]
 name = "clawdometer-app"
-version = "0.2.6"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 
@@ -18,6 +18,9 @@ notify = "6"
 tempfile = "3"
 time = { version = "0.3", features = ["formatting", "local-offset", "parsing"] }
 wait-timeout = "0.2"
+# Audiowave Orb rice skin: FFT of the WASAPI loopback capture. rustfft is
+# cross-platform; the capture (wasapi) is Windows-only, below.
+rustfft = "6"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
@@ -25,5 +28,9 @@ windows-sys = { version = "0.61", features = [
     "Win32_System_Console",
     "Win32_UI_WindowsAndMessaging",
 ] }
+# System-audio loopback capture for the Audiowave Orb skin. Purpose-built
+# WASAPI bindings with a canonical loopback example; cpal's Windows capture
+# callback has known breakage (RustAudio/cpal#516).
+wasapi = "0.23"
 
 [dev-dependencies]

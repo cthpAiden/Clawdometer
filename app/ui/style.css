@@ -88,3 +88,52 @@ body.working .bar.main .fill::after {
      marks "working" without moving. */
   body.working .bar.main .fill::after { animation: none; }
 }
+
+/* ── Audiowave Orb rice skin ──────────────────────────────────────────────
+   A circular 54-bar ring that reacts to system audio, wrapped around a center
+   usage disc. Hidden unless the RICE profile selects it; when shown, the card
+   is hidden and the window is a 180×180 square (see apply_prefs). Bars animate
+   with transform/opacity only — the transparent WebView2 window never repaints
+   background changes (same rule as the working stripes). */
+#orb { display: none; }
+/* Prefix match: both "audiowave_orb" (Bars) and "audiowave_orb_peak" show the ring. */
+body[data-rice^="audiowave_orb"] #card { display: none; }
+body[data-rice^="audiowave_orb"] #orb { display: block; }
+#orb {
+  position: relative; width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #14161c 0 60%, #0e1014 100%);
+}
+#orb .ring { position: absolute; inset: 0; }
+/* Each bar rides a zero-size spoke rotated to its angle; scaleY-only growth
+   from the inner radius keeps every bar a crisp radial line, never an oval. */
+#orb .spoke { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+#orb .bar {
+  position: absolute; bottom: var(--ir); left: -1px; width: 2px; height: 22px;
+  border-radius: 2px; transform-origin: center bottom; will-change: transform;
+  background: #c8e05a;
+}
+/* Peak-hold cap: white marker riding each bar's held peak (translateY only). */
+#orb .cap {
+  position: absolute; bottom: var(--ir); left: -1.6px; width: 3.2px; height: 2px;
+  border-radius: 1px; background: #fff; box-shadow: 0 0 4px rgba(255, 255, 255, .6);
+  will-change: transform; display: none;
+}
+/* Caps ride only the "Peak hold" variant; the plain "Bars" orb hides them. */
+#orb.peak .cap { display: block; }
+#orb .co {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 104px; height: 104px; border-radius: 50%; line-height: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 45%, rgba(18, 22, 28, .85), rgba(18, 22, 28, 0) 74%);
+}
+#orb .st { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+#orb .st.s2 { margin-top: 8px; }
+#orb .st .k { font: 700 9.5px "Segoe UI", sans-serif; color: #828994; letter-spacing: .3px; }
+#orb .st .k b { color: #eef1f5; font-weight: 800; }
+#orb .st .k b.g { color: #63b35f; }
+#orb .track { width: 54px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+#orb .track i { display: block; height: 100%; width: 0%; border-radius: 2px; background: #4a7c47; }
+#orb .reset {
+  margin-top: 7px; font: 700 7.5px "Segoe UI", sans-serif;
+  color: #6b727b; letter-spacing: .4px; text-transform: uppercase;
+}

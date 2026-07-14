@@ -1,5 +1,6 @@
 #![cfg_attr(all(not(debug_assertions), windows), windows_subsystem = "windows")]
 
+mod audio;
 mod ui_prefs;
 mod usage_refresher;
 mod watcher;
@@ -25,7 +26,7 @@ fn save_position(app: &tauri::AppHandle, x: i32, y: i32) {
     let mut p = current_prefs(app);
     p.x = x;
     p.y = y;
-    ui_prefs::save(&ui_path(), p);
+    ui_prefs::save(&ui_path(), &p);
 }
 
 /// Persist any not-yet-settled drag position immediately (quit path — the
@@ -49,7 +50,13 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
             .get_webview_window("hud")
             .and_then(|w| w.outer_position().ok())
             .unwrap_or(tauri::PhysicalPosition::new(0, 0));
-        ui_prefs::UiPrefs { x: pos.x, y: pos.y, opacity: 1.0, compact: false }
+        ui_prefs::UiPrefs {
+            x: pos.x,
+            y: pos.y,
+            opacity: 1.0,
+            compact: false,
+            rice: ui_prefs::default_rice(),
+        }
     })
 }
 
@@ -57,12 +64,24 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
 /// webview ready and after every tray change.
 fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
     if let Some(win) = app.get_webview_window("hud") {
-        let (w, h) = if prefs.compact { (120.0, 92.0) } else { (200.0, 112.0) };
+        // The Audiowave Orb skin is a square ring stage; Classic keeps its
+        // regular or compact card size.
+        let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
+            (160.0, 160.0)
+        } else if prefs.compact {
+            (120.0, 92.0)
+        } else {
+            (200.0, 112.0)
+        };
         let _ = win.set_size(tauri::LogicalSize::new(w, h));
     }
     let _ = app.emit(
         "ui-prefs",
-        serde_json::json!({ "opacity": prefs.opacity, "compact": prefs.compact }),
+        serde_json::json!({
+            "opacity": prefs.opacity,
+            "compact": prefs.compact,
+            "rice": prefs.rice,
+        }),
     );
 }
 
@@ -190,6 +209,33 @@ fn main() {
                 true,
                 &opacity_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>).collect::<Vec<_>>(),
             )?;
+            // RICE skin profiles. Classic sits at the top level; the two
+            // Audiowave Orb variants — "Bars" (rings only) and "Peak hold"
+            // (bars + falling peak caps) — nest under their own arrow submenu.
+            // All three are one radio group: the handler keeps exactly one
+            // checked across the whole set. Both orb ids share the
+            // "audiowave_orb" prefix so window sizing / audio capture treat
+            // them alike.
+            let rice_classic = CheckMenuItem::with_id(
+                app, "rice-classic", "Classic", true, prefs.rice == "classic", None::<&str>,
+            )?;
+            let orb_bars = CheckMenuItem::with_id(
+                app, "rice-audiowave_orb", "Bars", true, prefs.rice == "audiowave_orb", None::<&str>,
+            )?;
+            let orb_peak = CheckMenuItem::with_id(
+                app, "rice-audiowave_orb_peak", "Peak hold", true,
+                prefs.rice == "audiowave_orb_peak", None::<&str>,
+            )?;
+            let orb_menu =
+                Submenu::with_items(app, "Audiowave Orb", true, &[&orb_bars, &orb_peak])?;
+            let rice_menu = Submenu::with_items(
+                app,
+                "RICE",
+                true,
+                &[&rice_classic as &dyn tauri::menu::IsMenuItem<_>, &orb_menu],
+            )?;
+            // The radio set the menu handler syncs when any rice id is picked.
+            let rice_items = vec![rice_classic, orb_bars, orb_peak];
             // Seed the checkmark from the actual Run-key state so the menu
             // shows whether autostart is on instead of flipping blind.
             let autostart_enabled = {
@@ -202,8 +248,10 @@ fn main() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
-                &[&show_hide, &refresh, &compact_item, &opacity_menu, &autostart, &quit],
+                &[&show_hide, &refresh, &compact_item, &opacity_menu, &rice_menu, &autostart, &quit],
             )?;
+            // Cloned for the HUD right-click, which pops this same full menu.
+            let context_menu = menu.clone();
 
             TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().expect("bundled icon").clone())
@@ -225,6 +273,7 @@ fn main() {
                     let compact_item = compact_item.clone();
                     let opacity_items = opacity_items.clone();
                     let autostart_item = autostart.clone();
+                    let rice_items = rice_items.clone();
                     move |app, event| match event.id().as_ref() {
                         "toggle" => toggle_hud(app),
                         "refresh-usage" => usage_refresher::request_refresh(),
@@ -233,7 +282,7 @@ fn main() {
                         "compact" => {
                             let mut p = current_prefs(app);
                             p.compact = compact_item.is_checked().unwrap_or(!p.compact);
-                            ui_prefs::save(&ui_path(), p);
+                            ui_prefs::save(&ui_path(), &p);
                             apply_prefs(app, &p);
                         }
                         id if id.starts_with("opacity-") => {
@@ -244,12 +293,28 @@ fn main() {
                             };
                             let mut p = current_prefs(app);
                             p.opacity = *val;
-                            ui_prefs::save(&ui_path(), p);
+                            ui_prefs::save(&ui_path(), &p);
                             apply_prefs(app, &p);
                             // Radio behavior: exactly the picked step stays checked.
                             for item in &opacity_items {
                                 let _ = item.set_checked(item.id().as_ref() == id);
                             }
+                        }
+                        id if id.starts_with("rice-") => {
+                            let profile = id.trim_start_matches("rice-").to_string();
+                            let mut p = current_prefs(app);
+                            p.rice = profile.clone();
+                            ui_prefs::save(&ui_path(), &p);
+                            // Resizes the window (orb = square) and emits the
+                            // skin change to the webview.
+                            apply_prefs(app, &p);
+                            // Radio behavior: only the picked profile stays checked.
+                            for item in &rice_items {
+                                let _ = item.set_checked(item.id().as_ref() == id);
+                            }
+                            // Loopback capture runs for either orb variant, so
+                            // Classic costs nothing.
+                            audio::set_active(app, profile.starts_with("audiowave_orb"));
                         }
                         "autostart" => {
                             // Explicit user action — the one write outside ~/.clawdometer
@@ -312,17 +377,24 @@ fn main() {
             // opacity/compact once the webview signals it's listening —
             // events emitted before the listener attaches are lost.
             apply_prefs(app.handle(), &prefs);
+            // Start loopback capture now if the saved skin is the orb, so it
+            // reacts the moment the HUD paints.
+            if prefs.rice.starts_with("audiowave_orb") {
+                audio::set_active(app.handle(), true);
+            }
             let handle = app.handle().clone();
             app.listen("ui-ready", move |_| {
                 let p = current_prefs(&handle);
                 apply_prefs(&handle, &p);
             });
-            // Right-clicking the HUD pops the native Opacity menu at the cursor
-            // (JS suppresses WebView2's own menu and emits "hud-context"). Items
-            // route through the same on_menu_event handler as the tray, so a
-            // pick saves + applies + syncs the tray checkmarks — no new logic.
+            // Right-clicking the HUD pops the full settings menu at the cursor
+            // (JS suppresses WebView2's own menu and emits "hud-context"), so the
+            // panel offers the same items as the tray — Show/Hide, Refresh,
+            // Compact, Opacity, RICE, autostart, Quit. Items route through the
+            // same on_menu_event handler, so a pick saves + applies + syncs the
+            // checkmarks with no extra logic.
             let popup_handle = app.handle().clone();
-            let popup_menu = opacity_menu.clone();
+            let popup_menu = context_menu.clone();
             app.listen("hud-context", move |_| {
                 if let Some(win) = popup_handle.get_webview_window("hud") {
                     let _ = popup_menu.popup(win.as_ref().window());
@@ -336,7 +408,7 @@ fn main() {
             app.listen("toggle-compact", move |_| {
                 let mut p = current_prefs(&compact_handle);
                 p.compact = !p.compact;
-                ui_prefs::save(&ui_path(), p);
+                ui_prefs::save(&ui_path(), &p);
                 apply_prefs(&compact_handle, &p);
                 let _ = compact_toggle.set_checked(p.compact);
             });

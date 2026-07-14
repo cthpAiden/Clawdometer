@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — Audio-Reactive Ring Visualizer (20 designs · v3 · stat-D)</title>
+<!--
+  DESIGN MOCKUP — not wired to real audio yet. Open in a browser to preview.
+  State/decisions: see audio-reactive-visualizer-STATE.md in this folder.
+  Chosen so far: center layout = D (5h/7d + mini bars + small "resets 2h 14m").
+  Engine = v3 anti-sticky (per-bar envelope follower, fast release, 3 bins).
+  Default settings: Track=house, Spring=65, Jitter=45. Color = hsl(60+fold(a)*110,82%,56%) yellow-green.
+  STILL OPEN: pick ONE bar style (1-20) + final Spring/Jitter, then build WASAPI loopback -> FFT -> Tauri event -> feed ring.
+-->
+<style>
+  html,body{margin:0;background:#0d1015;color:#e9edf2}
+  body{padding:20px}
+  .board{font-family:ui-sans-serif,system-ui,sans-serif;max-width:340px;margin:0 auto}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .tag{font-size:9.5px;letter-spacing:.3px;color:#8a8f98;font-weight:700}
+  .stage{position:relative;width:148px;height:148px}
+  .ring{position:absolute;inset:0}
+  .bar{position:absolute;bottom:var(--ir);transform-origin:center bottom}
+  .tip{position:absolute;bottom:var(--ir);left:50%;transform:translate(-50%,0);border-radius:50%}
+  .co{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:94px;height:94px;border-radius:50%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
+      background:radial-gradient(circle at 50% 45%,rgba(18,22,28,.82),rgba(18,22,28,0) 74%)}
+  .st{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .st .k{font-size:9.5px;color:#828994;font-weight:700;letter-spacing:.3px}
+  .st .k b{color:#eef1f5;font-weight:800}
+  .st .k b.g{color:#c8e05a}
+  .track{width:54px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:2px}
+  .reset{font-size:7.5px;color:#6b727b;font-weight:700;letter-spacing:.4px;margin-top:7px;text-transform:uppercase}
+  .ctrls{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 0 10px;font-size:11px;color:#9aa0a8}
+  .ctrls label{display:flex;gap:6px;align-items:center}
+  .ctrls input[type=range]{width:80px}
+  .foot{text-align:center;font-size:10px;color:#7f8791;padding-top:6px}
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="ctrls">
+    <label>Track
+      <select id="trk"><option value="0">house</option><option value="1">trap</option><option value="2">lofi</option><option value="3">dubstep</option></select>
+    </label>
+    <label>Spring <input id="spr" type="range" min="0" max="100" value="65"><span id="sprv">65</span></label>
+    <label>Jitter <input id="jit" type="range" min="0" max="100" value="45"><span id="jitv">45</span></label>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="foot">v3 engine · center layout D · 20 bar styles · fake spectrum (design preview only)</div>
+</div>
+<script>
+(function(){
+  var STY=[
+    {id:1,n:'crisp',w:3},
+    {id:2,n:'peak',w:3,tip:'peak'},
+    {id:3,n:'spike',w:6,clip:'polygon(50% 0,100% 100%,0 100%)'},
+    {id:4,n:'mirror',w:3,mirror:true},
+    {id:5,n:'dot',w:3,dotOnly:true},
+    {id:6,n:'lolli',w:2,tip:'lolli'},
+    {id:7,n:'vari',w:5,vari:true},
+    {id:8,n:'wave',w:3,wave:true},
+    {id:9,n:'chunky',w:7},
+    {id:10,n:'needle',w:2},
+    {id:11,n:'grad',w:4,grad:true},
+    {id:12,n:'double',w:2,dense:true},
+    {id:13,n:'tear',w:5,clip:'polygon(50% 0,100% 60%,50% 100%,0 60%)'},
+    {id:14,n:'led',w:5,led:true},
+    {id:15,n:'ribbon',w:8,ribbon:true},
+    {id:16,n:'dotring',w:3,dotOnly:true,bigdot:true},
+    {id:17,n:'comet',w:2,tip:'comet'},
+    {id:18,n:'diamond',w:4,tip:'diamond'},
+    {id:19,n:'pulse',w:3,pulse:true},
+    {id:20,n:'neon',w:2,glow:true}
+  ];
+  var N=36,IR=48,MAXLEN=20,CEN=74;
+  function fold(x){x=x%1;if(x<0)x+=1;return x<0.5?x*2:(1-x)*2;}
+  function col(a){var h=60+fold(a)*110;return 'hsl('+h.toFixed(0)+',82%,56%)';}
+  var grid=document.getElementById('grid');
+  var rings=[];
+  STY.forEach(function(s){
+    var cell=document.createElement('div');cell.className='cell';
+    var tag=document.createElement('div');tag.className='tag';tag.textContent=s.id+' · '+s.n;
+    var stage=document.createElement('div');stage.className='stage';
+    var ring=document.createElement('div');ring.className='ring';
+    stage.appendChild(ring);
+    var co=document.createElement('div');co.className='co';
+    co.innerHTML='<div class="st"><span class="k">5H · <b class="g">63%</b></span><div class="track"><i style="width:63%;background:#c8e05a"></i></div></div>'+
+      '<div class="st" style="margin-top:8px"><span class="k">7D · <b>41%</b></span><div class="track"><i style="width:41%;background:#cfd4da"></i></div></div>'+
+      '<div class="reset">resets 2h 14m</div>';
+    if(s.pulse){var pg=document.createElement('div');pg.style.cssText='position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;background:radial-gradient(circle,rgba(200,224,90,.5),rgba(200,224,90,0) 70%);pointer-events:none';stage.appendChild(pg);s._pg=pg;}
+    stage.appendChild(co);
+    cell.appendChild(tag);cell.appendChild(stage);grid.appendChild(cell);
+    var bars=[],cnt=s.dense?54:N;
+    for(var i=0;i<cnt;i++){
+      var ang=i/cnt*360;
+      var spoke=document.createElement('div');
+      spoke.style.cssText='position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate('+ang+'deg)';
+      var d=document.createElement('div');d.className='bar';
+      d.style.width=s.w+'px';d.style.left=(-s.w/2)+'px';
+      d.style.height=MAXLEN+'px';d.style.borderRadius=(s.w>4?3:2)+'px';
+      d.style.setProperty('--ir',IR+'px');
+      if(s.clip)d.style.clipPath=s.clip;
+      if(s.grad)d.style.background='linear-gradient(to top,#7a9010,#c8e05a,#eef7b0)';
+      if(s.led)d.style.background='repeating-linear-gradient(to top,#c8e05a 0 3px,transparent 3px 5px)';
+      if(s.ribbon)d.style.opacity='.4';
+      if(s.glow)d.style.boxShadow='0 0 6px 1px rgba(200,224,90,.8)';
+      if(s.dotOnly)d.style.display='none';
+      spoke.appendChild(d);
+      var tipVar=0.7+(i%5)*0.14;
+      var tip=null,inner=null;
+      if(s.tip||s.dotOnly){
+        tip=document.createElement('div');tip.className='tip';
+        var base=s.tip==='lolli'?7:(s.tip==='peak'?4:(s.bigdot?6:(s.tip==='comet'?5:4)));
+        var ts=Math.max(2,base*tipVar);
+        tip.style.width=ts+'px';tip.style.height=ts+'px';tip.style.setProperty('--ir',IR+'px');
+        if(s.tip==='peak'){tip.style.background='#fff';tip.style.borderRadius='1px';tip.style.height='2px';tip.style.width=s.w+'px';}
+        else if(s.tip==='comet'){tip.style.boxShadow='0 0 8px 2px rgba(200,224,90,.9)';tip.style.background='#eef7b0';}
+        else if(s.tip==='diamond'){tip.style.borderRadius='0';tip.style.transform='translate(-50%,0) rotate(45deg)';tip.style.background='#c8e05a';}
+        else{tip.style.background=s.dotOnly?'#c8e05a':'#eef7b0';}
+        spoke.appendChild(tip);
+      }
+      if(s.mirror){
+        inner=document.createElement('div');inner.className='bar';
+        inner.style.width=s.w+'px';inner.style.left=(-s.w/2)+'px';inner.style.height=(MAXLEN*0.55)+'px';
+        inner.style.borderRadius='2px';inner.style.top=(CEN-IR)+'px';inner.style.transformOrigin='center top';
+        inner.style.transform='scaleY(0)';inner.style.setProperty('--ir',IR+'px');
+        spoke.appendChild(inner);
+      }
+      ring.appendChild(spoke);
+      bars.push({el:d,tip:tip,inner:inner,y:0,v:0,env:0,
+        binA:((i*13)%cnt)/cnt,binB:((i*29+7)%cnt)/cnt,binC:((i*7+3)%cnt)/cnt,
+        phase:i*2.399,oscf:3.5+(i%9)*0.85,
+        attack:0.30+(i%6)*0.06, release:0.18+(i%8)*0.035,
+        decay:0.74+(i%9)*0.02, k:0.14+(i%7)*0.018,
+        i:i,ang:ang,tipVar:tipVar});
+    }
+    rings.push({s:s,bars:bars});
+  });
+  var spec=new Float32Array(N);
+  function fillSpec(t,trk){for(var i=0;i<N;i++){var f=i/N,v;
+    if(trk===0){var bass=Math.max(0,Math.sin(t*2)*.5+.5)*(1-f)*1.1,kick=Math.pow(Math.max(0,Math.sin(t*3.14159)),8)*(f<.15?1:0),mid=Math.max(0,Math.sin(t*1.3+f*8))*.4*(f>.2&&f<.7?1:.3),hat=(Math.sin(t*11+i)*.5+.5)*.25*(f>.7?1:.2);v=bass+kick+mid+hat;}
+    else if(trk===1){var k2=Math.pow(Math.max(0,Math.sin(t*4.2)),6)*(f<.2?1.2:0),snare=Math.pow(Math.max(0,Math.sin(t*2.1+1.5)),4)*(f>.3&&f<.5?1:.1),hh=(Math.sin(t*23+i*2)*.5+.5)*.4*(f>.6?1:.15);v=k2+snare+hh+.05;}
+    else if(trk===2){var warm=Math.max(0,Math.sin(t*.9+f*5))*.5*(1-f*.5),vinyl=(Math.sin(t*7+i)*.5+.5)*.12;v=warm+vinyl+.1;}
+    else{var wob=Math.abs(Math.sin(t*3+Math.sin(t*1.3)*3))*(1-f)*1.2,drop=Math.pow(Math.max(0,Math.sin(t*.7)),3)*.6,gr=(Math.sin(t*17+i*3)*.5+.5)*.3*(f>.5?1:.3);v=wob+drop+gr;}
+    spec[i]=Math.min(1,v);}}
+  function lerpBin(fr){var x=fr*N,i=Math.floor(x),a=spec[(i%N+N)%N],b=spec[((i+1)%N+N)%N];return a+(b-a)*(x-i);}
+  var trk=0,spring=0.65,jit=0.45,t=0;
+  document.getElementById('trk').onchange=function(e){trk=+e.target.value;};
+  document.getElementById('spr').oninput=function(e){spring=+e.target.value/100;document.getElementById('sprv').textContent=e.target.value;};
+  document.getElementById('jit').oninput=function(e){jit=+e.target.value/100;document.getElementById('jitv').textContent=e.target.value;};
+  function frame(){t+=0.016;fillSpec(t,trk);
+    for(var r=0;r<rings.length;r++){var R=rings[r],s=R.s,loud=0;
+      for(var j=0;j<R.bars.length;j++){var b=R.bars[j];
+        var a=lerpBin(fold(b.binA+t*0.05)),c=lerpBin(b.binB),dd=lerpBin(fold(b.binC-t*0.03));
+        var osc=(Math.sin(b.phase+t*b.oscf)*0.5+0.5);
+        var tgt=Math.min(1,a*0.40+c*0.30*osc+dd*0.20+0.03);
+        if(tgt>b.env)b.env+=(tgt-b.env)*b.attack;else b.env+=(tgt-b.env)*(b.release+spring*0.15);
+        var force=(b.env-b.y)*b.k*(1+spring*1.3);
+        b.v=(b.v+force)*(b.decay-spring*0.06);b.y+=b.v;if(b.y<0){b.y=0;b.v*=-0.3;}
+        var jj=jit*0.06*Math.sin(t*(9+b.i*1.3)+b.phase);
+        var frac=Math.max(0.04,Math.min(1.25,b.y+jj));
+        if(s.wave)frac*=(0.7+0.3*Math.sin(b.ang*0.1+t*3));
+        loud+=frac;var len=MAXLEN*frac;
+        if(!s.dotOnly){
+          if(s.vari)b.el.style.transform='scaleY('+frac+') scaleX('+(0.5+frac*0.8)+')';
+          else b.el.style.transform='scaleY('+frac+')';
+          b.el.style.opacity=(0.4+frac*0.55).toFixed(2);
+          if(!s.grad&&!s.led)b.el.style.background=col(b.binA+frac*0.35);
+        }
+        if(b.tip){b.tip.style.transform='translate(-50%,-'+len+'px)'+(s.tip==='diamond'?' rotate(45deg)':'');
+          if(s.tip==='comet')b.tip.style.opacity=(0.35+frac*0.65).toFixed(2);}
+        if(b.inner){b.inner.style.transform='scaleY('+(frac*0.55)+')';b.inner.style.background=col(b.binA);}
+      }
+      if(s.pulse&&s._pg){var lv=loud/R.bars.length;s._pg.style.transform='scale('+(0.7+lv*0.9)+')';s._pg.style.opacity=(0.15+lv*0.5).toFixed(2);}
+    }
+    requestAnimationFrame(frame);}
+  frame();
+})();
+</script>
+</body>
+</html>
