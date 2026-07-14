@@ -34,8 +34,43 @@ const MIN_SPACING: Duration = Duration::from_secs(60);
 const FAILURE_SPACING: Duration = Duration::from_secs(10 * 60);
 /// `claude` is a Node CLI with a slow cold start; well past that is a hang.
 const CLI_TIMEOUT: Duration = Duration::from_secs(90);
+/// `/usage`'s "Current session/week" summary comes from a network fetch that
+/// intermittently fails (~1 in 3 runs). When it does, claude still prints the
+/// local analysis but omits those lines, so the parse yields nothing. Retry a
+/// few times within one refresh so a single flaky fetch doesn't drop the whole
+/// attempt into FAILURE_SPACING.
+const REFRESH_TRIES: usize = 3;
+/// Pause between retries. Measured: back-to-back `claude` runs a couple of
+/// seconds apart fail reliably (exit 1 / empty output — some internal
+/// concurrency or rate guard), while ~10s spacing succeeds. Anything shorter
+/// makes the retries hit the very flake they exist to ride out.
+const RETRY_SPACING: Duration = Duration::from_secs(10);
 
 static REFRESH_TX: OnceLock<Sender<()>> = OnceLock::new();
+
+/// A GUI-subsystem process starts with no console, and `claude -p /usage` only
+/// prints its rate-limit summary lines when a console is attached (measured:
+/// 0/5 headless runs emit them vs ~2/3 with a console). Allocate one console
+/// for this process and hide its window; the /usage child then inherits it
+/// (see `run_usage_command`, which no longer sets CREATE_NO_WINDOW) and prints
+/// the lines, with nothing ever visible on screen. Must run on the HUD path
+/// only — never the `hook` subcommand, whose stdout Claude Code captures.
+#[cfg(windows)]
+pub fn ensure_hidden_console() {
+    use windows_sys::Win32::System::Console::{AllocConsole, GetConsoleWindow};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
+    unsafe {
+        if AllocConsole() != 0 {
+            let hwnd = GetConsoleWindow();
+            if !hwnd.is_null() {
+                ShowWindow(hwnd, SW_HIDE);
+            }
+        }
+    }
+}
+
+#[cfg(not(windows))]
+pub fn ensure_hidden_console() {}
 
 /// Tray "Refresh usage": skip the schedule and refresh on the next tick.
 pub fn request_refresh() {
@@ -65,6 +100,11 @@ pub fn spawn() {
             }
             last_attempt = Some(std::time::Instant::now());
             last_failed = !refresh_once();
+            // A refresh can take minutes (CLI timeouts × retries). Tray clicks
+            // queued while it ran — or spammed before it — are satisfied by
+            // the refresh that just finished; drain them so each doesn't spawn
+            // another back-to-back `claude` run.
+            while rx.try_recv().is_ok() {}
         }
     });
 }
@@ -82,25 +122,36 @@ fn snapshot_is_stale() -> bool {
     ) else {
         return true;
     };
-    time::OffsetDateTime::now_utc() - t > STALE_AFTER
+    let age = time::OffsetDateTime::now_utc() - t;
+    // Future-stamped captured_at (clock stepped back) is as untrustworthy as
+    // old data — the UI already flags it stale, so refresh it too instead of
+    // treating it as forever-fresh. Small negative slack tolerates sub-minute
+    // clock differences.
+    age > STALE_AFTER || age < -time::Duration::seconds(60)
 }
 
 fn refresh_once() -> bool {
-    let Some(text) = run_usage_command() else { return false };
-    let now = time::OffsetDateTime::now_utc();
-    let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
-    let Some(rate_limits) = parse_usage_text(&text, now, offset) else { return false };
-    let state = State {
-        schema_version: SCHEMA_VERSION,
-        captured_at: now_rfc3339(),
-        rate_limits: Some(rate_limits),
-        model: None,
-        context_window: None,
-        session_id: None,
-        transcript_path: None,
-        cli_version: None,
-    };
-    write_state_atomic(&clawdometer_core::paths::live_path(), &state).is_ok()
+    for attempt in 0..REFRESH_TRIES {
+        if attempt > 0 {
+            std::thread::sleep(RETRY_SPACING);
+        }
+        let Some(text) = run_usage_command() else { continue };
+        let now = time::OffsetDateTime::now_utc();
+        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
+        let Some(rate_limits) = parse_usage_text(&text, now, offset) else { continue };
+        let state = State {
+            schema_version: SCHEMA_VERSION,
+            captured_at: now_rfc3339(),
+            rate_limits: Some(rate_limits),
+            model: None,
+            context_window: None,
+            session_id: None,
+            transcript_path: None,
+            cli_version: None,
+        };
+        return write_state_atomic(&clawdometer_core::paths::live_path(), &state).is_ok();
+    }
+    false
 }
 
 /// Run `claude -p /usage` headlessly and return its stdout. `claude` on
@@ -114,7 +165,11 @@ fn run_usage_command() -> Option<String> {
         use std::os::windows::process::CommandExt;
         let mut c = Command::new(clawdometer_core::paths::system32_exe("cmd.exe"));
         c.arg("/C").raw_arg("claude -p --no-session-persistence /usage");
-        c.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: no console flash
+        // Deliberately no CREATE_NO_WINDOW: the child must inherit this
+        // process's console (ensure_hidden_console) so claude prints the
+        // rate-limit summary. That console's window is hidden, so inheriting it
+        // flashes nothing — whereas CREATE_NO_WINDOW detaches the console and
+        // claude silently drops the numbers.
         c
     };
     #[cfg(not(windows))]

@@ -236,8 +236,8 @@ pub fn spawn(app: AppHandle) {
 }
 
 /// Tray tooltip: percentages when there's data; otherwise how to get some —
-/// the statusline hook only delivers data while Claude Code runs, so a hidden
-/// HUD isn't the only place a first run is explained.
+/// the refresher fetches within a minute of startup, so an empty tooltip
+/// mostly means it's still warming up (or the claude CLI is missing).
 fn tooltip_text(payload: &serde_json::Value) -> String {
     match (
         payload.pointer("/state/rate_limits/five_hour/used_percentage").and_then(|v| v.as_i64()),
@@ -246,7 +246,7 @@ fn tooltip_text(payload: &serde_json::Value) -> String {
         (Some(fh), Some(sd)) => format!("5h {fh}% · 7d {sd}%"),
         (Some(fh), None) => format!("5h {fh}%"),
         (None, Some(sd)) => format!("7d {sd}%"),
-        (None, None) => "Clawdometer — waiting for data, open Claude Code".into(),
+        (None, None) => "Clawdometer — waiting for first usage refresh".into(),
     }
 }
 
@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn tooltip_explains_how_to_get_data() {
         let t = tooltip_text(&serde_json::json!({ "state": null }));
-        assert_eq!(t, "Clawdometer — waiting for data, open Claude Code");
+        assert_eq!(t, "Clawdometer — waiting for first usage refresh");
     }
 
     #[test]

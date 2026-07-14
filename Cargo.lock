@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-app"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "clawdometer-core",
  "notify",
@@ -491,11 +491,12 @@ dependencies = [
  "tempfile",
  "time",
  "wait-timeout",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "clawdometer-cli"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "clawdometer-core",
  "serde_json",
@@ -505,7 +506,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-core"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "dirs 6.0.0",
  "serde",

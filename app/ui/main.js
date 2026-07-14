@@ -134,9 +134,9 @@ function fmtAge(capturedAtIso, nowMs) {
 
 function render() {
   const nowMs = Date.now();
-  // Animate while the statusline hook is actively rewriting state.json; the
-  // backend derives this flag (see watcher::state_is_working) so idle live.json
-  // refreshes never trip it.
+  // Animate while a Claude Code session is mid-turn; the backend derives this
+  // flag from transcript turn state (see watcher::any_session_generating) so
+  // idle live.json refreshes never trip it.
   document.body.classList.toggle("working", !!(current && current.working));
   const state = current && current.state;
   if (!state || !state.rate_limits) {
@@ -160,11 +160,10 @@ function render() {
   document.body.classList.toggle("critical", critical);
   els.countdown.style.color = critical ? "#e5484d" : "";
 
-  // The statusline only delivers data while Claude Code runs, so aging is
-  // normal, not a failure — and the backend zeroes any window whose reset
-  // passed, which keeps an idle 5h number honest. Old data can still hide
-  // usage made elsewhere (claude.ai web/mobile), so past 30 minutes say how
-  // to refresh instead of silently aging.
+  // The refresher normally keeps data under a minute old, so 30+ minutes
+  // means it's failing (claude CLI missing/broken) — say how to retry
+  // instead of silently aging. The backend zeroes any window whose reset
+  // passed, which keeps an idle 5h number honest.
   const ageMs = nowMs - Date.parse(state.captured_at);
   // Unparseable or future-stamped captured_at (clock stepped back) is as
   // untrustworthy as old data — never render it as fresh.
@@ -172,7 +171,7 @@ function render() {
   const hint = " — " + (
     Number.isFinite(ageMs) && ageMs < -60000
       ? "check system clock"
-      : "open Claude Code to refresh");
+      : "tray → Refresh usage");
   els.age.textContent = stale
     ? (fmtAge(state.captured_at, nowMs) || "stale data") + hint
     : fmtAge(state.captured_at, nowMs);

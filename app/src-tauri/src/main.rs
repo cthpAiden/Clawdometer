@@ -142,6 +142,11 @@ fn main() {
         let _ = writeln!(std::io::stdout(), "{line}");
         return;
     }
+    // Give this windowless process a hidden console before anything spawns the
+    // headless `claude -p /usage` refresh — claude only prints its rate-limit
+    // numbers when a console is attached. Must come after the `hook` return
+    // above (that path's stdout belongs to Claude Code).
+    usage_refresher::ensure_hidden_console();
     autoinstall_statusline();
     tauri::Builder::default()
         // Must be the first registered plugin (per its docs). A second launch

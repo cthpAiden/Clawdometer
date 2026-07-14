@@ -1,6 +1,6 @@
 [package]
 name = "clawdometer-app"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 license = "MIT"
 
@@ -18,5 +18,12 @@ notify = "6"
 tempfile = "3"
 time = { version = "0.3", features = ["formatting", "local-offset", "parsing"] }
 wait-timeout = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Console",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [dev-dependencies]
