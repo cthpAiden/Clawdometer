@@ -67,9 +67,13 @@ pub fn write_state_atomic(path: &Path, state: &State) -> io::Result<()> {
 }
 
 /// None on missing/malformed/torn file. Readers retry next cycle.
+/// A schema_version other than ours counts as malformed: fields may have
+/// changed meaning across versions, and rendering a parseable-but-foreign
+/// snapshot would be silent drift rather than the honest "no data" dash.
 pub fn read_state(path: &Path) -> Option<State> {
     let raw = std::fs::read_to_string(path).ok()?;
-    serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()
+    let state: State = serde_json::from_str(raw.trim_start_matches('\u{feff}')).ok()?;
+    (state.schema_version == SCHEMA_VERSION).then_some(state)
 }
 
 /// Merge the statusline snapshot (state.json) with the refresh snapshot

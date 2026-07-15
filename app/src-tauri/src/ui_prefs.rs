@@ -38,12 +38,17 @@ pub fn save(path: &Path, prefs: &UiPrefs) {
     // Atomic like every other write into ~/.clawdometer: save() fires on
     // every window-move event, so a plain fs::write racing a crash could
     // leave a torn ui.json.
-    let _ = tempfile::NamedTempFile::new_in(dir).and_then(|mut tmp| {
+    let res = tempfile::NamedTempFile::new_in(dir).and_then(|mut tmp| {
         use std::io::Write as _;
         tmp.write_all(body.as_bytes())?;
         tmp.persist(path).map_err(|e| e.error)?;
         Ok(())
     });
+    if let Err(e) = res {
+        // Disk-full / permissions: prefs silently revert on next launch
+        // otherwise. Leave a breadcrumb on the hidden console.
+        eprintln!("clawdometer: ui prefs save failed: {e}");
+    }
 }
 
 /// Coalesces the continuous stream of window-move events (one per pixel of

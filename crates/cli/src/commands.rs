@@ -89,6 +89,15 @@ pub fn cmd_uninstall(args: &[String]) -> i32 {
             println!("uninstalled: statusLine key removed");
             0
         }
+        Ok(UninstallOutcome::RemovedKeyBackupUnreadable) => {
+            println!("uninstalled: statusLine key removed");
+            eprintln!(
+                "warning: the backup of your original statusLine is unreadable — \
+                 left for manual recovery at {}",
+                claw.join("wrapped.json").display()
+            );
+            0
+        }
         Ok(UninstallOutcome::NotInstalled) => {
             println!("not installed — nothing to do");
             0

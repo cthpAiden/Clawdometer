@@ -120,6 +120,19 @@ fn read_state_is_tolerant() {
 }
 
 #[test]
+fn read_state_rejects_foreign_schema_version() {
+    // A future (or corrupted) schema_version must read as "no data", not as a
+    // parseable-but-possibly-reinterpreted snapshot.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("state.json");
+    let input = parse_statusline_input(FULL).unwrap();
+    let mut state = State::from_input(&input, "t".into());
+    state.schema_version = 999;
+    write_state_atomic(&path, &state).unwrap();
+    assert!(read_state(&path).is_none());
+}
+
+#[test]
 fn write_creates_parent_dir() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("nested").join("state.json");

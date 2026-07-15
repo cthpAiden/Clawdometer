@@ -183,6 +183,10 @@ pub fn install(
 pub enum UninstallOutcome {
     Restored,
     RemovedKey,
+    /// wrapped.json exists but is unreadable (torn write, AV lock mid-write):
+    /// the original statusLine can't be restored, but the hook is removed.
+    /// The corrupt backup is left on disk for manual recovery.
+    RemovedKeyBackupUnreadable,
     NotInstalled,
     NotOurs,
 }
@@ -215,8 +219,19 @@ pub fn uninstall(
     let wrapped_path = clawdometer_dir.join("wrapped.json");
     if wrapped_path.exists() {
         let raw = std::fs::read_to_string(&wrapped_path)?;
-        let original: Value = serde_json::from_str(raw.trim_start_matches('\u{feff}'))
-            .map_err(|e| SettingsError::MalformedSettings(format!("wrapped.json: {e}")))?;
+        let Ok(original) = serde_json::from_str::<Value>(raw.trim_start_matches('\u{feff}'))
+        else {
+            // Backup unreadable (torn write, AV lock mid-write): restoring is
+            // impossible, but the user still asked to uninstall. Remove our
+            // key and keep the corrupt backup for manual recovery — a hard
+            // fail here would leave the hook permanently installed until
+            // someone deletes wrapped.json by hand.
+            root.as_object_mut()
+                .expect("load_settings guarantees object")
+                .remove(STATUSLINE_KEY);
+            save_settings(settings_path, &root)?;
+            return Ok(UninstallOutcome::RemovedKeyBackupUnreadable);
+        };
         root[STATUSLINE_KEY] = original;
         save_settings(settings_path, &root)?;
         // settings.json is already restored at this point; wrapped.json is only

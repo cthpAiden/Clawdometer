@@ -112,15 +112,19 @@ fn uninstall_recognizes_stale_clawdometer_hook_command_after_exe_move() {
 }
 
 #[test]
-fn uninstall_with_malformed_wrapped_json_errors_and_touches_nothing() {
+fn uninstall_with_malformed_wrapped_json_removes_key_and_keeps_backup() {
+    // The backup can't be restored, but a hard fail would leave the hook
+    // installed until the user deletes wrapped.json by hand. Uninstall must
+    // still uninstall: remove the key, keep the corrupt backup for recovery.
     let e = env();
-    std::fs::write(&e.settings, r#"{"statusLine":{"command":"old.cmd"}}"#).unwrap();
+    std::fs::write(&e.settings, r#"{"model":"opus","statusLine":{"command":"old.cmd"}}"#).unwrap();
     install(&e.settings, &e.claw, OURS, "20260712-000000").unwrap();
-    let after_install = std::fs::read_to_string(&e.settings).unwrap();
     // corrupt the wrapped backup
     std::fs::write(e.claw.join("wrapped.json"), "{ nope").unwrap();
-    let err = uninstall(&e.settings, &e.claw, OURS);
-    assert!(err.is_err(), "malformed wrapped.json must error");
-    assert_eq!(std::fs::read_to_string(&e.settings).unwrap(), after_install, "settings untouched");
+    let outcome = uninstall(&e.settings, &e.claw, OURS).unwrap();
+    assert_eq!(outcome, UninstallOutcome::RemovedKeyBackupUnreadable);
+    let after = read_json(&e.settings);
+    assert!(after.get("statusLine").is_none(), "statusLine key removed");
+    assert_eq!(after["model"], "opus", "unrelated settings untouched");
     assert!(e.claw.join("wrapped.json").exists(), "corrupt wrapped.json left for inspection");
 }

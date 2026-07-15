@@ -24,7 +24,7 @@ pub fn set_active(_app: &tauri::AppHandle, _on: bool) {}
 #[cfg(windows)]
 mod imp {
     use std::collections::VecDeque;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::Mutex;
     use std::time::Instant;
 
@@ -63,6 +63,12 @@ mod imp {
     /// Set while a capture thread should keep running. `set_active` flips it;
     /// the thread checks it once per event timeout and unwinds when it clears.
     static ACTIVE: AtomicBool = AtomicBool::new(false);
+    /// Bumped once per spawned capture thread. A thread also exits when a
+    /// newer generation exists: a rapid off→on toggle can respawn before the
+    /// old thread has sampled the cleared flag, and without this check both
+    /// threads would see ACTIVE == true and emit concurrently (doubled,
+    /// jittery spectrum).
+    static GEN: AtomicU64 = AtomicU64::new(0);
     /// Holds the running thread's handle so a stray double-start can't leak it.
     static THREAD: Mutex<Option<std::thread::JoinHandle<()>>> = Mutex::new(None);
 
@@ -75,20 +81,31 @@ mod imp {
             if ACTIVE.swap(true, Ordering::SeqCst) {
                 return; // already running
             }
+            let my_gen = GEN.fetch_add(1, Ordering::SeqCst) + 1;
             let app = app.clone();
             let handle = std::thread::Builder::new()
                 .name("audio-loopback".into())
                 .spawn(move || {
-                    if let Err(e) = capture_loop(&app) {
+                    if let Err(e) = capture_loop(&app, my_gen) {
                         // Missing device / format refusal: the orb just stays
                         // flat. Leave a breadcrumb on the hidden console.
                         eprintln!("clawdometer audio: loopback stopped: {e}");
                     }
                     // Whether it errored or was told to stop, leave the flag
-                    // clear so a later re-activation spawns a fresh thread.
-                    ACTIVE.store(false, Ordering::SeqCst);
+                    // clear so a later re-activation spawns a fresh thread —
+                    // unless a newer generation superseded this one and owns
+                    // the flag now.
+                    if GEN.load(Ordering::SeqCst) == my_gen {
+                        ACTIVE.store(false, Ordering::SeqCst);
+                    }
                 })
                 .ok();
+            if handle.is_none() {
+                // Spawn failed: no thread will ever clear the flag, and
+                // leaving it set would turn every future start into an
+                // "already running" no-op until app restart.
+                ACTIVE.store(false, Ordering::SeqCst);
+            }
             if let Ok(mut slot) = THREAD.lock() {
                 *slot = handle;
             }
@@ -97,7 +114,7 @@ mod imp {
         }
     }
 
-    fn capture_loop(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    fn capture_loop(app: &AppHandle, my_gen: u64) -> Result<(), Box<dyn std::error::Error>> {
         // COM into the MTA for this thread. Harmless if already initialized.
         let _ = initialize_mta().ok();
 
@@ -132,7 +149,7 @@ mod imp {
         let mut scratch = vec![Complex { re: 0.0f32, im: 0.0f32 }; FFT_SIZE];
         let mut last_emit = Instant::now();
 
-        while ACTIVE.load(Ordering::SeqCst) {
+        while ACTIVE.load(Ordering::SeqCst) && GEN.load(Ordering::SeqCst) == my_gen {
             // Pull whatever WASAPI has buffered. On silence this may add nothing.
             let _ = capture.read_from_device_to_deque(&mut raw);
             // Interleaved stereo f32, little-endian: 8 bytes per frame. Mix to
