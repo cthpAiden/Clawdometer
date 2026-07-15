@@ -6,9 +6,27 @@ Unofficial Windows desktop HUD for Claude Code usage limits.
 
 > **Unofficial.** Not affiliated with or endorsed by Anthropic.
 
-<img width="261" height="158" alt="Screenshot 2026-07-13 001402" src="https://github.com/user-attachments/assets/7c10635c-367a-4fbc-bb94-ed330299fadb" />
-<img width="165" height="128" alt="Screenshot 2026-07-13 001412" src="https://github.com/user-attachments/assets/d8fbfe7c-52dc-4800-9cff-e2b85d1f4e62" />
+## Skins
 
+Three looks, switchable any time from the tray menu (right-click the tray icon
+→ *RICE*). All of them show the same numbers — only the presentation differs.
+
+| Classic | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
+|:---:|:---:|:---:|
+| <img src="docs/images/hud-classic.png" width="200" alt="Classic HUD skin: a small card showing the 5-hour session bar at 64%, plus weekly and Fable weekly bars"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
+| The default card. Session bar with a countdown to the next reset, plus the weekly and Fable weekly bars. | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
+
+**Classic** is the plain readout, and is what the tray tooltip and statusline
+mirror. Its bars turn blue → yellow → red as you approach a limit, and the card
+pulses a red ring past 90%.
+
+The two **Audiowave Orb** skins are "rice" — the ring reacts to whatever your
+speakers are playing. To do that the HUD opens a WASAPI **loopback** capture of
+your system audio output while an orb skin is selected (Classic starts no
+capture at all). The audio is turned into bar heights inside the process and
+then discarded: nothing is recorded, written to disk, or sent anywhere —
+consistent with the no-network guarantee below. It also captures only the
+system output mix, never a microphone.
 
 ## What it does
 
@@ -58,8 +76,10 @@ Clawdometer spawns for it is the official `claude` binary. The webview
 receives only usage percentages and reset times over
 one-way events, runs under a strict CSP, has no invokable backend commands,
 and no filesystem or shell capabilities. (The webview also receives a single
-`working` boolean for the activity animation — the backend derives it locally
-and it carries no usage data.)
+`working` boolean for the activity animation, and — only while an Audiowave Orb
+[skin](#skins) is selected — a stream of 36 audio spectrum magnitudes for the
+ring. The backend derives both locally; neither carries usage data, and the
+spectrum bands are bar heights, not audio: nothing is recorded or stored.)
 
 For that activity flag the HUD also **reads** (never writes) Claude Code's
 transcript files under `~/.claude/projects/`, to tell when a session is
@@ -160,8 +180,13 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
   current monitors, so an unplugged display can't strand it off-screen).
 - **Tray icon, left-click:** show/hide the HUD.
 - **Tray icon, right-click:** menu with *Show/Hide*, *Refresh usage* (runs a
-  headless `claude /usage` now), *Compact size*, *Opacity*, *Start with
+  headless `claude /usage` now), *RICE*, *Compact size*, *Opacity*, *Start with
   Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
+- **RICE:** picks the skin — *Classic*, or *Audiowave Orb* → *Bars* / *Peak
+  hold* (see [Skins](#skins)). One radio group, so exactly one is ever checked.
+  Switching resizes the HUD (the orb is a 160×160 square, Classic keeps its
+  card size) and is remembered across restarts. Selecting an orb skin starts
+  the system-audio loopback capture; going back to Classic stops it.
 - **Compact size:** shrinks the card to roughly half width (bars and
   percentages only — no footer or reset times). Also toggled by
   double-clicking the card. Remembered across restarts.
@@ -251,6 +276,28 @@ HUD không chính thức cho Windows, hiển thị giới hạn sử dụng củ
 
 > **Không chính thức.** Không liên kết với và không được Anthropic bảo trợ.
 
+## Giao diện (Skins)
+
+Ba kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
+tượng khay → *RICE*). Cả ba đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
+
+| Classic | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
+|:---:|:---:|:---:|
+| <img src="docs/images/hud-classic.png" width="200" alt="Giao diện Classic: thẻ nhỏ hiện thanh phiên 5 giờ ở mức 64%, kèm thanh tuần và thanh Fable tuần"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
+| Thẻ mặc định. Thanh phiên kèm đếm ngược tới lần reset kế tiếp, cùng thanh tuần và thanh Fable tuần. | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
+
+**Classic** là bản đọc số thuần túy, cũng là thứ mà tooltip khay và statusline
+phản chiếu. Thanh của nó chuyển xanh dương → vàng → đỏ khi bạn tiến gần giới
+hạn, và thẻ nhấp nháy viền đỏ khi vượt 90%.
+
+Hai giao diện **Audiowave Orb** là "rice" — vòng phổ phản ứng theo bất cứ thứ
+gì loa của bạn đang phát. Để làm vậy, HUD mở một luồng thu **loopback** WASAPI
+từ đầu ra âm thanh hệ thống trong lúc giao diện orb được chọn (Classic không mở
+luồng thu nào). Âm thanh được chuyển thành chiều cao các thanh ngay trong tiến
+trình rồi bỏ đi: không ghi lại, không lưu ra đĩa, không gửi đi đâu — đúng với
+cam kết không-mạng bên dưới. Nó cũng chỉ thu bản trộn đầu ra của hệ thống,
+không bao giờ thu micro.
+
 ## Ứng dụng làm gì
 
 Claude Code gửi dữ liệu sử dụng (phần trăm giới hạn, thời điểm reset, model,
@@ -300,8 +347,11 @@ Clawdometer khởi chạy cho việc này là binary `claude` chính thức. Web
 chỉ nhận phần trăm sử dụng và thời điểm reset qua sự kiện một chiều,
 chạy dưới CSP nghiêm ngặt, không có lệnh backend nào gọi được từ giao diện,
 và không có quyền truy cập file hay shell. (Webview cũng nhận một biến boolean
-`working` cho hiệu ứng hoạt động — backend suy ra tại chỗ và nó không mang dữ
-liệu sử dụng nào.)
+`working` cho hiệu ứng hoạt động, và — chỉ khi một [giao diện](#giao-diện-skins)
+Audiowave Orb đang được chọn — một luồng 36 giá trị độ lớn phổ âm thanh cho
+vòng orb. Backend suy ra cả hai tại chỗ; không cái nào mang dữ liệu sử dụng, và
+các dải phổ là chiều cao thanh chứ không phải âm thanh: không có gì được ghi
+lại hay lưu trữ.)
 
 Cho cờ hoạt động đó, HUD còn **đọc** (không bao giờ ghi) các file transcript
 của Claude Code trong `~/.claude/projects/`, để biết khi nào một phiên đang tạo
@@ -405,9 +455,15 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
   hiện tại, nên màn hình đã rút không thể làm HUD kẹt ngoài vùng nhìn thấy).
 - **Biểu tượng khay, chuột trái:** ẩn/hiện HUD.
 - **Biểu tượng khay, chuột phải:** menu gồm *Show/Hide*, *Refresh usage*
-  (chạy `claude /usage` headless ngay lập tức), *Compact size*, *Opacity*,
-  *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa HKCU Run
-  hiện tại), và *Quit*.
+  (chạy `claude /usage` headless ngay lập tức), *RICE*, *Compact size*,
+  *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa
+  HKCU Run hiện tại), và *Quit*.
+- **RICE:** chọn giao diện — *Classic*, hoặc *Audiowave Orb* → *Bars* / *Peak
+  hold* (xem [Giao diện](#giao-diện-skins)). Cả ba là một nhóm radio, nên luôn
+  chỉ đúng một cái được tích. Đổi giao diện sẽ đổi kích thước HUD (orb là ô
+  vuông 160×160, Classic giữ kích thước thẻ của nó) và được nhớ qua các lần
+  khởi động. Chọn giao diện orb sẽ bật luồng thu loopback âm thanh hệ thống;
+  quay lại Classic sẽ tắt nó.
 - **Compact size:** thu thẻ còn khoảng nửa chiều rộng (chỉ thanh và phần
   trăm — không có chân và thời điểm reset). Cũng bật/tắt được bằng cách
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
