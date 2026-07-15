@@ -78,16 +78,35 @@ pub fn read_state(path: &Path) -> Option<State> {
 /// rate_limits; model/context only ever exist in the statusline snapshot.
 /// captured_at strings are RFC3339 UTC from the same formatter, so
 /// lexicographic comparison is chronological.
+///
+/// fable_week is the exception to "newest snapshot wins wholesale": only
+/// /usage prints the per-model week, so the statusline snapshot always has
+/// None there. Taking rate_limits as one unit would blank the Fable bar on
+/// every prompt (the hook writes a newer snapshot than the last refresh) and
+/// bring it back on the next refresh. So it survives from whichever snapshot
+/// still has it. A stale value can linger until the next refresh, but
+/// zero_expired_windows still zeroes it once its reset passes.
 pub fn merge(state: Option<State>, live: Option<State>) -> Option<State> {
     match (state, live) {
-        (Some(s), Some(l)) => {
+        (Some(mut s), Some(mut l)) => {
             let use_live = l.rate_limits.is_some()
                 && (s.rate_limits.is_none() || l.captured_at > s.captured_at);
-            if use_live {
-                Some(State { rate_limits: l.rate_limits, captured_at: l.captured_at, ..s })
+            // Everything outside rate_limits/captured_at only ever exists on
+            // the statusline snapshot, so `s` is the base either way.
+            let carried = if use_live {
+                let carried = s.rate_limits.take().and_then(|rl| rl.fable_week);
+                s.rate_limits = l.rate_limits;
+                s.captured_at = l.captured_at;
+                carried
             } else {
-                Some(s)
+                l.rate_limits.take().and_then(|rl| rl.fable_week)
+            };
+            if let Some(rl) = s.rate_limits.as_mut() {
+                if rl.fable_week.is_none() {
+                    rl.fable_week = carried;
+                }
             }
+            Some(s)
         }
         (s, l) => s.or(l),
     }
@@ -100,7 +119,11 @@ pub fn merge(state: Option<State>, live: Option<State>) -> Option<State> {
 /// windows in place; resets_at is kept so the UI can label the value as
 /// post-reset.
 pub fn zero_expired_windows(rate_limits: &mut RateLimits, now_epoch_secs: i64) {
-    for w in [&mut rate_limits.five_hour, &mut rate_limits.seven_day] {
+    for w in [
+        &mut rate_limits.five_hour,
+        &mut rate_limits.seven_day,
+        &mut rate_limits.fable_week,
+    ] {
         if let Some(w) = w.as_mut() {
             if w.resets_at <= now_epoch_secs {
                 w.used_percentage = 0;

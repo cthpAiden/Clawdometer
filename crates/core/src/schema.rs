@@ -31,6 +31,12 @@ pub struct RateLimits {
     pub five_hour: Option<LimitWindow>,
     #[serde(default, deserialize_with = "lenient_opt")]
     pub seven_day: Option<LimitWindow>,
+    /// The per-model weekly limit. Unlike the two above this never arrives on
+    /// the statusline's stdin — only `/usage` prints it — so it is always None
+    /// on the hook path and Some only after a refresh. state::merge carries it
+    /// across snapshots for exactly that reason.
+    #[serde(default, deserialize_with = "lenient_opt")]
+    pub fable_week: Option<LimitWindow>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

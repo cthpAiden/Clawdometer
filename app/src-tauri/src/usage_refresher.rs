@@ -209,9 +209,13 @@ fn run_usage_command() -> Option<String> {
 /// Parse the `/usage` plain-text report. Expected lines (v2.1, 2026-07):
 ///   Current session: 32% used · resets Jul 13, 3:29pm (Asia/Saigon)
 ///   Current week (all models): 39% used · resets Jul 16, 9:59am (Asia/Saigon)
-/// Session maps to five_hour, week (all models) to seven_day. Any line that
-/// doesn't parse is skipped; None when neither window parsed (e.g. the CLI
-/// changed its wording) — the caller then just keeps the old snapshot.
+///   Current week (Fable): 54% used · resets Jul 16, 9:59am (Asia/Saigon)
+/// Session maps to five_hour, week (all models) to seven_day, week (Fable) to
+/// fable_week. Any line that doesn't parse is skipped; None when neither of
+/// the two account-wide windows parsed (e.g. the CLI changed its wording) —
+/// the caller then just keeps the old snapshot. The Fable line alone is not
+/// enough to accept a report: it only shows up once you have used Fable this
+/// week, so its absence is normal and must not gate the other two.
 fn parse_usage_text(
     text: &str,
     now: time::OffsetDateTime,
@@ -228,10 +232,11 @@ fn parse_usage_text(
     };
     let five_hour = window_from("Current session:");
     let seven_day = window_from("Current week (all models):");
+    let fable_week = window_from("Current week (Fable):");
     if five_hour.is_none() && seven_day.is_none() {
         return None;
     }
-    Some(RateLimits { five_hour, seven_day })
+    Some(RateLimits { five_hour, seven_day, fable_week })
 }
 
 /// "Jul 13, 3:29pm" or "Jul 16, 10am" (printed in the machine's local
@@ -308,10 +313,28 @@ What's contributing to your limits usage?
     }
 
     #[test]
-    fn ignores_the_per_model_week_line() {
+    fn reads_the_per_model_week_line_without_confusing_it_for_the_account_week() {
         let offset = time::UtcOffset::from_hms(7, 0, 0).unwrap();
         let rl = parse_usage_text(REPORT, t("2026-07-13T06:00:00Z"), offset).unwrap();
-        assert_ne!(rl.seven_day.unwrap().used_percentage, 54, "must not read the Fable line");
+        assert_eq!(rl.seven_day.unwrap().used_percentage, 39, "7d must not read the Fable line");
+        let fb = rl.fable_week.unwrap();
+        assert_eq!(fb.used_percentage, 54);
+        assert_eq!(fb.resets_at, t("2026-07-16T02:59:00Z").unix_timestamp());
+    }
+
+    /// The Fable line only appears once Fable has been used this week. Its
+    /// absence must leave the other two windows intact, not reject the report.
+    #[test]
+    fn report_without_a_fable_line_still_parses() {
+        let offset = time::UtcOffset::from_hms(7, 0, 0).unwrap();
+        let text = "\
+Current session: 32% used \u{b7} resets Jul 13, 3:29pm (Asia/Saigon)
+Current week (all models): 39% used \u{b7} resets Jul 16, 9:59am (Asia/Saigon)
+";
+        let rl = parse_usage_text(text, t("2026-07-13T06:00:00Z"), offset).unwrap();
+        assert_eq!(rl.five_hour.unwrap().used_percentage, 32);
+        assert_eq!(rl.seven_day.unwrap().used_percentage, 39);
+        assert!(rl.fable_week.is_none());
     }
 
     #[test]

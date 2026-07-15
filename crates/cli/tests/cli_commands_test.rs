@@ -128,6 +128,7 @@ fn write_snapshot(path: &Path, captured_at: &str, pct: i64, resets_at: i64) {
                 resets_at,
             }),
             seven_day: None,
+            fable_week: None,
         }),
         model: None,
         context_window: None,

@@ -269,6 +269,7 @@ mod tests {
             rate_limits: pct.map(|p| RateLimits {
                 five_hour: Some(LimitWindow { used_percentage: p, resets_at }),
                 seven_day: None,
+                fable_week: None,
             }),
             model: None,
             context_window: None,

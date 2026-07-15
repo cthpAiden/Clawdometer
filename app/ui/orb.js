@@ -38,9 +38,8 @@
     return a + (b - a) * (x - i);
   };
 
-  // Usage colors: same thresholds as the card so a low number reads as safe.
-  const barColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f59e0b" : "#4a7c47");
-  const numColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f0b429" : "#63b35f");
+  // Usage colors come from the shared table so the orb and the card can't drift.
+  const { paint, num: numColor } = window.UsageColor;
 
   let orbEl = null, bars = [], co = null, running = false, raf = 0, t = 0;
   let lastPayload = null;
@@ -153,7 +152,7 @@
       co.n5.textContent = p5 + "%";
       co.n5.style.color = numColor(p5);
       co.b5.style.width = clampPct(p5) + "%";
-      co.b5.style.background = barColor(p5);
+      paint(co.b5, p5);
     }
 
     const p7 = sd && typeof sd.used_percentage === "number" ? sd.used_percentage : null;
@@ -162,7 +161,7 @@
     } else {
       co.n7.textContent = p7 + "%";
       co.b7.style.width = clampPct(p7) + "%";
-      co.b7.style.background = barColor(p7);
+      paint(co.b7, p7);
     }
 
     // Reset countdown for the 5h window; drop the line past its reset.

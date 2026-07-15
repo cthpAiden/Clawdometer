@@ -1,16 +1,20 @@
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 html, body { background: transparent; overflow: hidden; }
+/* The 5h window has no label row of its own: the big number IS its value and
+   the main bar sits beside it, so "5H" would only name what the number
+   already says. The two weekly windows share that convention below it. */
 #card {
-  width: 200px; height: 112px; padding: 11px 13px;
+  width: 200px; height: 136px; padding: 11px 13px;
   background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
   border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
-  display: grid; column-gap: 8px; row-gap: 6px; align-items: center;
+  display: grid; column-gap: 8px; row-gap: 5px; align-items: center;
   grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto 1fr;
   grid-template-areas:
     "header  header"
     "num     bar"
     "wlabel  wbar"
+    "flabel  fbar"
     "footer  footer";
 }
 #header { grid-area: header; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
@@ -22,26 +26,34 @@ html, body { background: transparent; overflow: hidden; }
 .bar.main { grid-area: bar; height: 8px; }
 .wlabel { grid-area: wlabel; color: #8a8a92; }
 .wbar { grid-area: wbar; display: flex; align-items: center; gap: 8px; }
+.flabel { grid-area: flabel; color: #8a8a92; }
+.fbar { grid-area: fbar; display: flex; align-items: center; gap: 8px; }
 .bar { background: #2c2c32; border-radius: 4px; overflow: hidden; }
 .bar.thin { flex: 1; height: 4px; border-radius: 2px; }
-.fill { height: 100%; width: 0%; background: #4a7c47; border-radius: inherit; transition: width .3s;
+/* --u / --u-lit are set per-element by UsageColor.paint (usage-color.js); the
+   literals here are only what shows before the first payload lands. */
+.fill { height: 100%; width: 0%; background: var(--u, #3f7fbf); border-radius: inherit; transition: width .3s;
   position: relative; overflow: hidden; }
 .pct { min-width: 34px; text-align: right; color: #a8a8b0; font-variant-numeric: tabular-nums; }
-#footer { grid-area: footer; align-self: end; display: flex; justify-content: space-between;
+/* margin-bottom lifts the line off the card's bottom edge — align-self:end
+   would otherwise park it right against the border. */
+#footer { grid-area: footer; align-self: end; margin-bottom: 2px;
+  display: flex; justify-content: space-between;
   gap: 8px; color: #6a6a72; font-size: 10px; white-space: nowrap; }
 #footer.stale #age { color: #f87171; }
 #reset { color: #8a8a92; }
-#reset b { color: #63b35f; font-weight: 400; }
+#reset b { color: #6aa9e8; font-weight: 400; }
 
 /* Compact: 120x92 near-square — "Current" + countdown, inline num/bar, weekly.
    No footer, so the weekly reset day/time only shows in the regular size. */
 body.compact #card {
-  width: 120px; height: 92px; padding: 10px 11px; column-gap: 8px; row-gap: 6px;
-  grid-template-rows: auto auto auto;
+  width: 120px; height: 106px; padding: 10px 11px; column-gap: 8px; row-gap: 5px;
+  grid-template-rows: auto auto auto auto;
   grid-template-areas:
     "header header"
     "num    bar"
-    "wlabel wbar";
+    "wlabel wbar"
+    "flabel fbar";
 }
 body.compact .lsfx { display: none; }
 body.compact #footer { display: none; }
@@ -50,8 +62,9 @@ body.compact #countdown { font-size: 8px; padding: 2px 5px; }
 body.compact #txt5h { font-size: 19px; }
 body.compact #txt5h .u { font-size: 0.6em; }
 body.compact .bar.main { height: 7px; }
-body.compact .wlabel { font-size: 10px; }
+body.compact .wlabel, body.compact .flabel { font-size: 10px; }
 body.compact .pct { min-width: 24px; font-size: 10px; }
+body.compact .wbar, body.compact .fbar { gap: 6px; }
 
 /* Near-limit (>=90%): pulse an inset red ring. Inset so the transparent
    WebView2 window (sized to the card) never clips it. */
@@ -65,7 +78,7 @@ body.critical #card { animation: pulse 1.8s ease-in-out infinite; }
    burns tokens. The card itself never moves, so the HUD doesn't jitter.
    Regular and compact sizes share .bar.main, so this covers both. The
    stripes are gated on body.working, so they appear and vanish cleanly with
-   the state — idle falls back to the solid green fill.
+   the state — idle falls back to the solid fill.
    Base hook for future skin animations: skins override this block. */
 /* The stripes live on a pseudo-element moved with transform: translateX, not
    an animated background-position — background animations run on the main
@@ -74,10 +87,15 @@ body.critical #card { animation: pulse 1.8s ease-in-out infinite; }
    did. 22.07px = one horizontal period of the 20px pattern at 115deg
    (20 / sin 115deg), so the loop wraps seamlessly; the extra left overhang
    keeps the fill covered mid-cycle, and .fill's overflow:hidden stops the
-   stripes leaking past its right edge into the empty track. */
+   stripes leaking past its right edge into the empty track.
+   The stripes read --u/--u-lit off the .fill they cover, so a working bar
+   stays at its own threshold level. Hard-coding the hue here (as this did)
+   painted the bar green at 94% — the red the level called for was drawn, then
+   covered up, exactly when it mattered most. */
 body.working .bar.main .fill::after {
   content: ""; position: absolute; top: 0; bottom: 0; left: -22.07px; right: 0;
-  background: repeating-linear-gradient(115deg, #4a7c47 0 10px, #5c9257 10px 20px);
+  background: repeating-linear-gradient(115deg,
+    var(--u, #3f7fbf) 0 10px, var(--u-lit, #5b98d4) 10px 20px);
   animation: flow 0.9s linear infinite;
 }
 @keyframes flow {
@@ -130,9 +148,9 @@ body[data-rice^="audiowave_orb"] #orb { display: block; }
 #orb .st.s2 { margin-top: 8px; }
 #orb .st .k { font: 700 9.5px "Segoe UI", sans-serif; color: #828994; letter-spacing: .3px; }
 #orb .st .k b { color: #eef1f5; font-weight: 800; }
-#orb .st .k b.g { color: #63b35f; }
+#orb .st .k b.g { color: #6aa9e8; }
 #orb .track { width: 54px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
-#orb .track i { display: block; height: 100%; width: 0%; border-radius: 2px; background: #4a7c47; }
+#orb .track i { display: block; height: 100%; width: 0%; border-radius: 2px; background: var(--u, #3f7fbf); }
 #orb .reset {
   margin-top: 7px; font: 700 7.5px "Segoe UI", sans-serif;
   color: #6b727b; letter-spacing: .4px; text-transform: uppercase;

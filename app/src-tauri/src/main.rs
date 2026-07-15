@@ -67,12 +67,14 @@ fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
     if let Some(win) = app.get_webview_window("hud") {
         // The Audiowave Orb skin is a square ring stage; Classic keeps its
         // regular or compact card size.
+        // Must match #card in style.css exactly — the window is sized to the
+        // card, so a stale number here clips the footer off the bottom.
         let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
             (160.0, 160.0)
         } else if prefs.compact {
-            (120.0, 92.0)
+            (120.0, 106.0)
         } else {
-            (200.0, 112.0)
+            (200.0, 136.0)
         };
         let _ = win.set_size(tauri::LogicalSize::new(w, h));
     }
@@ -357,7 +359,7 @@ fn main() {
                 let (w, h) = win
                     .outer_size()
                     .map(|s| (s.width as i32, s.height as i32))
-                    .unwrap_or((200, 112));
+                    .unwrap_or((200, 136));
                 let on_a_monitor = win
                     .available_monitors()
                     .map(|monitors| {

@@ -47,8 +47,10 @@ const els = {
   countdown: document.getElementById("countdown"),
   bar5h: document.getElementById("bar5h"),
   bar7d: document.getElementById("bar7d"),
+  barfb: document.getElementById("barfb"),
   txt5h: document.getElementById("txt5h"),
   txt7d: document.getElementById("txt7d"),
+  txtfb: document.getElementById("txtfb"),
   footer: document.getElementById("footer"),
   age: document.getElementById("age"),
   reset: document.getElementById("reset"),
@@ -57,10 +59,9 @@ const els = {
 let current = null; // last payload
 let compactMode = false; // mirrors the tray's "Compact size" toggle
 
-// Usage colors: calm green when safe, amber past 70%, red past 90% — so a low
-// number reads as safe instead of the old always-orange bar.
-const barColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f59e0b" : "#4a7c47");
-const numColor = (pct) => (pct >= 90 ? "#e5484d" : pct >= 70 ? "#f0b429" : "#63b35f");
+// Usage colors live in usage-color.js — the orb skin reads the same table, and
+// the working stripes read the same custom properties.
+const { paint, num: numColor } = window.UsageColor;
 
 // Header countdown to the 5h window reset. Account-wide limits, so this beats a
 // model name. Leading ↻ marks it as a reset countdown so the number isn't read as
@@ -94,20 +95,24 @@ function renderPrimary(win) {
   els.txt5h.append(unit);
   els.txt5h.style.color = numColor(win.used_percentage);
   els.bar5h.style.width = pct + "%";
-  els.bar5h.style.background = barColor(win.used_percentage);
+  paint(els.bar5h, win.used_percentage);
 }
 
-// The demoted weekly window: thin bar (threshold-colored) + muted percentage.
-function renderSecondary(win) {
+// A demoted window (weekly, Fable): thin bar (threshold-colored) + muted
+// percentage.
+// fable_week is absent until a /usage refresh has seen it (the statusline hook
+// never carries it), and absent entirely if Fable hasn't been used this week —
+// both render as "—", not as 0%, which would be a lie.
+function renderSecondary(win, bar, txt) {
   if (!win || typeof win.used_percentage !== "number") {
-    els.txt7d.textContent = "—";
-    els.bar7d.style.width = "0%";
+    txt.textContent = "—";
+    bar.style.width = "0%";
     return;
   }
   const pct = Math.max(0, Math.min(100, win.used_percentage));
-  els.txt7d.textContent = `${win.used_percentage}%`;
-  els.bar7d.style.width = pct + "%";
-  els.bar7d.style.background = barColor(win.used_percentage);
+  txt.textContent = `${win.used_percentage}%`;
+  bar.style.width = pct + "%";
+  paint(bar, win.used_percentage);
 }
 
 // Weekly reset day + local time, from the seven_day.resets_at the statusline
@@ -143,7 +148,8 @@ function render() {
     els.countdown.textContent = "—";
     els.countdown.style.color = "";
     renderPrimary(null);
-    renderSecondary(null);
+    renderSecondary(null, els.bar7d, els.txt7d);
+    renderSecondary(null, els.barfb, els.txtfb);
     els.age.textContent = "waiting for data — open Claude Code";
     els.reset.textContent = "";
     els.footer.classList.remove("stale");
@@ -153,7 +159,8 @@ function render() {
   const fh = state.rate_limits.five_hour;
   els.countdown.textContent = fmtCountdown(fh && fh.resets_at, nowMs, compactMode);
   renderPrimary(fh);
-  renderSecondary(state.rate_limits.seven_day);
+  renderSecondary(state.rate_limits.seven_day, els.bar7d, els.txt7d);
+  renderSecondary(state.rate_limits.fable_week, els.barfb, els.txtfb);
 
   const fivePct = fh && typeof fh.used_percentage === "number" ? fh.used_percentage : 0;
   const critical = fivePct >= 90;

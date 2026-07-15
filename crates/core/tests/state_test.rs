@@ -1,8 +1,60 @@
-use clawdometer_core::schema::parse_statusline_input;
-use clawdometer_core::state::{read_state, write_state_atomic, State};
+use clawdometer_core::schema::{parse_statusline_input, LimitWindow, RateLimits};
+use clawdometer_core::state::{merge, read_state, write_state_atomic, State};
 
 const PRE: &str = include_str!("fixtures/stdin-pre-response.json");
 const FULL: &str = include_str!("fixtures/stdin-with-limits.json");
+
+fn win(pct: i64) -> Option<LimitWindow> {
+    Some(LimitWindow { used_percentage: pct, resets_at: 4_000_000_000 })
+}
+
+fn snapshot(captured_at: &str, rl: Option<RateLimits>) -> Option<State> {
+    Some(State {
+        schema_version: 1,
+        captured_at: captured_at.into(),
+        rate_limits: rl,
+        model: None,
+        context_window: None,
+        session_id: None,
+        transcript_path: None,
+        cli_version: None,
+    })
+}
+
+/// The statusline hook never carries fable_week, and it writes a newer
+/// snapshot on every prompt. Taking rate_limits as one unit would blank the
+/// Fable bar until the next /usage refresh brought it back — a visible flicker
+/// on each turn.
+#[test]
+fn merge_keeps_fable_week_when_a_newer_statusline_snapshot_lacks_it() {
+    let live = snapshot(
+        "2026-07-13T06:00:00Z",
+        Some(RateLimits { five_hour: win(30), seven_day: win(39), fable_week: win(54) }),
+    );
+    let state = snapshot(
+        "2026-07-13T06:05:00Z", // newer: the hook just fired
+        Some(RateLimits { five_hour: win(31), seven_day: win(39), fable_week: None }),
+    );
+    let rl = merge(state, live).unwrap().rate_limits.unwrap();
+    assert_eq!(rl.five_hour.unwrap().used_percentage, 31, "newer statusline still wins");
+    assert_eq!(rl.fable_week.unwrap().used_percentage, 54, "fable must survive the hook");
+}
+
+/// The reverse direction: a fresh refresh must be able to update the value,
+/// not just be a fallback for it.
+#[test]
+fn merge_prefers_fable_week_from_the_newer_refresh() {
+    let state = snapshot(
+        "2026-07-13T06:00:00Z",
+        Some(RateLimits { five_hour: win(30), seven_day: win(39), fable_week: win(54) }),
+    );
+    let live = snapshot(
+        "2026-07-13T06:05:00Z",
+        Some(RateLimits { five_hour: win(33), seven_day: win(41), fable_week: win(61) }),
+    );
+    let rl = merge(state, live).unwrap().rate_limits.unwrap();
+    assert_eq!(rl.fable_week.unwrap().used_percentage, 61);
+}
 
 #[test]
 fn state_from_full_input_matches_spec_shape() {
