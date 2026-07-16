@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — LED band-mapping balance fix, 4-way compare</title>
+<!--
+  DESIGN MOCKUP — synthetic fake spectrum, not wired to real audio.
+  Physics/geometry constants (IR, SEGMENTS, LED_ATTACK/RELEASE/K/DECAY/BOUNCE,
+  band weight 0.65, always-on inner rung) are copied verbatim from the shipped
+  app/ui/orb.js frameLed() — this is the real baseline, not the older 6-preset
+  bounce mockup. Region onset arcs (bass->treble, 6 regions/9 bars each) are
+  ALSO left spatially fixed across all 4 modes below — only the per-bar
+  *resting* band mapping changes. Remapping bloom-region placement to match
+  Mirror/Seam geometry is a follow-up, not attempted here.
+
+  Root cause this compares fixes for: frameLed() reads
+  `band = lerpBin(b.i / BARS)` — a straight linear sweep, bin 0 (~30Hz, bass)
+  at bar 0 (top), climbing clockwise to bin 35 (~16kHz, treble/air) just
+  before wrapping back to bar 0. That puts the right half of the ring
+  (top->bottom clockwise) on bins 0-18 (bass+low-mid, genuinely louder/more
+  dynamic in most audio) and the left half on bins 18-36 (mid/treble,
+  quieter) — plus a hard bass/treble seam exactly at the top, between bar 53
+  and bar 0. All 36 bins ARE used (no coverage gap); the asymmetry is the
+  fixed placement of real, uneven energy, not a missing band.
+
+  4 modes, top buttons:
+  - Current   — shipped baseline, unmodified, for A/B reference.
+  - Mirror    — bass anchors one point, sweeps out symmetrically both ways,
+                meets treble at the opposite point. Left becomes an exact
+                mirror of right (same bins at mirrored bar positions) and the
+                seam disappears (both arms land on the same bin at the far
+                point instead of jumping bass<->treble).
+  - Move seam — cheap rotate: same linear wraparound sweep, just offset so
+                the bass/treble jump lands somewhere other than the top.
+                Does NOT balance loudness, only relocates which side has it.
+  - Tame bass — geometry unchanged (bass stays at top), but the low bins'
+                contribution to bar height is scaled down before use, so the
+                bass half doesn't dominate as hard. Treble bins untouched.
+
+  Settings under the ring are per-mode and update a plain-text readout line
+  so the exact values can be read back verbatim.
+-->
+<style>
+  html,body{margin:0;background:#0a0c10;color:#e9edf2}
+  body{padding:24px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .board{max-width:560px;margin:0 auto}
+  header.intro{margin-bottom:18px}
+  header.intro h1{font-size:16px;margin:0 0 8px}
+  header.intro p{font-size:12px;color:#9aa0a8;line-height:1.55;margin:4px 0}
+  header.intro code{color:#c8e05a;font-size:11px}
+  .panel{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .stage{position:relative;width:210px;height:210px}
+  .ring{position:absolute;inset:0}
+  .spoke{position:absolute;left:50%;top:50%;width:0;height:0}
+  .seg{position:absolute;left:-1.5px;width:3px;height:4px;border-radius:1px;transition:opacity .09s linear}
+  .co{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:96px;height:96px;border-radius:50%;
+      background:radial-gradient(circle at 50% 45%,rgba(20,24,30,.92),rgba(20,24,30,0) 74%);border:1px solid rgba(255,255,255,.06);
+      display:flex;align-items:center;justify-content:center}
+  .co .lbl{font-size:10px;color:#7f8791;text-align:center;line-height:1.4}
+  .modes{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .modes button{font-size:11.5px;padding:6px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#c9ced6;cursor:pointer}
+  .modes button:hover{background:rgba(255,255,255,.09)}
+  .modes button.active{background:#3f7fbf;border-color:#3f7fbf;color:#fff}
+  .modenote{font-size:11px;color:#9aa0a8;line-height:1.5;text-align:center;max-width:460px;min-height:32px}
+  .settings{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;min-height:56px;justify-content:center}
+  .row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#9aa0a8;flex-wrap:wrap;justify-content:center}
+  .row input[type=range]{width:170px}
+  .seg2{display:flex;gap:5px}
+  .seg2 button{font-size:10.5px;padding:3px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#c9ced6;cursor:pointer}
+  .seg2 button.active{background:#3f7fbf;border-color:#3f7fbf;color:#fff}
+  .readout{font-size:11.5px;color:#c8e05a;background:rgba(200,224,90,.08);border:1px solid rgba(200,224,90,.2);
+      border-radius:6px;padding:6px 12px;font-family:ui-monospace,monospace}
+  .foot{text-align:center;font-size:10px;color:#7f8791;padding:14px 0 4px}
+  @media (prefers-reduced-motion: reduce){ .seg{transition:none} }
+</style>
+</head>
+<body>
+<div class="board">
+  <header class="intro">
+    <h1>LED band-mapping balance — 4 fixes compared</h1>
+    <p>Right half of the ring reads bins 0-18 (bass/low-mid, louder in most audio); left half reads bins 18-36 (mid/treble, quieter) — plus a hard seam at the top where the sweep wraps. All 36 bins are covered already; this is about <em>where</em> that real energy lands, not a missing band. Pick a mode, tune its setting, and the readout below shows the exact value to hand back.</p>
+  </header>
+  <div class="panel">
+    <div class="stage" id="stage">
+      <div class="ring" id="ring"></div>
+      <div class="co"><div class="lbl">band mapping<br>compare</div></div>
+    </div>
+    <div class="modes" id="modes"></div>
+    <p class="modenote" id="modenote"></p>
+    <div class="settings" id="settings"></div>
+    <div class="readout" id="readout"></div>
+  </div>
+  <div class="foot">bloom/region arcs stay fixed across all 4 modes here — only the per-bar resting band mapping changes · design preview only</div>
+</div>
+<script>
+(function(){
+  // ---- constants copied verbatim from app/ui/orb.js frameLed() ----
+  const N=36, BARS=54, IR=52, SEGMENTS=5, SEGSTEP=5;
+  const KICK_DECAY=0.85;
+  const KERNEL=[0.30,0.62,1.0,0.62,0.30];
+  const REGIONS=6, REGION_BARS=BARS/REGIONS, REGION_BINS=N/REGIONS; // 9 bars / 6 bins
+  const LED_ATTACK=0.40, LED_RELEASE=0.22, LED_K=0.20, LED_DECAY=0.88, LED_BOUNCE=1.9, LED_RND_WEIGHT=0.12;
+  const BAND_WEIGHT=0.65;
+  const RAMP=["#2d5d8f","#3f7fbf","#5b98d4","#7cc3e6","#67e8f9"]; // "ok" zone, fixed — zone color isn't what's being compared
+
+  const ring=document.getElementById('ring');
+  const bars=[];
+  for(let i=0;i<BARS;i++){
+    const ang=i/BARS*360;
+    const spoke=document.createElement('div'); spoke.className='spoke';
+    spoke.style.transform='rotate('+ang+'deg)';
+    const segs=[];
+    for(let s=0;s<SEGMENTS;s++){
+      const seg=document.createElement('div'); seg.className='seg';
+      seg.style.bottom=(IR+s*SEGSTEP)+'px';
+      seg.style.opacity='.12';
+      seg.style.background=RAMP[s];
+      spoke.appendChild(seg);
+      segs.push(seg);
+    }
+    ring.appendChild(spoke);
+    bars.push({i:i, seg:segs, env:0, y:0, v:0, kick:0, rnd:0, lastLit:0});
+  }
+
+  // ---- fake spectrum generator, identical to audio-orb-led-usage-zones.html ----
+  const spec=new Float32Array(N);
+  function lerpBinWrap(fr){
+    const x=fr*N, i=Math.floor(x);
+    const a=spec[((i%N)+N)%N], b=spec[(((i+1)%N)+N)%N];
+    return a+(b-a)*(x-i);
+  }
+  function sampleClamped(x){
+    x=Math.max(0,Math.min(N-1,x));
+    const i=Math.floor(x);
+    const a=spec[i], b=spec[Math.min(N-1,i+1)];
+    return a+(b-a)*(x-i);
+  }
+  const BEAT=60/128;
+  function fakeSpectrumUpdate(t){
+    for(let i=0;i<N;i++) spec[i]*=0.90;
+    const bt=t%BEAT;
+    const kick=Math.max(0,1-bt/0.10);
+    for(let i=0;i<6;i++) spec[i]=Math.max(spec[i], kick*(1-i/8));
+    const beatIdx=Math.floor(t/BEAT)%4;
+    if(beatIdx===1||beatIdx===3){
+      const snare=Math.max(0,1-bt/0.14);
+      for(let i=8;i<20;i++) spec[i]=Math.max(spec[i], snare*(0.5+Math.random()*0.5));
+    }
+    const ht=t%(BEAT/2);
+    const hat=Math.max(0,1-ht/0.045);
+    for(let i=24;i<N;i++) spec[i]=Math.max(spec[i], hat*(0.3+Math.random()*0.5));
+    for(let i=0;i<N;i++) spec[i]=Math.min(1, spec[i]+0.01+0.01*Math.sin(t*0.7+i));
+  }
+
+  // ---- region onset detection, UNCHANGED across all 4 modes ----
+  const regionFast=new Float32Array(REGIONS), regionAvg=new Float32Array(REGIONS).fill(0.05), regionCooldown=new Int32Array(REGIONS);
+  function detectRegionHits(){
+    const fired=[];
+    for(let r=0;r<REGIONS;r++){
+      let e=0; const b0=r*REGION_BINS;
+      for(let i=0;i<REGION_BINS;i++) e+=spec[b0+i];
+      e/=REGION_BINS;
+      regionFast[r]+=(e-regionFast[r])*0.55;
+      regionAvg[r]+=(e-regionAvg[r])*0.04;
+      regionCooldown[r]=Math.max(0,regionCooldown[r]-1);
+      if(regionFast[r]>regionAvg[r]*1.35+0.10 && regionCooldown[r]===0){
+        regionCooldown[r]=10;
+        fired.push(r);
+      }
+    }
+    return fired;
+  }
+
+  // ---- the 4 modes ----
+  let mode='current';       // 'current' | 'mirror' | 'seam' | 'tame'
+  let mirrorAnchor='top';   // 'top' | 'bottom'
+  let seamOffsetDeg=180;    // 0-359
+  let tameStrength=50;      // 0-100
+
+  function bandForBar(i){
+    if(mode==='mirror'){
+      const half=i<=BARS/2 ? i : BARS-i;      // triangle 0..27..0 across the ring
+      let frac=half/(BARS/2);                  // 0 at anchor, 1 at the far point
+      if(mirrorAnchor==='bottom') frac=1-frac;
+      return sampleClamped(frac*(N-1));         // no modulo — no seam, ever
+    }
+    if(mode==='seam'){
+      const fr=(((i/BARS)+seamOffsetDeg/360)%1+1)%1;
+      return lerpBinWrap(fr);
+    }
+    if(mode==='tame'){
+      const fr=i/BARS;
+      const raw=lerpBinWrap(fr);
+      const effBin=((fr*N)%N+N)%N;              // 0=bass..35=treble, same geometry as current
+      const gain=1-(tameStrength/100)*(1-effBin/(N-1))*0.7;
+      return raw*gain;
+    }
+    return lerpBinWrap(i/BARS); // 'current' — shipped baseline, untouched
+  }
+
+  const MODES=[
+    {key:'current', label:'Current', note:'Shipped baseline. No settings — this is what you’re looking at live right now, for reference.'},
+    {key:'mirror', label:'Mirror', note:'Bass anchors one point, sweeps out both ways, meets treble at the opposite point. Left is forced to mirror right exactly — always balanced, seam gone.'},
+    {key:'seam', label:'Move seam', note:'Same linear sweep, just rotated. Cheap, but doesn’t balance loudness — one half still jumps more, just relocated off the top.'},
+    {key:'tame', label:'Tame bass', note:'Geometry unchanged (bass stays at top) — low bins’ contribution to bar height is scaled down so the bass half doesn’t dominate as hard.'},
+  ];
+
+  const modesEl=document.getElementById('modes');
+  const modeBtns={};
+  MODES.forEach(function(m){
+    const b=document.createElement('button'); b.type='button'; b.textContent=m.label;
+    b.onclick=function(){ setMode(m.key); };
+    modesEl.appendChild(b);
+    modeBtns[m.key]=b;
+  });
+
+  const modenoteEl=document.getElementById('modenote');
+  const settingsEl=document.getElementById('settings');
+  const readoutEl=document.getElementById('readout');
+
+  function renderSettings(){
+    settingsEl.textContent='';
+    if(mode==='mirror'){
+      const row=document.createElement('div'); row.className='row';
+      row.appendChild(document.createTextNode('Bass anchor '));
+      const seg=document.createElement('div'); seg.className='seg2';
+      ['top','bottom'].forEach(function(v){
+        const b=document.createElement('button'); b.type='button'; b.textContent=v;
+        b.className=(mirrorAnchor===v?'active':'');
+        b.onclick=function(){ mirrorAnchor=v; renderSettings(); updateReadout(); };
+        seg.appendChild(b);
+      });
+      row.appendChild(seg);
+      settingsEl.appendChild(row);
+    } else if(mode==='seam'){
+      const row=document.createElement('div'); row.className='row';
+      const label=document.createElement('label'); label.textContent='Seam offset ';
+      const input=document.createElement('input'); input.type='range'; input.min=0; input.max=359; input.value=seamOffsetDeg;
+      const val=document.createElement('span'); val.textContent=seamOffsetDeg+'°';
+      input.oninput=function(e){ seamOffsetDeg=+e.target.value; val.textContent=seamOffsetDeg+'°'; updateReadout(); };
+      label.appendChild(input);
+      row.appendChild(label); row.appendChild(val);
+      settingsEl.appendChild(row);
+    } else if(mode==='tame'){
+      const row=document.createElement('div'); row.className='row';
+      const label=document.createElement('label'); label.textContent='Tame strength ';
+      const input=document.createElement('input'); input.type='range'; input.min=0; input.max=100; input.value=tameStrength;
+      const val=document.createElement('span'); val.textContent=tameStrength+'%';
+      input.oninput=function(e){ tameStrength=+e.target.value; val.textContent=tameStrength+'%'; updateReadout(); };
+      label.appendChild(input);
+      row.appendChild(label); row.appendChild(val);
+      settingsEl.appendChild(row);
+    } else {
+      const row=document.createElement('div'); row.className='row';
+      row.textContent='(no settings for this mode)';
+      settingsEl.appendChild(row);
+    }
+  }
+
+  function updateReadout(){
+    let s='mode: '+mode;
+    if(mode==='mirror') s+='  ·  anchor: '+mirrorAnchor;
+    if(mode==='seam') s+='  ·  offset: '+seamOffsetDeg+'°';
+    if(mode==='tame') s+='  ·  strength: '+tameStrength+'%';
+    readoutEl.textContent=s;
+  }
+
+  function setMode(key){
+    mode=key;
+    MODES.forEach(function(m){ modeBtns[m.key].classList.toggle('active', m.key===key); });
+    modenoteEl.textContent=MODES.find(function(m){ return m.key===key; }).note;
+    renderSettings();
+    updateReadout();
+  }
+  setMode('current');
+
+  let t=0;
+  const REDUCED=window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function frame(){
+    t+=0.016;
+    fakeSpectrumUpdate(t);
+    for(const r of detectRegionHits()){
+      const center=r*REGION_BARS+Math.floor(Math.random()*REGION_BARS);
+      for(let o=-2;o<=2;o++){
+        const idx=((center+o)%BARS+BARS)%BARS;
+        bars[idx].kick=Math.max(bars[idx].kick, KERNEL[o+2]);
+      }
+    }
+    for(const b of bars){
+      const band=bandForBar(b.i);
+      b.rnd+=(Math.random()*2-1)*0.03;
+      b.rnd=Math.max(-1,Math.min(1,b.rnd));
+      b.rnd*=0.97;
+      b.kick*=KICK_DECAY;
+      const tgt=Math.min(1.3, band*BAND_WEIGHT + b.rnd*LED_RND_WEIGHT + b.kick);
+      if(tgt>b.env) b.env+=(tgt-b.env)*LED_ATTACK;
+      else b.env+=(tgt-b.env)*LED_RELEASE;
+      const force=(b.env-b.y)*LED_K*LED_BOUNCE;
+      b.v=(b.v+force)*LED_DECAY;
+      b.y+=b.v;
+      if(b.y<0){ b.y=0; b.v*=-0.3; }
+      const frac=Math.max(0,Math.min(1.3,b.y));
+      const lit=Math.max(1,Math.min(SEGMENTS,Math.round(frac*SEGMENTS)));
+      if(lit!==b.lastLit){
+        if(lit>b.lastLit) for(let s=b.lastLit;s<lit;s++) b.seg[s].style.opacity=1;
+        else for(let s=lit;s<b.lastLit;s++) b.seg[s].style.opacity=.12;
+        b.lastLit=lit;
+      }
+    }
+    if(!REDUCED) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

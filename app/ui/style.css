@@ -202,6 +202,14 @@ body[data-rice^="audiowave_orb"] #orb { display: block; }
 }
 /* Caps ride only the "Peak hold" variant; the plain "Bars" orb hides them. */
 #orb.peak .cap { display: block; }
+/* LED Bloom variant: 5 stacked "rung" segments per bar instead of one solid
+   bar, opacity-toggled top to bottom as the bar climbs (orb.js frameLed).
+   Built only while this variant is active, so Bars/Peak's .bar/.cap are
+   simply absent from the DOM rather than hidden — no extra CSS toggle. */
+#orb .seg {
+  position: absolute; left: -1.2px; width: 2.4px; height: 3.4px;
+  border-radius: 1px; will-change: opacity;
+}
 #orb .co {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: 104px; height: 104px; border-radius: 50%; line-height: 1;

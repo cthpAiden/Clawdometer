@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — Concept 4: Region Dividers</title>
+<!--
+  IMPROVEMENT CONCEPT 4 of 5 — layered on the SHIPPED LED Bloom baseline.
+  Right now the 6 bass->treble regions that drive the band-specific bloom
+  are invisible — you can only infer them by watching where blooms land.
+  This concept makes the 6 regions LEGIBLE at rest: faint alternating wedge
+  shading behind the ring + a thin divider tick at each region boundary.
+  Purely additive, no physics change — same bars, same colors, same bloom.
+
+  Toggle "Show region map" off to compare against the exact shipped baseline.
+-->
+<style>
+  html,body{margin:0;background:#0a0c10;color:#e9edf2}
+  body{padding:24px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .board{max-width:520px;margin:0 auto}
+  header.intro{margin-bottom:18px}
+  header.intro h1{font-size:16px;margin:0 0 8px}
+  header.intro p{font-size:12px;color:#9aa0a8;line-height:1.55;margin:4px 0}
+  header.intro code{color:#c8e05a;font-size:11px}
+  .panel{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .stage{position:relative;width:210px;height:210px}
+  .wedges{position:absolute;left:50%;top:50%;width:184px;height:184px;margin:-92px;border-radius:50%}
+  .dividers{position:absolute;inset:0}
+  .dtick{position:absolute;left:50%;top:50%;width:0;height:0}
+  .dtick i{position:absolute;left:-0.5px;width:1px;background:rgba(255,255,255,.22)}
+  .ring{position:absolute;inset:0}
+  .spoke{position:absolute;left:50%;top:50%;width:0;height:0}
+  .seg{position:absolute;left:-1.5px;width:3px;height:4px;border-radius:1px;transition:opacity .09s linear}
+  .co{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:108px;height:108px;border-radius:50%;
+      background:radial-gradient(circle at 50% 45%,rgba(20,24,30,.92),rgba(20,24,30,0) 74%);border:1px solid rgba(255,255,255,.06);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;z-index:2}
+  .pctnum{font-size:26px;font-weight:800;line-height:1}
+  .zonename{font-size:9.5px;color:#9aa0a8;font-weight:700;letter-spacing:.3px;text-align:center;padding:0 8px}
+  .track{width:60px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:2px}
+  .ctrls{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
+  .row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#9aa0a8;flex-wrap:wrap;justify-content:center}
+  .row input[type=range]{width:160px}
+  .quick{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+  .quick button{font-size:10.5px;padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#c9ced6;cursor:pointer}
+  .quick button:hover{background:rgba(255,255,255,.09)}
+  .toggle-row{display:flex;gap:14px;align-items:center;font-size:11.5px;color:#9aa0a8}
+  .toggle-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .legend{display:flex;gap:18px;justify-content:center;margin-top:4px}
+  .legend .lg{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .legend .lg b{font-size:9.5px;color:#9aa0a8;font-weight:700}
+  .swatch{display:flex;gap:2px}
+  .swatch i{width:8px;height:8px;border-radius:2px;display:block}
+  .rlabels{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:9.5px;color:#7f8791}
+  .rlabels b{color:#c9ced6}
+  .foot{text-align:center;font-size:10px;color:#7f8791;padding:14px 0 4px}
+  @media (prefers-reduced-motion: reduce){ .seg{transition:none} }
+</style>
+</head>
+<body>
+<div class="board">
+  <header class="intro">
+    <h1>Concept 4 · Region Dividers</h1>
+    <p>Same ring, same physics, same colors. New: the 6 bass→treble regions driving the band-specific bloom are now visible at rest — faint alternating wedge shading plus a divider tick at each boundary. Turns "trust me, it's band-specific" into something you can actually see.</p>
+  </header>
+  <div class="panel">
+    <div class="stage" id="stage">
+      <div class="wedges" id="wedges"></div>
+      <div class="dividers" id="dividers"></div>
+      <div class="ring" id="ring"></div>
+      <div class="co" id="co">
+        <div class="pctnum" id="pctnum">42%</div>
+        <div class="zonename" id="zonename">—</div>
+        <div class="track"><i id="trackfill"></i></div>
+      </div>
+    </div>
+    <div class="rlabels">
+      <span><b>R0</b> bass</span><span><b>R1</b> low-mid</span><span><b>R2</b> mid</span>
+      <span><b>R3</b> hi-mid</span><span><b>R4</b> presence</span><span><b>R5</b> air</span>
+    </div>
+    <div class="ctrls">
+      <div class="row">
+        <label>Usage % <input id="pct" type="range" min="0" max="100" value="42"></label>
+        <span id="pctlabel">42%</span>
+      </div>
+      <div class="quick" id="quick"></div>
+      <div class="toggle-row">
+        <label><input type="checkbox" id="mapToggle" checked> Show region map</label>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="foot">uncheck "Show region map" to compare against the exact shipped baseline</div>
+</div>
+<script>
+(function(){
+  const N=36, BARS=54, IR=60, SEGMENTS=5, SEGSTEP=5.6;
+  const KICK_DECAY=0.85;
+  const KERNEL=[0.30,0.62,1.0,0.62,0.30];
+  const REGIONS=6, REGION_BARS=BARS/REGIONS, REGION_BINS=N/REGIONS;
+  const LED_ATTACK=.40, LED_RELEASE=.22, LED_K=.20, LED_DECAY=.88, LED_BOUNCE=1.9, LED_RND_WEIGHT=.12;
+
+  const ZONES=[
+    { key:'ok',   name:'Blue · normal (0-74%)',           num:'#6aa9e8', ramp:['#2d5d8f','#3f7fbf','#5b98d4','#7cc3e6','#67e8f9'] },
+    { key:'warn', name:'Yellow · approaching limit (75-89%)', num:'#f0b429', ramp:['#a8670a','#f59e0b','#ffb733','#ffd580','#f97316'] },
+    { key:'crit', name:'Red · critical (≥90%)',       num:'#e5484d', ramp:['#a8353a','#e5484d','#f26a6e','#f8a3a5','#f5a623'] },
+  ];
+  function zoneFor(pct){ return pct>=90?ZONES[2]:pct>=75?ZONES[1]:ZONES[0]; }
+
+  // Wedge shading: 6 alternating near-invisible bands, boundaries matching
+  // the region math exactly (conic-gradient 0deg = up = same convention as
+  // the spoke rotate() below, both clockwise from 12 o'clock).
+  const wedgeDeg=360/REGIONS;
+  const stops=[];
+  for(let r=0;r<REGIONS;r++){
+    const c = r%2===0 ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.012)';
+    stops.push(c+' '+(r*wedgeDeg)+'deg '+((r+1)*wedgeDeg)+'deg');
+  }
+  const wedgesEl=document.getElementById('wedges');
+  wedgesEl.style.background='conic-gradient('+stops.join(',')+')';
+
+  // Divider ticks at each region boundary.
+  const dividersEl=document.getElementById('dividers');
+  for(let r=0;r<REGIONS;r++){
+    const ang=r*wedgeDeg;
+    const wrap=document.createElement('div'); wrap.className='dtick';
+    wrap.style.transform='rotate('+ang+'deg)';
+    const line=document.createElement('i');
+    const top=IR-8, bot=IR+(SEGMENTS-1)*SEGSTEP+10;
+    line.style.bottom=top+'px';
+    line.style.height=(bot-top)+'px';
+    wrap.appendChild(line);
+    dividersEl.appendChild(wrap);
+  }
+
+  let mapOn=true;
+  document.getElementById('mapToggle').onchange=function(e){
+    mapOn=e.target.checked;
+    wedgesEl.style.display=mapOn?'block':'none';
+    dividersEl.style.display=mapOn?'block':'none';
+  };
+
+  const ring=document.getElementById('ring');
+  const bars=[];
+  for(let j=0;j<BARS;j++){
+    const ang=j/BARS*360;
+    const spoke=document.createElement('div'); spoke.className='spoke';
+    spoke.style.transform='rotate('+ang+'deg)';
+    const segs=[];
+    for(let s=0;s<SEGMENTS;s++){
+      const seg=document.createElement('div'); seg.className='seg';
+      seg.style.bottom=(IR+s*SEGSTEP)+'px';
+      seg.style.opacity='.12';
+      spoke.appendChild(seg);
+      segs.push(seg);
+    }
+    ring.appendChild(spoke);
+    bars.push({j:j, seg:segs, env:0, y:0, v:0, kick:0, rnd:0, lastLit:0});
+  }
+
+  const quick=document.getElementById('quick');
+  [0,50,74,75,89,90,100].forEach(function(v){
+    const b=document.createElement('button'); b.type='button'; b.textContent=v+'%';
+    b.onclick=function(){ applyPct(v); };
+    quick.appendChild(b);
+  });
+
+  const legend=document.getElementById('legend');
+  ZONES.forEach(function(z){
+    const lg=document.createElement('div'); lg.className='lg';
+    const b=document.createElement('b'); b.textContent=z.key;
+    const sw=document.createElement('div'); sw.className='swatch';
+    z.ramp.forEach(function(hex){ const i=document.createElement('i'); i.style.background=hex; sw.appendChild(i); });
+    lg.appendChild(sw); lg.appendChild(b);
+    legend.appendChild(lg);
+  });
+
+  const pctSlider=document.getElementById('pct');
+  const pctLabel=document.getElementById('pctlabel');
+  const pctNum=document.getElementById('pctnum');
+  const zoneNameEl=document.getElementById('zonename');
+  const trackFill=document.getElementById('trackfill');
+  let pct=42, curZoneKey=null;
+  function applyPct(v){
+    pct=Math.max(0,Math.min(100,v));
+    pctSlider.value=pct;
+    pctLabel.textContent=pct+'%';
+    pctNum.textContent=pct+'%';
+    const z=zoneFor(pct);
+    pctNum.style.color=z.num;
+    zoneNameEl.textContent=z.name;
+    trackFill.style.width=pct+'%';
+    trackFill.style.background=z.ramp[1];
+    if(z.key!==curZoneKey){
+      curZoneKey=z.key;
+      for(const b of bars) for(let s=0;s<SEGMENTS;s++) b.seg[s].style.background=z.ramp[s];
+    }
+  }
+  pctSlider.oninput=function(e){ applyPct(+e.target.value); };
+  applyPct(pct);
+
+  const spec=new Float32Array(N);
+  function lerpBin(fr){
+    const x=fr*N, i=Math.floor(x);
+    const a=spec[((i%N)+N)%N], b=spec[(((i+1)%N)+N)%N];
+    return a+(b-a)*(x-i);
+  }
+  const BEAT=60/128;
+  function fakeSpectrumUpdate(t){
+    for(let i=0;i<N;i++) spec[i]*=0.90;
+    const bt=t%BEAT;
+    const kick=Math.max(0,1-bt/0.10);
+    for(let i=0;i<6;i++) spec[i]=Math.max(spec[i], kick*(1-i/8));
+    const beatIdx=Math.floor(t/BEAT)%4;
+    if(beatIdx===1||beatIdx===3){
+      const snare=Math.max(0,1-bt/0.14);
+      for(let i=8;i<20;i++) spec[i]=Math.max(spec[i], snare*(0.5+Math.random()*0.5));
+    }
+    const ht=t%(BEAT/2);
+    const hat=Math.max(0,1-ht/0.045);
+    for(let i=24;i<N;i++) spec[i]=Math.max(spec[i], hat*(0.3+Math.random()*0.5));
+    for(let i=0;i<N;i++) spec[i]=Math.min(1, spec[i]+0.01+0.01*Math.sin(t*0.7+i));
+  }
+  const regionFast=new Float32Array(REGIONS);
+  const regionAvg=new Float32Array(REGIONS).fill(0.05);
+  const regionCooldown=new Int32Array(REGIONS);
+  function detectHits(){
+    const fired=[];
+    for(let r=0;r<REGIONS;r++){
+      let e=0; const b0=r*REGION_BINS;
+      for(let i=0;i<REGION_BINS;i++) e+=spec[b0+i];
+      e/=REGION_BINS;
+      regionFast[r] += (e-regionFast[r])*0.55;
+      regionAvg[r]  += (e-regionAvg[r])*0.04;
+      regionCooldown[r]=Math.max(0,regionCooldown[r]-1);
+      if(regionFast[r] > regionAvg[r]*1.35+0.10 && regionCooldown[r]===0){
+        regionCooldown[r]=10;
+        fired.push(r);
+      }
+    }
+    return fired;
+  }
+
+  let t=0;
+  const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function frame(){
+    t+=0.016;
+    fakeSpectrumUpdate(t);
+    for(const r of detectHits()){
+      const center=r*REGION_BARS + Math.floor(Math.random()*REGION_BARS);
+      for(let o=-2;o<=2;o++){
+        const idx=((center+o)%BARS+BARS)%BARS;
+        bars[idx].kick=Math.max(bars[idx].kick, KERNEL[o+2]);
+      }
+    }
+    for(const b of bars){
+      const band=lerpBin(b.j/BARS);
+      b.rnd += (Math.random()*2-1)*0.03;
+      b.rnd = Math.max(-1,Math.min(1,b.rnd));
+      b.rnd *= 0.97;
+      b.kick *= KICK_DECAY;
+      const tgt=Math.min(1.3, band*0.55 + b.rnd*LED_RND_WEIGHT + b.kick);
+      if(tgt>b.env) b.env += (tgt-b.env)*LED_ATTACK;
+      else b.env += (tgt-b.env)*LED_RELEASE;
+      const force=(b.env-b.y)*LED_K*LED_BOUNCE;
+      b.v=(b.v+force)*LED_DECAY;
+      b.y+=b.v;
+      if(b.y<0){ b.y=0; b.v*=-0.3; }
+      const frac=Math.max(0,Math.min(1.3,b.y));
+      const lit=Math.max(1,Math.min(SEGMENTS,Math.round(frac*SEGMENTS)));
+      if(lit!==b.lastLit){
+        if(lit>b.lastLit) for(let s=b.lastLit;s<lit;s++) b.seg[s].style.opacity=1;
+        else for(let s=lit;s<b.lastLit;s++) b.seg[s].style.opacity=.12;
+        b.lastLit=lit;
+      }
+    }
+    if(!REDUCED) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

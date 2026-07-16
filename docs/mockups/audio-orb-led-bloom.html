@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — LED Bloom Bars (band + random + bass-bloom physics)</title>
+<!--
+  DESIGN MOCKUP — synthetic fake spectrum, not wired to real audio.
+  Base visual: style 14 "led" from audio-reactive-visualizer.html, refined from a
+  single scaleY+repeating-gradient bar into discrete stacked LED segments (5 per
+  bar, classic VU-meter rungs) — cheaper to animate (opacity-only, delta-checked:
+  a segment's opacity is only written when its lit state actually flips, not every
+  frame) and a closer match to a literal "LED" read. Ring topology/engine lineage:
+  app/ui/orb.js (54-bar v3 anti-sticky ring).
+
+  NEW mechanic this file explores (not shipped anywhere yet):
+  1. Positional band mapping — bar j's own reactive band is bin j/BARS*N (ascending
+     around the ring), so "this side of the ring = bass, that side = treble" is
+     legible, instead of orb.js's deliberately-scattered per-bar bins.
+  2. Persistent per-bar random walk added on top of the band signal, so bars don't
+     read as a mechanical EQ — each bar has its own slow, smoothed random drift
+     independent of the audio.
+  3. Bass-onset "bloom" kernel — a simple envelope-vs-average onset detector
+     watches only the low bins. On a detected hit it picks one bar inside the bass
+     arc at random and injects a decaying impulse into it AND its 4 neighbors
+     (offsets -2..+2) weighted [0.30, 0.62, 1.0, 0.62, 0.30] — center highest, each
+     ring out a bit lower, matching "a group of 5 bars go up, middle highest."
+     The impulse feeds into the SAME spring/env physics as the band signal, so how
+     it rises and settles is entirely down to the active bounce preset below.
+  A small angle-locked flash (.hitwrap/.hitglow) marks exactly where each hit
+  landed, so the bass-arc mapping is visually checkable, not just asserted.
+
+  6 bounce/physics presets (the "different bouncing settings" ask) × 2 color
+  palettes each = 12 tiles, grouped by preset so the same physics can be compared
+  across colors. All 12 read the identical shared fake spectrum + hit stream, and
+  a hit's center bar is chosen once and applied to all 12 — only preset and
+  palette vary tile-to-tile, so differences on screen are physics/color, not luck.
+-->
+<style>
+  html,body{margin:0;background:#0a0c10;color:#e9edf2}
+  body{padding:24px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .board{max-width:760px;margin:0 auto}
+  header.intro{margin-bottom:22px}
+  header.intro h1{font-size:16px;margin:0 0 8px}
+  header.intro p{font-size:12px;color:#9aa0a8;line-height:1.55;margin:4px 0}
+  header.intro code{color:#c8e05a;font-size:11px}
+  .grp{margin-bottom:30px}
+  .grp h2{font-size:13.5px;margin:0 0 4px;color:#eef1f5;font-weight:700}
+  .grp h2 .sub{font-weight:400;color:#9aa0a8;font-size:11.5px}
+  .grp .stat{font-size:10px;color:#6b727b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .tile{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 8px 12px;display:flex;flex-direction:column;align-items:center;gap:7px}
+  .tag{font-size:10.5px;font-weight:700;color:#eef1f5;text-align:center}
+  .pal{font-size:9px;color:#6b727b;letter-spacing:.2px}
+  .stage{position:relative;width:150px;height:150px}
+  .ring{position:absolute;inset:0}
+  .spoke{position:absolute;left:50%;top:50%;width:0;height:0}
+  .seg{position:absolute;left:-1.2px;width:2.4px;height:3.2px;border-radius:1px;transition:opacity .09s linear}
+  .co{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:82px;height:82px;border-radius:50%;
+      background:radial-gradient(circle at 50% 45%,rgba(20,24,30,.9),rgba(20,24,30,0) 74%);border:1px solid rgba(255,255,255,.05)}
+  .hitwrap{position:absolute;left:50%;top:50%;width:0;height:0}
+  .hitglow{position:absolute;bottom:39px;left:-9px;width:18px;height:18px;border-radius:50%;
+      background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,0) 70%);opacity:0}
+  .swatch{display:flex;gap:3px}
+  .swatch i{width:9px;height:9px;border-radius:2px;display:block}
+  .foot{text-align:center;font-size:10px;color:#7f8791;padding:10px 0 4px}
+  @media (prefers-reduced-motion: reduce){ .seg{transition:none} }
+</style>
+</head>
+<body>
+<div class="board" id="board">
+  <header class="intro">
+    <h1>LED Bloom Bars — band-mapped + random + bass bloom</h1>
+    <p>Each bar's base signal is a <code>fixed</code> band position around the ring (bass on one arc, treble opposite), plus a persistent per-bar random drift so it doesn't read as a mechanical EQ. A bass-onset detector fires a 5-bar bloom impulse (center highest, ±1 lower, ±2 lower still) into the same spring physics every bar already uses — the bounce preset decides how that impulse rises and settles.</p>
+    <p>Fake synthetic beat (128 BPM kick/snare/hats) drives all 12 tiles identically; only bounce preset and color differ tile-to-tile. The small white flash marks exactly which bar the hit centered on, angle-locked, so the bass-arc mapping is checkable, not just asserted.</p>
+  </header>
+</div>
+<script>
+(function(){
+  const N=36, BARS=54, IR=48, SEGMENTS=5, SEGSTEP=4.4;
+  const KICK_DECAY=0.85;
+  const KERNEL=[0.30,0.62,1.0,0.62,0.30]; // offsets -2..+2, center highest
+  const BASS_BARS=8; // bar indices 0..7 sit on bins 0..~5 (positional mapping)
+
+  const PRESETS=[
+    {name:'Snappy',  blurb:'Tight spring, instant settle — punchy transient.',        attack:.55, release:.30, k:.30, decay:.80, bounce:1.0, rndWeight:.12},
+    {name:'Bouncy',  blurb:'Overshoots and rebounds before resting — springy.',        attack:.40, release:.22, k:.20, decay:.88, bounce:1.9, rndWeight:.12},
+    {name:'Smooth',  blurb:'Critically damped, no overshoot — buttery glide.',         attack:.25, release:.16, k:.12, decay:.82, bounce:.6,  rndWeight:.08},
+    {name:'Heavy',   blurb:'Slow to start, slow to stop — weighty momentum.',          attack:.14, release:.09, k:.09, decay:.90, bounce:1.1, rndWeight:.06},
+    {name:'Jittery', blurb:'Fast twitchy micro-motion, high randomness weight.',       attack:.65, release:.40, k:.26, decay:.76, bounce:1.3, rndWeight:.28},
+    {name:'Elastic', blurb:'Extreme overshoot, rubber-band wobble, long settle.',      attack:.45, release:.20, k:.16, decay:.93, bounce:2.4, rndWeight:.12},
+  ];
+
+  const PALETTES=[
+    {name:'Classic VU',    c:['#1b8a3c','#3cb54a','#e0c419','#f2a729','#e0393e']},
+    {name:'Cyberpunk',     c:['#0891b2','#06b6d4','#67e8f9','#e879f9','#d946ef']},
+    {name:'Sunset Amber',  c:['#7c2d12','#c2410c','#f59e0b','#f472b6','#ec4899']},
+    {name:'Ice Blue',      c:['#1e3a5f','#2563eb','#3b82f6','#93c5fd','#eff6ff']},
+    {name:'Purple Haze',   c:['#3b0764','#6b21a8','#9333ea','#c084fc','#f0abfc']},
+    {name:'Emerald',       c:['#064e3b','#059669','#10b981','#6ee7b7','#d1fae5']},
+    {name:'Amber Analog',  c:['#78350f','#b45309','#d97706','#f59e0b','#fbbf24']},
+    {name:'Steel Blue',    c:['#1e293b','#334155','#475569','#64748b','#94a3b8']},
+    {name:'Neon Rainbow',  c:['#ef4444','#f59e0b','#eab308','#22c55e','#3b82f6']},
+    {name:'Hot Pink/Cyan', c:['#831843','#db2777','#ec4899','#22d3ee','#06b6d4']},
+    {name:'Gold Luxury',   c:['#3f2d12','#78502a','#a8792f','#d4af37','#f5d576']},
+    {name:'Crimson',       c:['#450a0a','#7f1d1d','#b91c1c','#ef4444','#fca5a5']},
+  ];
+
+  const board=document.getElementById('board');
+  const TILES=[];
+
+  function buildTile(grid, preset, palette){
+    const tile=document.createElement('div'); tile.className='tile';
+    const tag=document.createElement('div'); tag.className='tag'; tag.textContent=preset.name+' · '+palette.name;
+    const stage=document.createElement('div'); stage.className='stage';
+    const ring=document.createElement('div'); ring.className='ring';
+    stage.appendChild(ring);
+
+    const bars=[];
+    for(let j=0;j<BARS;j++){
+      const ang=j/BARS*360;
+      const spoke=document.createElement('div'); spoke.className='spoke';
+      spoke.style.transform='rotate('+ang+'deg)';
+      const segs=[];
+      for(let s=0;s<SEGMENTS;s++){
+        const seg=document.createElement('div'); seg.className='seg';
+        seg.style.bottom=(IR+s*SEGSTEP)+'px';
+        seg.style.background=palette.c[s];
+        seg.style.opacity='.12';
+        spoke.appendChild(seg);
+        segs.push(seg);
+      }
+      ring.appendChild(spoke);
+      bars.push({j:j, seg:segs, env:0, y:0, v:0, kick:0, rnd:0, lastLit:0});
+    }
+
+    const co=document.createElement('div'); co.className='co';
+    stage.appendChild(co);
+
+    const hitwrap=document.createElement('div'); hitwrap.className='hitwrap';
+    const hitglow=document.createElement('div'); hitglow.className='hitglow';
+    hitwrap.appendChild(hitglow);
+    stage.appendChild(hitwrap);
+
+    const swatch=document.createElement('div'); swatch.className='swatch';
+    palette.c.forEach(function(hex){ const i=document.createElement('i'); i.style.background=hex; swatch.appendChild(i); });
+
+    const palLabel=document.createElement('div'); palLabel.className='pal'; palLabel.textContent='5-seg LED · positional band + random + bloom';
+
+    tile.appendChild(tag); tile.appendChild(stage); tile.appendChild(swatch); tile.appendChild(palLabel);
+    grid.appendChild(tile);
+
+    TILES.push({bars:bars, preset:preset, hitwrap:hitwrap, hitglow:hitglow, hitFlash:0});
+  }
+
+  PRESETS.forEach(function(preset, pi){
+    const section=document.createElement('section'); section.className='grp';
+    const h2=document.createElement('h2'); h2.innerHTML=preset.name+' <span class="sub">— '+preset.blurb+'</span>';
+    const stat=document.createElement('div'); stat.className='stat';
+    stat.textContent='attack '+preset.attack+' · release '+preset.release+' · k '+preset.k+' · decay '+preset.decay+' · bounce '+preset.bounce+' · rnd '+preset.rndWeight;
+    const grid=document.createElement('div'); grid.className='grid';
+    section.appendChild(h2); section.appendChild(stat); section.appendChild(grid);
+    board.appendChild(section);
+    buildTile(grid, preset, PALETTES[pi*2]);
+    buildTile(grid, preset, PALETTES[pi*2+1]);
+  });
+
+  const foot=document.createElement('div'); foot.className='foot';
+  foot.textContent='6 bounce presets × 2 palettes · shared fake 128 BPM spectrum + shared hit stream · design preview only';
+  board.appendChild(foot);
+
+  // Shared fake spectrum (same generator family as audio-orb-skins-25.html).
+  const spec=new Float32Array(N);
+  function lerpBin(fr){
+    const x=fr*N, i=Math.floor(x);
+    const a=spec[((i%N)+N)%N], b=spec[(((i+1)%N)+N)%N];
+    return a+(b-a)*(x-i);
+  }
+  const BEAT=60/128;
+  function fakeSpectrumUpdate(t){
+    for(let i=0;i<N;i++) spec[i]*=0.90;
+    const bt=t%BEAT;
+    const kick=Math.max(0,1-bt/0.10);
+    for(let i=0;i<6;i++) spec[i]=Math.max(spec[i], kick*(1-i/8));
+    const beatIdx=Math.floor(t/BEAT)%4;
+    if(beatIdx===1||beatIdx===3){
+      const snare=Math.max(0,1-bt/0.14);
+      for(let i=8;i<20;i++) spec[i]=Math.max(spec[i], snare*(0.5+Math.random()*0.5));
+    }
+    const ht=t%(BEAT/2);
+    const hat=Math.max(0,1-ht/0.045);
+    for(let i=24;i<N;i++) spec[i]=Math.max(spec[i], hat*(0.3+Math.random()*0.5));
+    for(let i=0;i<N;i++) spec[i]=Math.min(1, spec[i]+0.01+0.01*Math.sin(t*0.7+i));
+  }
+
+  // Bass-onset detector: fast vs slow running average of the low bins only.
+  let bassFast=0, bassAvg=0.05, hitCooldown=0;
+  function detectHit(){
+    let bass=0; for(let i=0;i<5;i++) bass+=spec[i]; bass/=5;
+    bassFast += (bass-bassFast)*0.55;
+    bassAvg  += (bass-bassAvg)*0.04;
+    hitCooldown=Math.max(0,hitCooldown-1);
+    if(bassFast > bassAvg*1.35+0.10 && hitCooldown===0){
+      hitCooldown=10;
+      return true;
+    }
+    return false;
+  }
+
+  let t=0;
+  const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function frame(){
+    t+=0.016;
+    fakeSpectrumUpdate(t);
+    const hit=detectHit();
+    if(hit){
+      const center=Math.floor(Math.random()*BASS_BARS);
+      for(const tile of TILES){
+        for(let o=-2;o<=2;o++){
+          const idx=((center+o)%BARS+BARS)%BARS;
+          tile.bars[idx].kick=Math.max(tile.bars[idx].kick, KERNEL[o+2]);
+        }
+        tile.hitFlash=1;
+        tile.hitwrap.style.transform='rotate('+(center/BARS*360)+'deg)';
+      }
+    }
+    for(const tile of TILES){
+      const p=tile.preset;
+      for(const b of tile.bars){
+        const band=lerpBin(b.j/BARS);
+        b.rnd += (Math.random()*2-1)*0.03;
+        b.rnd = Math.max(-1,Math.min(1,b.rnd));
+        b.rnd *= 0.97;
+        b.kick *= KICK_DECAY;
+        const tgt=Math.min(1.3, band*0.55 + b.rnd*p.rndWeight + b.kick);
+        if(tgt>b.env) b.env += (tgt-b.env)*p.attack;
+        else b.env += (tgt-b.env)*p.release;
+        const force=(b.env-b.y)*p.k*p.bounce;
+        b.v=(b.v+force)*p.decay;
+        b.y+=b.v;
+        if(b.y<0){ b.y=0; b.v*=-0.3; }
+        const frac=Math.max(0,Math.min(1.3,b.y));
+        const lit=Math.max(0,Math.min(SEGMENTS,Math.round(frac*SEGMENTS)));
+        if(lit!==b.lastLit){
+          if(lit>b.lastLit) for(let s=b.lastLit;s<lit;s++) b.seg[s].style.opacity=1;
+          else for(let s=lit;s<b.lastLit;s++) b.seg[s].style.opacity=.12;
+          b.lastLit=lit;
+        }
+      }
+      tile.hitFlash*=0.90;
+      tile.hitglow.style.opacity=tile.hitFlash.toFixed(2);
+    }
+    if(!REDUCED) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -8,13 +8,13 @@ Unofficial Windows desktop HUD for Claude Code usage limits.
 
 ## Skins
 
-Four looks, switchable any time from the tray menu (right-click the tray icon
+Five looks, switchable any time from the tray menu (right-click the tray icon
 → *RICE*). All of them show the same numbers — only the presentation differs.
 
-| Classic | Bento Box | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="200" alt="Classic HUD skin: a small card showing the 5-hour session bar, plus weekly and Fable weekly bars"> | <img src="docs/images/hud-bento.png" width="200" alt="Bento Box HUD skin: a 2x2 grid of cells for 5H, 7D, Fable, and a reset countdown"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
-| The default card. Session bar with a countdown to the next reset, plus the weekly and Fable weekly bars. | A 2x2 grid: 5H, 7D, and Fable percentages, plus a reset countdown cell. | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
+| Classic | Bento Box | Audiowave Orb — LED Bloom | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/images/hud-classic.png" width="200" alt="Classic HUD skin: a small card showing the 5-hour session bar, plus weekly and Fable weekly bars"> | <img src="docs/images/hud-bento.png" width="200" alt="Bento Box HUD skin: a 2x2 grid of cells for 5H, 7D, Fable, and a reset countdown"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Audiowave Orb LED Bloom skin: a ring of 5-segment LED-style rungs per bar, colored by usage zone, blooming outward from bass to treble hits"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
+| The default card. Session bar with a countdown to the next reset, plus the weekly and Fable weekly bars. | A 2x2 grid: 5H, 7D, and Fable percentages, plus a reset countdown cell. | 5-segment LED rungs per bar, colored by usage zone, with kick/snare/hat hits blooming outward across their own bass-to-treble arc. | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
 
 **Classic** is the plain readout, and is what the tray tooltip and statusline
 mirror. Its bars turn blue → yellow → red as you approach a limit, and the card
@@ -26,7 +26,7 @@ history — it's the 5-hour window's reset countdown, with a bar that fills as
 the window elapses. Parked next to 5H's usage bar, the pair reads as pace: if
 the usage bar is ahead of the reset bar, you're burning faster than the clock.
 
-The two **Audiowave Orb** skins are "rice" — the ring reacts to whatever your
+The three **Audiowave Orb** skins are "rice" — the ring reacts to whatever your
 speakers are playing. To do that the HUD opens a WASAPI **loopback** capture of
 your system audio output while an orb skin is selected (Classic starts no
 capture at all). The audio is turned into bar heights inside the process and
@@ -189,7 +189,7 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
   headless `claude /usage` now), *RICE*, *Compact size*, *Opacity*, *Start with
   Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
 - **RICE:** picks the skin — *Classic*, *Bento Box*, or *Audiowave Orb* →
-  *Bars* / *Peak hold* (see [Skins](#skins)). One radio group, so exactly one
+  *Bars* / *Peak hold* / *LED Bloom* (see [Skins](#skins)). One radio group, so exactly one
   is ever checked. Switching resizes the HUD (the orb is a 160×160 square,
   Classic and Bento Box keep the card size) and is remembered across restarts.
   Selecting an orb skin starts the system-audio loopback capture; going back
@@ -285,13 +285,13 @@ HUD không chính thức cho Windows, hiển thị giới hạn sử dụng củ
 
 ## Giao diện (Skins)
 
-Bốn kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
-tượng khay → *RICE*). Cả bốn đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
+Năm kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
+tượng khay → *RICE*). Cả năm đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
 
-| Classic | Bento Box | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="200" alt="Giao diện Classic: thẻ nhỏ hiện thanh phiên 5 giờ, kèm thanh tuần và thanh Fable tuần"> | <img src="docs/images/hud-bento.png" width="200" alt="Giao diện Bento Box: lưới 2x2 gồm 5H, 7D, Fable, và ô đếm ngược reset"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
-| Thẻ mặc định. Thanh phiên kèm đếm ngược tới lần reset kế tiếp, cùng thanh tuần và thanh Fable tuần. | Lưới 2x2: phần trăm 5H, 7D, Fable, cùng một ô đếm ngược reset. | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
+| Classic | Bento Box | Audiowave Orb — LED Bloom | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/images/hud-classic.png" width="200" alt="Giao diện Classic: thẻ nhỏ hiện thanh phiên 5 giờ, kèm thanh tuần và thanh Fable tuần"> | <img src="docs/images/hud-bento.png" width="200" alt="Giao diện Bento Box: lưới 2x2 gồm 5H, 7D, Fable, và ô đếm ngược reset"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Giao diện Audiowave Orb LED Bloom: vòng thanh LED 5 đoạn mỗi thanh, đổi màu theo ngưỡng sử dụng, nở rộng từ tiếng bass đến treble"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
+| Thẻ mặc định. Thanh phiên kèm đếm ngược tới lần reset kế tiếp, cùng thanh tuần và thanh Fable tuần. | Lưới 2x2: phần trăm 5H, 7D, Fable, cùng một ô đếm ngược reset. | Mỗi thanh là 5 đoạn LED, đổi màu theo ngưỡng sử dụng, nở rộng theo từng cú đánh bass/snare/hat trong cung riêng của nó. | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
 
 **Classic** là bản đọc số thuần túy, cũng là thứ mà tooltip khay và statusline
 phản chiếu. Thanh của nó chuyển xanh dương → vàng → đỏ khi bạn tiến gần giới
@@ -304,7 +304,7 @@ lịch sử sử dụng cả — mà là đếm ngược reset của cửa sổ 
 được nhịp độ: nếu thanh sử dụng chạy nhanh hơn thanh reset, bạn đang dùng
 nhanh hơn tốc độ đồng hồ.
 
-Hai giao diện **Audiowave Orb** là "rice" — vòng phổ phản ứng theo bất cứ thứ
+Ba giao diện **Audiowave Orb** là "rice" — vòng phổ phản ứng theo bất cứ thứ
 gì loa của bạn đang phát. Để làm vậy, HUD mở một luồng thu **loopback** WASAPI
 từ đầu ra âm thanh hệ thống trong lúc giao diện orb được chọn (Classic không mở
 luồng thu nào). Âm thanh được chuyển thành chiều cao các thanh ngay trong tiến
@@ -473,7 +473,7 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
   *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa
   HKCU Run hiện tại), và *Quit*.
 - **RICE:** chọn giao diện — *Classic*, *Bento Box*, hoặc *Audiowave Orb* →
-  *Bars* / *Peak hold* (xem [Giao diện](#giao-diện-skins)). Cả bốn là một nhóm
+  *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả năm là một nhóm
   radio, nên luôn chỉ đúng một cái được tích. Đổi giao diện sẽ đổi kích thước
   HUD (orb là ô vuông 160×160, Classic và Bento Box giữ kích thước thẻ) và
   được nhớ qua các lần khởi động. Chọn giao diện orb sẽ bật luồng thu loopback

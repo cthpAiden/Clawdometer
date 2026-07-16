@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — LED Bloom Bars, dynamic usage-zone color</title>
+<!--
+  DESIGN MOCKUP — synthetic fake spectrum, not wired to real audio.
+  Same bar mechanic as audio-orb-led-bloom.html (positional band + persistent
+  random walk + bass-onset 5-bar bloom kernel, all feeding one spring/env
+  physics per bar, six selectable bounce presets). What's new here: instead of
+  a fixed named palette, the ring's 5 LED rungs are recolored from the SAME
+  usage thresholds already shipped in app/ui/usage-color.js (single source of
+  truth — do not invent new breakpoints or hex values for the bottom 4 rungs):
+
+    blue   0-74%   ok    bar #3f7fbf  lit #5b98d4
+    yellow 75-89%  warn  bar #f59e0b  lit #ffb733
+    red    90-100% crit  bar #e5484d  lit #f26a6e
+
+  The 5th (top) rung per zone is a distinct "peak" accent, decided with the
+  user (2026-07-16): blue -> cyan, yellow -> deep orange, red -> gold/amber
+  (explicitly between yellow and orange, not white/magenta/reused-amber).
+
+  Drag the % slider (or hit a quick-jump button) to cross the 75/90 thresholds
+  live and watch all 270 segments recolor in one shot — that recolor is a
+  one-time write on zone change, not a per-frame cost; the animation loop only
+  ever touches transform/opacity.
+
+  2026-07-16 update: bloom trigger generalized from bass-only to BAND-SPECIFIC
+  across the whole ring — 6 independent onset detectors, one per contiguous
+  6-bin/9-bar region (bass through treble), each firing its own 5-bar kernel
+  inside its own arc when ITS band spikes. A kick still blooms over the bass
+  arc, but a hat/cymbal transient now blooms over the treble arc instead of
+  everything routing through one bass-only detector — spreads lobes across
+  the full ring while staying truthful to the positional-band mapping (no
+  pure-random placement). Six static flash markers (one per region, at each
+  arc's midpoint angle) show which region just fired. Locked visual/color design
+  above is untouched; this is the physics/animation the user flagged as "not
+  good yet" — expect more iteration here based on feedback.
+-->
+<style>
+  html,body{margin:0;background:#0a0c10;color:#e9edf2}
+  body{padding:24px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .board{max-width:520px;margin:0 auto}
+  header.intro{margin-bottom:18px}
+  header.intro h1{font-size:16px;margin:0 0 8px}
+  header.intro p{font-size:12px;color:#9aa0a8;line-height:1.55;margin:4px 0}
+  header.intro code{color:#c8e05a;font-size:11px}
+  .panel{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .stage{position:relative;width:210px;height:210px}
+  .ring{position:absolute;inset:0}
+  .spoke{position:absolute;left:50%;top:50%;width:0;height:0}
+  .seg{position:absolute;left:-1.5px;width:3px;height:4px;border-radius:1px;transition:opacity .09s linear}
+  .co{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:108px;height:108px;border-radius:50%;
+      background:radial-gradient(circle at 50% 45%,rgba(20,24,30,.92),rgba(20,24,30,0) 74%);border:1px solid rgba(255,255,255,.06);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+  .pctnum{font-size:26px;font-weight:800;line-height:1}
+  .zonename{font-size:9.5px;color:#9aa0a8;font-weight:700;letter-spacing:.3px;text-align:center;padding:0 8px}
+  .track{width:60px;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:2px}
+  .hitmarks{position:absolute;inset:0}
+  .hitm{position:absolute;left:50%;top:50%;width:0;height:0}
+  .hitglow{position:absolute;bottom:52px;left:-10px;width:20px;height:20px;border-radius:50%;
+      background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,0) 70%);opacity:0}
+  .ctrls{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
+  .row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#9aa0a8;flex-wrap:wrap;justify-content:center}
+  .row input[type=range]{width:160px}
+  .quick{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+  .quick button{font-size:10.5px;padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#c9ced6;cursor:pointer}
+  .quick button:hover{background:rgba(255,255,255,.09)}
+  select{background:#12151b;color:#e9edf2;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:3px 6px;font-size:11px}
+  .legend{display:flex;gap:18px;justify-content:center;margin-top:4px}
+  .legend .lg{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .legend .lg b{font-size:9.5px;color:#9aa0a8;font-weight:700}
+  .swatch{display:flex;gap:2px}
+  .swatch i{width:8px;height:8px;border-radius:2px;display:block}
+  .foot{text-align:center;font-size:10px;color:#7f8791;padding:14px 0 4px}
+  @media (prefers-reduced-motion: reduce){ .seg{transition:none} }
+</style>
+</head>
+<body>
+<div class="board">
+  <header class="intro">
+    <h1>LED Bloom Bars — dynamic usage-zone color</h1>
+    <p>Band + random + bloom bar physics, evolved from <code>audio-orb-led-bloom.html</code>: 6 independent onset detectors (bass through treble) each bloom their own 5-bar lobe inside their own arc, instead of one bass-only detector. Color is no longer a fixed palette: the ring reads whatever zone the current usage % falls in — <code>ok</code> &lt;75% blue, <code>warn</code> 75-89% yellow, <code>crit</code> &ge;90% red — pulled straight from <code>app/ui/usage-color.js</code>. Drag the slider or hit a quick-jump button to cross a threshold live.</p>
+  </header>
+  <div class="panel">
+    <div class="stage" id="stage">
+      <div class="ring" id="ring"></div>
+      <div class="co" id="co">
+        <div class="pctnum" id="pctnum">42%</div>
+        <div class="zonename" id="zonename">—</div>
+        <div class="track"><i id="trackfill"></i></div>
+      </div>
+      <div class="hitmarks" id="hitmarks"></div>
+    </div>
+    <div class="ctrls">
+      <div class="row">
+        <label>Usage % <input id="pct" type="range" min="0" max="100" value="42"></label>
+        <span id="pctlabel">42%</span>
+      </div>
+      <div class="quick" id="quick"></div>
+      <div class="row">
+        <label>Bounce
+          <select id="presetSel"></select>
+        </label>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="foot">bloom now fires per-region (bass→treble), not bass-only · 5-rung color source is the live usage % · design preview only</div>
+</div>
+<script>
+(function(){
+  const N=36, BARS=54, IR=60, SEGMENTS=5, SEGSTEP=5.6;
+  const KICK_DECAY=0.85;
+  const KERNEL=[0.30,0.62,1.0,0.62,0.30];
+  const REGIONS=6, REGION_BARS=BARS/REGIONS, REGION_BINS=N/REGIONS; // 9 bars / 6 bins each
+
+  const PRESETS=[
+    {name:'Snappy',  attack:.55, release:.30, k:.30, decay:.80, bounce:1.0, rndWeight:.12},
+    {name:'Bouncy',  attack:.40, release:.22, k:.20, decay:.88, bounce:1.9, rndWeight:.12},
+    {name:'Smooth',  attack:.25, release:.16, k:.12, decay:.82, bounce:.6,  rndWeight:.08},
+    {name:'Heavy',   attack:.14, release:.09, k:.09, decay:.90, bounce:1.1, rndWeight:.06},
+    {name:'Jittery', attack:.65, release:.40, k:.26, decay:.76, bounce:1.3, rndWeight:.28},
+    {name:'Elastic', attack:.45, release:.20, k:.16, decay:.93, bounce:2.4, rndWeight:.12},
+  ];
+
+  // Bottom 4 rungs are the app's real ok/warn/crit bar+lit shades (usage-color.js)
+  // darkened-then-lifted; only the 5th (tip) rung is the new peak accent.
+  const ZONES=[
+    { key:'ok',   name:'Blue · normal (0-74%)',           num:'#6aa9e8', ramp:['#2d5d8f','#3f7fbf','#5b98d4','#7cc3e6','#67e8f9'] },
+    { key:'warn', name:'Yellow · approaching limit (75-89%)', num:'#f0b429', ramp:['#a8670a','#f59e0b','#ffb733','#ffd580','#f97316'] },
+    { key:'crit', name:'Red · critical (≥90%)',       num:'#e5484d', ramp:['#a8353a','#e5484d','#f26a6e','#f8a3a5','#f5a623'] },
+  ];
+  function zoneFor(pct){ return pct>=90?ZONES[2]:pct>=75?ZONES[1]:ZONES[0]; }
+
+  const ring=document.getElementById('ring');
+  const bars=[];
+  for(let j=0;j<BARS;j++){
+    const ang=j/BARS*360;
+    const spoke=document.createElement('div'); spoke.className='spoke';
+    spoke.style.transform='rotate('+ang+'deg)';
+    const segs=[];
+    for(let s=0;s<SEGMENTS;s++){
+      const seg=document.createElement('div'); seg.className='seg';
+      seg.style.bottom=(IR+s*SEGSTEP)+'px';
+      seg.style.opacity='.12';
+      spoke.appendChild(seg);
+      segs.push(seg);
+    }
+    ring.appendChild(spoke);
+    bars.push({j:j, seg:segs, env:0, y:0, v:0, kick:0, rnd:0, lastLit:0});
+  }
+
+  const hitmarksEl=document.getElementById('hitmarks');
+  const regionGlow=[];
+  for(let r=0;r<REGIONS;r++){
+    const ang=(r*REGION_BARS+REGION_BARS/2)/BARS*360;
+    const wrap=document.createElement('div'); wrap.className='hitm';
+    wrap.style.transform='rotate('+ang+'deg)';
+    const glow=document.createElement('div'); glow.className='hitglow';
+    wrap.appendChild(glow);
+    hitmarksEl.appendChild(wrap);
+    regionGlow.push(glow);
+  }
+
+  const presetSel=document.getElementById('presetSel');
+  PRESETS.forEach(function(p,i){ const o=document.createElement('option'); o.value=i; o.textContent=p.name; presetSel.appendChild(o); });
+  let activePreset=PRESETS[0];
+  presetSel.onchange=function(e){ activePreset=PRESETS[+e.target.value]; };
+
+  const quick=document.getElementById('quick');
+  [0,50,74,75,89,90,100].forEach(function(v){
+    const b=document.createElement('button'); b.type='button'; b.textContent=v+'%';
+    b.onclick=function(){ applyPct(v); };
+    quick.appendChild(b);
+  });
+
+  const legend=document.getElementById('legend');
+  ZONES.forEach(function(z){
+    const lg=document.createElement('div'); lg.className='lg';
+    const b=document.createElement('b'); b.textContent=z.key;
+    const sw=document.createElement('div'); sw.className='swatch';
+    z.ramp.forEach(function(hex){ const i=document.createElement('i'); i.style.background=hex; sw.appendChild(i); });
+    lg.appendChild(sw); lg.appendChild(b);
+    legend.appendChild(lg);
+  });
+
+  const pctSlider=document.getElementById('pct');
+  const pctLabel=document.getElementById('pctlabel');
+  const pctNum=document.getElementById('pctnum');
+  const zoneNameEl=document.getElementById('zonename');
+  const trackFill=document.getElementById('trackfill');
+  let pct=42, curZoneKey=null;
+  function applyPct(v){
+    pct=Math.max(0,Math.min(100,v));
+    pctSlider.value=pct;
+    pctLabel.textContent=pct+'%';
+    pctNum.textContent=pct+'%';
+    const z=zoneFor(pct);
+    pctNum.style.color=z.num;
+    zoneNameEl.textContent=z.name;
+    trackFill.style.width=pct+'%';
+    trackFill.style.background=z.ramp[1];
+    if(z.key!==curZoneKey){
+      curZoneKey=z.key;
+      for(const b of bars) for(let s=0;s<SEGMENTS;s++) b.seg[s].style.background=z.ramp[s];
+    }
+  }
+  pctSlider.oninput=function(e){ applyPct(+e.target.value); };
+  applyPct(pct);
+
+  // Shared fake spectrum + bass-onset detector (same generator as the sibling mockups).
+  const spec=new Float32Array(N);
+  function lerpBin(fr){
+    const x=fr*N, i=Math.floor(x);
+    const a=spec[((i%N)+N)%N], b=spec[(((i+1)%N)+N)%N];
+    return a+(b-a)*(x-i);
+  }
+  const BEAT=60/128;
+  function fakeSpectrumUpdate(t){
+    for(let i=0;i<N;i++) spec[i]*=0.90;
+    const bt=t%BEAT;
+    const kick=Math.max(0,1-bt/0.10);
+    for(let i=0;i<6;i++) spec[i]=Math.max(spec[i], kick*(1-i/8));
+    const beatIdx=Math.floor(t/BEAT)%4;
+    if(beatIdx===1||beatIdx===3){
+      const snare=Math.max(0,1-bt/0.14);
+      for(let i=8;i<20;i++) spec[i]=Math.max(spec[i], snare*(0.5+Math.random()*0.5));
+    }
+    const ht=t%(BEAT/2);
+    const hat=Math.max(0,1-ht/0.045);
+    for(let i=24;i<N;i++) spec[i]=Math.max(spec[i], hat*(0.3+Math.random()*0.5));
+    for(let i=0;i<N;i++) spec[i]=Math.min(1, spec[i]+0.01+0.01*Math.sin(t*0.7+i));
+  }
+  const regionFast=new Float32Array(REGIONS);
+  const regionAvg=new Float32Array(REGIONS).fill(0.05);
+  const regionCooldown=new Int32Array(REGIONS);
+  function detectHits(){
+    const fired=[];
+    for(let r=0;r<REGIONS;r++){
+      let e=0; const b0=r*REGION_BINS;
+      for(let i=0;i<REGION_BINS;i++) e+=spec[b0+i];
+      e/=REGION_BINS;
+      regionFast[r] += (e-regionFast[r])*0.55;
+      regionAvg[r]  += (e-regionAvg[r])*0.04;
+      regionCooldown[r]=Math.max(0,regionCooldown[r]-1);
+      if(regionFast[r] > regionAvg[r]*1.35+0.10 && regionCooldown[r]===0){
+        regionCooldown[r]=10;
+        fired.push(r);
+      }
+    }
+    return fired;
+  }
+
+  let t=0;
+  const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const regionFlash=new Float32Array(REGIONS);
+
+  function frame(){
+    t+=0.016;
+    fakeSpectrumUpdate(t);
+    for(const r of detectHits()){
+      const center=r*REGION_BARS + Math.floor(Math.random()*REGION_BARS);
+      for(let o=-2;o<=2;o++){
+        const idx=((center+o)%BARS+BARS)%BARS;
+        bars[idx].kick=Math.max(bars[idx].kick, KERNEL[o+2]);
+      }
+      regionFlash[r]=1;
+    }
+    const p=activePreset;
+    for(const b of bars){
+      const band=lerpBin(b.j/BARS);
+      b.rnd += (Math.random()*2-1)*0.03;
+      b.rnd = Math.max(-1,Math.min(1,b.rnd));
+      b.rnd *= 0.97;
+      b.kick *= KICK_DECAY;
+      const tgt=Math.min(1.3, band*0.55 + b.rnd*p.rndWeight + b.kick);
+      if(tgt>b.env) b.env += (tgt-b.env)*p.attack;
+      else b.env += (tgt-b.env)*p.release;
+      const force=(b.env-b.y)*p.k*p.bounce;
+      b.v=(b.v+force)*p.decay;
+      b.y+=b.v;
+      if(b.y<0){ b.y=0; b.v*=-0.3; }
+      const frac=Math.max(0,Math.min(1.3,b.y));
+      const lit=Math.max(0,Math.min(SEGMENTS,Math.round(frac*SEGMENTS)));
+      if(lit!==b.lastLit){
+        if(lit>b.lastLit) for(let s=b.lastLit;s<lit;s++) b.seg[s].style.opacity=1;
+        else for(let s=lit;s<b.lastLit;s++) b.seg[s].style.opacity=.12;
+        b.lastLit=lit;
+      }
+    }
+    for(let r=0;r<REGIONS;r++){
+      regionFlash[r]*=0.90;
+      regionGlow[r].style.opacity=regionFlash[r].toFixed(2);
+    }
+    if(!REDUCED) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

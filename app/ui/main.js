@@ -218,10 +218,13 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   const rice = typeof p.rice === "string" ? p.rice : "classic";
   document.body.dataset.rice = rice;
   if (window.Orb) {
-    // Two orb variants share the "audiowave_orb" prefix: plain "Bars" and
-    // "audiowave_orb_peak" (bars + peak-hold caps).
+    // Three orb variants share the "audiowave_orb" prefix: plain "Bars",
+    // "audiowave_orb_peak" (bars + peak-hold caps), and "audiowave_orb_led"
+    // (LED rungs colored by usage zone + band-specific bloom).
     if (rice.startsWith("audiowave_orb")) {
-      window.Orb.setPeak(rice === "audiowave_orb_peak");
+      const style = rice === "audiowave_orb_peak" ? "peak"
+        : rice === "audiowave_orb_led" ? "led" : "bars";
+      window.Orb.setStyle(style);
       window.Orb.start();
     } else {
       window.Orb.stop();

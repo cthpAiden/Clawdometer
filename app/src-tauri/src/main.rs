@@ -215,12 +215,14 @@ fn main() {
                 &opacity_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>).collect::<Vec<_>>(),
             )?;
             // RICE skin profiles. Classic and Bento Box sit at the top level;
-            // the two Audiowave Orb variants — "Bars" (rings only) and "Peak
-            // hold" (bars + falling peak caps) — nest under their own arrow
-            // submenu. All four are one radio group: the handler keeps exactly
-            // one checked across the whole set. Both orb ids share the
-            // "audiowave_orb" prefix so window sizing / audio capture treat
-            // them alike; Bento Box is card-sized, so it needs neither.
+            // the three Audiowave Orb variants — "Bars" (rings only), "Peak
+            // hold" (bars + falling peak caps), and "LED Bloom" (usage-zone
+            // colored LED rungs + band-specific bloom) — nest under their own
+            // arrow submenu. All five are one radio group: the handler keeps
+            // exactly one checked across the whole set. All three orb ids
+            // share the "audiowave_orb" prefix so window sizing / audio
+            // capture treat them alike; Bento Box is card-sized, so it needs
+            // neither.
             let rice_classic = CheckMenuItem::with_id(
                 app, "rice-classic", "Classic", true, prefs.rice == "classic", None::<&str>,
             )?;
@@ -234,8 +236,12 @@ fn main() {
                 app, "rice-audiowave_orb_peak", "Peak hold", true,
                 prefs.rice == "audiowave_orb_peak", None::<&str>,
             )?;
+            let orb_led = CheckMenuItem::with_id(
+                app, "rice-audiowave_orb_led", "LED Bloom", true,
+                prefs.rice == "audiowave_orb_led", None::<&str>,
+            )?;
             let orb_menu =
-                Submenu::with_items(app, "Audiowave Orb", true, &[&orb_bars, &orb_peak])?;
+                Submenu::with_items(app, "Audiowave Orb", true, &[&orb_bars, &orb_peak, &orb_led])?;
             let rice_menu = Submenu::with_items(
                 app,
                 "RICE",
@@ -247,7 +253,7 @@ fn main() {
                 ],
             )?;
             // The radio set the menu handler syncs when any rice id is picked.
-            let rice_items = vec![rice_classic, rice_bento, orb_bars, orb_peak];
+            let rice_items = vec![rice_classic, rice_bento, orb_bars, orb_peak, orb_led];
             // Seed the checkmark from the actual Run-key state so the menu
             // shows whether autostart is on instead of flipping blind.
             let autostart_enabled = {
