@@ -241,7 +241,7 @@ fn main() {
                 prefs.rice == "audiowave_orb_led", None::<&str>,
             )?;
             let orb_menu =
-                Submenu::with_items(app, "Audiowave Orb", true, &[&orb_bars, &orb_peak, &orb_led])?;
+                Submenu::with_items(app, "Audiowave Orb", true, &[&orb_led, &orb_bars, &orb_peak])?;
             let rice_menu = Submenu::with_items(
                 app,
                 "RICE",
