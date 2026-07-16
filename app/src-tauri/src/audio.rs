@@ -58,7 +58,7 @@ mod imp {
     const NOISE_FLOOR: f32 = 0.001;
     /// Emit spacing (~33 Hz). The orb's rAF runs at 60 fps and smooths each
     /// band through its own envelope follower, so a 30 Hz data feed looks fluid.
-    const EMIT_EVERY_MS: u128 = 30;
+    const EMIT_EVERY_MS: u128 = 10;
 
     /// Set while a capture thread should keep running. `set_active` flips it;
     /// the thread checks it once per event timeout and unwinds when it clears.
