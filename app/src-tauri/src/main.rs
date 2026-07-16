@@ -65,8 +65,8 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
 /// webview ready and after every tray change.
 fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
     if let Some(win) = app.get_webview_window("hud") {
-        // The Audiowave Orb skin is a square ring stage; Classic keeps its
-        // regular or compact card size.
+        // The Audiowave Orb skin is a square ring stage; Classic and Bento Box
+        // share the regular or compact card size.
         // Must match #card in style.css exactly — the window is sized to the
         // card, so a stale number here clips the footer off the bottom.
         let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
@@ -214,15 +214,18 @@ fn main() {
                 true,
                 &opacity_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>).collect::<Vec<_>>(),
             )?;
-            // RICE skin profiles. Classic sits at the top level; the two
-            // Audiowave Orb variants — "Bars" (rings only) and "Peak hold"
-            // (bars + falling peak caps) — nest under their own arrow submenu.
-            // All three are one radio group: the handler keeps exactly one
-            // checked across the whole set. Both orb ids share the
+            // RICE skin profiles. Classic and Bento Box sit at the top level;
+            // the two Audiowave Orb variants — "Bars" (rings only) and "Peak
+            // hold" (bars + falling peak caps) — nest under their own arrow
+            // submenu. All four are one radio group: the handler keeps exactly
+            // one checked across the whole set. Both orb ids share the
             // "audiowave_orb" prefix so window sizing / audio capture treat
-            // them alike.
+            // them alike; Bento Box is card-sized, so it needs neither.
             let rice_classic = CheckMenuItem::with_id(
                 app, "rice-classic", "Classic", true, prefs.rice == "classic", None::<&str>,
+            )?;
+            let rice_bento = CheckMenuItem::with_id(
+                app, "rice-bento", "Bento Box", true, prefs.rice == "bento", None::<&str>,
             )?;
             let orb_bars = CheckMenuItem::with_id(
                 app, "rice-audiowave_orb", "Bars", true, prefs.rice == "audiowave_orb", None::<&str>,
@@ -237,10 +240,14 @@ fn main() {
                 app,
                 "RICE",
                 true,
-                &[&rice_classic as &dyn tauri::menu::IsMenuItem<_>, &orb_menu],
+                &[
+                    &rice_classic as &dyn tauri::menu::IsMenuItem<_>,
+                    &rice_bento,
+                    &orb_menu,
+                ],
             )?;
             // The radio set the menu handler syncs when any rice id is picked.
-            let rice_items = vec![rice_classic, orb_bars, orb_peak];
+            let rice_items = vec![rice_classic, rice_bento, orb_bars, orb_peak];
             // Seed the checkmark from the actual Run-key state so the menu
             // shows whether autostart is on instead of flipping blind.
             let autostart_enabled = {
@@ -318,7 +325,7 @@ fn main() {
                                 let _ = item.set_checked(item.id().as_ref() == id);
                             }
                             // Loopback capture runs for either orb variant, so
-                            // Classic costs nothing.
+                            // Classic and Bento Box cost nothing.
                             audio::set_active(app, profile.starts_with("audiowave_orb"));
                         }
                         "autostart" => {

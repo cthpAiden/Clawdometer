@@ -12,9 +12,10 @@ pub struct UiPrefs {
     pub opacity: f64,
     #[serde(default)]
     pub compact: bool,
-    // Selected "rice" skin profile: "classic" (the default card),
-    // "audiowave_orb" (ring, bars only), or "audiowave_orb_peak" (ring with
-    // peak-hold caps). serde default keeps pre-rice ui.json files loading.
+    // Selected "rice" skin profile: "classic" (the default card), "bento"
+    // (2×2 cell grid, card-sized), "audiowave_orb" (ring, bars only), or
+    // "audiowave_orb_peak" (ring with peak-hold caps). serde default keeps
+    // pre-rice ui.json files loading.
     #[serde(default = "default_rice")]
     pub rice: String,
 }

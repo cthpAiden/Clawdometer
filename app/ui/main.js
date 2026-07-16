@@ -208,11 +208,13 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   document.body.classList.toggle("compact", compactMode);
   const opacity = typeof p.opacity === "number" ? p.opacity : 1;
   els.card.style.opacity = opacity;
-  const orb = document.getElementById("orb");
-  if (orb) orb.style.opacity = opacity;
-  // Switch skins: Classic card vs Audiowave Orb. The orb's animation loop only
-  // runs while it's the active skin (the backend likewise gates audio capture
-  // on it), so Classic costs nothing extra.
+  for (const id of ["bento", "orb"]) {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = opacity;
+  }
+  // Switch skins: Classic card, Bento Box, or Audiowave Orb. The orb's
+  // animation loop only runs while it's the active skin (the backend likewise
+  // gates audio capture on it), so the other two cost nothing extra.
   const rice = typeof p.rice === "string" ? p.rice : "classic";
   document.body.dataset.rice = rice;
   if (window.Orb) {

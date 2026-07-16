@@ -67,8 +67,10 @@ body.compact .pct { min-width: 24px; font-size: 10px; }
 body.compact .wbar, body.compact .fbar { gap: 6px; }
 
 /* Near-limit (>=90%): pulse an inset red ring. Inset so the transparent
-   WebView2 window (sized to the card) never clips it. */
-body.critical #card { animation: pulse 1.8s ease-in-out infinite; }
+   WebView2 window (sized to the card) never clips it. Bento Box is a
+   card-shaped 1:1 swap for Classic, so it carries the same ring — switching
+   skins must not cost the near-limit warning. */
+body.critical #card, body.critical #bento { animation: pulse 1.8s ease-in-out infinite; }
 @keyframes pulse {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.35); }
   50%      { box-shadow: inset 0 0 0 2.5px rgba(229, 72, 77, 0.85); }
@@ -106,6 +108,68 @@ body.working .bar.main .fill::after {
      marks "working" without moving. */
   body.working .bar.main .fill::after { animation: none; }
 }
+
+/* ── Bento Box rice skin ─────────────────────────────────────────────────
+   The same four numbers as Classic, but as a 2×2 of self-contained cells
+   instead of a hierarchy: 5H (hero), 7D, Fable, and RESET. Card-sized in both
+   regular and compact, so apply_prefs needs no branch for it.
+   RESET's bar is the fraction of the 5h window already elapsed — parked next
+   to 5H's usage bar, the two together read as pace (usage bar ahead of the
+   time bar = burning faster than the clock). It is the only other real datum
+   the snapshot carries; an avg/peak cell would have to invent its number,
+   since nothing stores usage history.
+   Cells reuse .bar/.fill, so threshold colors (usage-color.js) and the
+   working stripes below apply here for free. */
+#bento { display: none; }
+body[data-rice="bento"] #card { display: none; }
+body[data-rice="bento"] #bento { display: grid; }
+#bento {
+  width: 200px; height: 136px; padding: 11px;
+  background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
+  border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px;
+}
+#bento .bc {
+  background: rgba(255, 255, 255, .045); border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 9px; padding: 8px 9px; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+}
+#bento .top { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+#bento .k {
+  font-size: 8px; line-height: 1; letter-spacing: 1.2px;
+  color: #8a8a92; font-weight: 600; white-space: nowrap;
+}
+/* nowrap so a too-wide value overflows visibly instead of silently wrapping to
+   a second line and pushing its own bar out of the cell. */
+#bento .v {
+  font-size: 14px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+#bento .v .u { font-size: 0.62em; opacity: .75; }
+#bento .bar { height: 5px; border-radius: 99px; margin-top: 7px; }
+/* 5H is the headline window, same as Classic's big number. */
+#bento .bc.hero .v { font-size: 19px; }
+#bento .bar.main { height: 6px; }
+/* RESET is time, not usage: never threshold-colored, or a grey clock would
+   read as a fourth limit going red. Overrides .fill's var(--u) background. */
+/* Its label is the ↻ glyph, not the word — "RESET" plus "2h 14m" wants ~75px
+   of a 68px cell, and ↻ is already this app's mark for a reset countdown
+   (see fmtCountdown in main.js). */
+#bento .bc.time .k { font-size: 10px; letter-spacing: 0; }
+#bento .bc.time .v { font-size: 12px; color: #b8b8c0; }
+#bento .bc.time .fill { background: #4a4a54; }
+
+/* Compact: 47px of cell can't hold a label and its value side by side
+   ("FABLE" + "54%" wants ~53px), so the label stacks over the value rather
+   than shrinking either past legibility. */
+body.compact #bento { width: 120px; height: 106px; padding: 9px; gap: 5px; border-radius: 9px; }
+body.compact #bento .bc { padding: 5px 7px; border-radius: 7px; }
+body.compact #bento .top { flex-direction: column; align-items: flex-start; gap: 2px; }
+body.compact #bento .k { font-size: 7px; letter-spacing: .8px; }
+body.compact #bento .v { font-size: 11px; }
+body.compact #bento .bc.hero .v { font-size: 13px; }
+body.compact #bento .bc.time .v { font-size: 9px; }
+body.compact #bento .bar, body.compact #bento .bar.main { height: 4px; margin-top: 4px; }
 
 /* ── Audiowave Orb rice skin ──────────────────────────────────────────────
    A circular 54-bar ring that reacts to system audio, wrapped around a center
