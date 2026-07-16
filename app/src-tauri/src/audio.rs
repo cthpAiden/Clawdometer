@@ -50,7 +50,7 @@ mod imp {
     /// magnitude of ~0.038 (vs ~0.125 at the old GAIN 8), so normal-volume music
     /// fills most of the ring; a genuinely loud mix now just pins the top, which
     /// is fine. Tunable — raise for even more sensitivity, lower to tame it.
-    const GAIN: f32 = 33.8;
+    const GAIN: f32 = 28.73;
     /// Raw per-band magnitude below this reads as silence (→ 0), so a truly
     /// idle device shows a flat ring instead of shimmering on float/hiss noise.
     /// Raised alongside GAIN: the higher gain would otherwise amplify near-floor

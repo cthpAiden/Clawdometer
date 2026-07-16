@@ -487,7 +487,7 @@ dependencies = [
 
 [[package]]
 name = "clawdometer-app"
-version = "0.5.6"
+version = "0.5.7"
 dependencies = [
  "clawdometer-core",
  "notify",
