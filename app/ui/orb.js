@@ -39,6 +39,15 @@
   const SEGSTEP = 5;     // px between rung bottoms
   const KICK_DECAY = 0.85;
   const KERNEL = [0.30, 0.62, 1.0, 0.62, 0.30]; // 5-bar bloom lobe, center highest
+  const KERNEL_SUM = KERNEL.reduce((a, c) => a + c, 0);
+  // Light spatial blend of the same bloom kernel into the continuous band
+  // read (not just bloom moments), so a bar's height is nudged toward its
+  // neighbors' average -- rounds off raw per-bar spikes into more of a lobe
+  // shape. 0 = fully raw/per-band accurate, 1 = fully the kernel-weighted
+  // neighbor average. User picked "Light" over "Even"/"Full" to keep most
+  // of the per-band realism.
+  const LED_BAND_BLEND = 0.25;
+  const ledRawBand = new Float32Array(BARS);
   const REGIONS = 6;
   const REGION_BARS = BARS / REGIONS; // 9 bars per region
   const REGION_BINS = N / REGIONS;    // 6 bins per region
@@ -47,14 +56,18 @@
   // Band weight bumped below (frameLed's tgt calc, 0.55 -> 0.65) per request
   // for the ring to swing a bit higher/taller on ordinary signal, not just
   // on blooms.
-  const LED_ATTACK = 0.40, LED_RELEASE = 0.22, LED_K = 0.20, LED_DECAY = 0.88,
+  // Attack/release/k/decay matched to Bars/Peak hold's per-bar average
+  // (frameBars: attack mean 0.45, release-used mean 0.4525, k*force-gain
+  // mean 0.696 @ fixed LED_BOUNCE=1.9 -> k 0.37, decay-used mean 0.76) so
+  // LED Bloom rises and falls just as fast as the other two variants.
+  const LED_ATTACK = 0.45, LED_RELEASE = 0.45, LED_K = 0.37, LED_DECAY = 0.76,
     LED_BOUNCE = 1.9, LED_RND_WEIGHT = 0.12;
   // Right half of the ring (bar i < BARS/2) sits on bins 0-18, bass/low-mid --
   // genuinely louder/more dynamic in most audio than the left half's bins
   // 18-36 (mid/treble), so it visibly jumps more. Per-half gain on the
   // positional band read, user's explicit ask after confirming coverage was
   // already complete (all 36 bins used, no missing band).
-  const LED_LEFT_GAIN = 1.44, LED_RIGHT_GAIN = 1.20;
+  const LED_LEFT_GAIN = 1.80, LED_RIGHT_GAIN = 1.20;
   // 5-stop ramps per usage zone (locked 2026-07-16). Bottom 4 stops are
   // usage-color.js's bar/lit shades pulled through the ramp; the 5th (tip) is
   // the peak accent picked with the user: blue->cyan, yellow->deep orange,
@@ -185,9 +198,17 @@
         bars[idx].kick = Math.max(bars[idx].kick, KERNEL[o + 2]);
       }
     }
+    // Raw per-bar band, computed once so the blend pass below reads true
+    // neighbor values instead of re-deriving lerpBin per read.
+    for (let i = 0; i < BARS; i++) ledRawBand[i] = lerpBin(i / BARS);
     for (const b of bars) {
+      let blended = 0;
+      for (let o = -2; o <= 2; o++) {
+        blended += ledRawBand[((b.i + o) % BARS + BARS) % BARS] * KERNEL[o + 2];
+      }
+      blended /= KERNEL_SUM;
       const halfGain = b.i < BARS / 2 ? LED_RIGHT_GAIN : LED_LEFT_GAIN;
-      const band = lerpBin(b.i / BARS) * halfGain;
+      const band = (ledRawBand[b.i] * (1 - LED_BAND_BLEND) + blended * LED_BAND_BLEND) * halfGain;
       // Persistent random walk, independent of audio — organic variation on
       // top of the band signal instead of a per-frame dice roll.
       b.rnd += (Math.random() * 2 - 1) * 0.03;
