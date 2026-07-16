@@ -13,7 +13,7 @@ Three looks, switchable any time from the tray menu (right-click the tray icon
 
 | Classic | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
 |:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="200" alt="Classic HUD skin: a small card showing the 5-hour session bar at 64%, plus weekly and Fable weekly bars"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
+| <img src="docs/images/hud-classic.png" width="200" alt="Classic HUD skin: a small card showing the 5-hour session bar, plus weekly and Fable weekly bars"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
 | The default card. Session bar with a countdown to the next reset, plus the weekly and Fable weekly bars. | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
 
 **Classic** is the plain readout, and is what the tray tooltip and statusline
@@ -283,7 +283,7 @@ tượng khay → *RICE*). Cả ba đều hiện cùng một dữ liệu — ch�
 
 | Classic | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
 |:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="200" alt="Giao diện Classic: thẻ nhỏ hiện thanh phiên 5 giờ ở mức 64%, kèm thanh tuần và thanh Fable tuần"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
+| <img src="docs/images/hud-classic.png" width="200" alt="Giao diện Classic: thẻ nhỏ hiện thanh phiên 5 giờ, kèm thanh tuần và thanh Fable tuần"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
 | Thẻ mặc định. Thanh phiên kèm đếm ngược tới lần reset kế tiếp, cùng thanh tuần và thanh Fable tuần. | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
 
 **Classic** là bản đọc số thuần túy, cũng là thứ mà tooltip khay và statusline
