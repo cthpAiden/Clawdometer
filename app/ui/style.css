@@ -125,8 +125,8 @@ body[data-rice="bento"] #card { display: none; }
 body[data-rice="bento"] #bento { display: grid; }
 #bento {
   width: 200px; height: 136px; padding: 11px;
-  background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
-  border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
+  color: #e8e8ea;
+  font: 12px/1.4 "Segoe UI", sans-serif;
   grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px;
 }
 #bento .bc {
