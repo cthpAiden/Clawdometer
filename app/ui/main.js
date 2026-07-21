@@ -183,6 +183,7 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   // animation loop only runs while it's the active skin (the backend likewise
   // gates audio capture on it), so the other two cost nothing extra.
   const rice = typeof p.rice === "string" ? p.rice : "classic";
+  const riceChanged = document.body.dataset.rice !== rice;
   document.body.dataset.rice = rice;
   if (window.Orb) {
     // Three orb variants share the "audiowave_orb" prefix: plain "Bars",
@@ -198,6 +199,20 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
     }
   }
   render();
+  // Each hidden skin's mascot lives in a display:none subtree, so its CSS
+  // working animation isn't running. When a skin swap reveals it mid-turn,
+  // WebView2 doesn't reliably start the animation on the freshly-shown
+  // subtree (Chromium does) — Clawd would sit idle until the next turn.
+  // Re-kick data-canim on the now-visible clawd so the animation restarts.
+  // Only on an actual skin change; compact/opacity keep the same skin visible.
+  if (riceChanged && document.body.classList.contains("working")) {
+    const anim = document.body.dataset.canim;
+    if (anim) {
+      document.body.dataset.canim = "";
+      void document.body.offsetWidth; // reflow so the clear registers
+      document.body.dataset.canim = anim;
+    }
+  }
 }));
 // Ask the backend to (re)send prefs — emissions before this listener
 // attached were lost.
