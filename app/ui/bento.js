@@ -7,12 +7,17 @@
   if (!window.__TAURI__) return;
 
   // Shared threshold table, same as the card and the orb: the three skins must
-  // never disagree about what 76% looks like. Only the bars are colored (the
-  // numbers stay off-white), so we take paint() but not num().
-  const { paint } = window.UsageColor;
+  // never disagree about what 76% looks like. Bento colors both the bar (paint)
+  // and the percentage number (num) with the threshold hue — the number is the
+  // only limit cue in Compact, where the bars are hidden.
+  const { paint, num } = window.UsageColor;
 
   const els = {
+    // Two reset holders: brtop rides the Current cell (full size), brtop2 the
+    // header top-right (compact only). CSS shows whichever fits; both get the
+    // same text so a size switch is instant.
     brtop: document.getElementById("brtop"),
+    brtop2: document.getElementById("brtop2"),
     b5v: document.getElementById("b5v"), b5b: document.getElementById("b5b"),
     b7v: document.getElementById("b7v"), b7b: document.getElementById("b7b"),
     bfv: document.getElementById("bfv"), bfb: document.getElementById("bfb"),
@@ -32,8 +37,10 @@
     if (win && typeof win.used_percentage === "number") {
       bar.style.width = clampPct(win.used_percentage) + "%";
       paint(bar, win.used_percentage);
+      val.style.color = num(win.used_percentage);
     } else {
       bar.style.width = "0%";
+      val.style.color = ""; // "—": fall back to the CSS off-white
     }
   }
 
@@ -41,12 +48,14 @@
   // drops the word to fit; past the reset the window is gone (the backend has
   // derived 0%), so it reads a plain "reset".
   function renderReset(fh, nowMs) {
+    const set = (t) => { els.brtop.textContent = t; els.brtop2.textContent = t; };
     const at = fh && fh.resets_at;
-    if (!Number.isFinite(at)) { els.brtop.textContent = "—"; return; }
+    if (!Number.isFinite(at)) { set("—"); return; }
     const mins = Math.ceil((at * 1000 - nowMs) / 60000);
-    if (mins <= 0) { els.brtop.textContent = "reset"; return; }
-    const core = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
-    els.brtop.textContent = document.body.classList.contains("compact") ? core : `Resets ${core}`;
+    if (mins <= 0) { set("reset"); return; }
+    // Just the countdown (e.g. "2h 47m") — no "Resets" prefix, since it sits
+    // beside the Current label (full) or in the header corner (compact).
+    set(mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`);
   }
 
   function render() {

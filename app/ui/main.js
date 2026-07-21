@@ -103,12 +103,39 @@ function renderRow(win, bar, txt) {
   paint(bar, win.used_percentage);
 }
 
+// Clawd's working animation is picked per turn from a no-repeat shuffle bag:
+// draw down the whole pool before reshuffling, and never let a reshuffle
+// repeat the last-shown one back-to-back. The CSS keys off body[data-canim].
+const CLAWD_ANIMS = ["coder", "a1", "a2", "a10"];
+let clawdBag = [];
+let clawdCur = null;
+let wasWorking = false;
+
+function nextClawdAnim() {
+  if (clawdBag.length === 0) {
+    clawdBag = CLAWD_ANIMS.slice();
+    for (let i = clawdBag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [clawdBag[i], clawdBag[j]] = [clawdBag[j], clawdBag[i]];
+    }
+    if (clawdBag[0] === clawdCur && clawdBag.length > 1) {
+      [clawdBag[0], clawdBag[1]] = [clawdBag[1], clawdBag[0]];
+    }
+  }
+  clawdCur = clawdBag.shift();
+  document.body.dataset.canim = clawdCur;
+}
+
 function render() {
   const nowMs = Date.now();
   // Animate the mascot while a Claude Code session is mid-turn; the backend
   // derives this flag from transcript turn state (see
   // watcher::any_session_generating) so idle live.json refreshes never trip it.
-  document.body.classList.toggle("working", !!(current && current.working));
+  const isWorking = !!(current && current.working);
+  document.body.classList.toggle("working", isWorking);
+  // New turn (idle -> working): advance to the next shuffled animation.
+  if (isWorking && !wasWorking) nextClawdAnim();
+  wasWorking = isWorking;
   const state = current && current.state;
   if (!state || !state.rate_limits) {
     els.countdown.textContent = "—";

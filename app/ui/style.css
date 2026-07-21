@@ -67,14 +67,47 @@ body.compact #card .rst-top, body.compact #bento .rst-top, body.compact #underli
 .clawd svg { display: block; image-rendering: auto; shape-rendering: geometricPrecision; overflow: visible; }
 .clawd .eyes { transform-box: fill-box; transform-origin: center; animation: gv-blink 4.6s infinite; }
 @keyframes gv-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.08); } }
-.clawd .g-all, .clawd .g-eyes { transform-box: view-box; }
-body.working .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-bob .7s ease-in-out infinite; }
-body.working .clawd .g-eyes { animation: cv-scan 3.2s ease-in-out infinite; }
+.clawd .g-all, .clawd .g-eyes,
+.clawd .g-armL, .clawd .g-armR,
+.clawd .g-leg1, .clawd .g-leg2, .clawd .g-leg3, .clawd .g-leg4 { transform-box: view-box; }
+
+/* One working animation per turn; main.js sets data-canim on <body> from a
+   no-repeat shuffle of the pool (coder / a1 leg-typing / a2 knead / a10 scurry)
+   each time isWorking flips true. All transform-only, compositor-safe. */
+
+/* coder — worker-bob + eye-scan (the original) */
+body.working[data-canim="coder"] .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-bob .7s ease-in-out infinite; }
+body.working[data-canim="coder"] .clawd .g-eyes { animation: cv-scan 3.2s ease-in-out infinite; }
+
+/* a1 — leg typing: legs tap in a rolling wave, body planted */
+body.working[data-canim="a1"] .clawd .g-leg1 { transform-origin: 20.6px 47.6px; animation: cv-tap .46s infinite; }
+body.working[data-canim="a1"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px; animation: cv-tap .46s .115s infinite; }
+body.working[data-canim="a1"] .clawd .g-leg3 { transform-origin: 61.7px 47.6px; animation: cv-tap .46s .23s infinite; }
+body.working[data-canim="a1"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px; animation: cv-tap .46s .345s infinite; }
+
+/* a2 — kneading arms: arms alternate up/down */
+body.working[data-canim="a2"] .clawd .g-armL { transform-origin: 15.8px 26.3px; animation: cv-knead .7s ease-in-out infinite; }
+body.working[data-canim="a2"] .clawd .g-armR { transform-origin: 84.2px 26.3px; animation: cv-knead .7s ease-in-out .35s infinite; }
+
+/* a10 — busy scurry: shuffle side-to-side while all four legs patter */
+body.working[data-canim="a10"] .clawd .g-all { animation: cv-scurry 2.6s ease-in-out infinite; }
+body.working[data-canim="a10"] .clawd .g-leg1 { transform-origin: 20.6px 47.6px; animation: cv-tap .3s infinite; }
+body.working[data-canim="a10"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px; animation: cv-tap .3s .075s infinite; }
+body.working[data-canim="a10"] .clawd .g-leg3 { transform-origin: 61.7px 47.6px; animation: cv-tap .3s .15s infinite; }
+body.working[data-canim="a10"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px; animation: cv-tap .3s .225s infinite; }
+
 @keyframes cv-bob { 0%, 100% { transform: translateY(0) scaleY(1); } 35% { transform: translateY(-2.6px) scaleY(1.015); } 70% { transform: translateY(.4px) scaleY(.975); } }
 @keyframes cv-scan { 0%, 18%, 100% { transform: translateX(0); } 28%, 46% { transform: translateX(-3.2px); } 58%, 80% { transform: translateX(3.2px); } }
+@keyframes cv-tap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.72); } }
+@keyframes cv-knead { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3.4px); } }
+@keyframes cv-scurry { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
 @media (prefers-reduced-motion: reduce) {
   /* No motion: freeze the mascot (still visible, just static). */
-  .clawd .eyes, body.working .clawd .g-all, body.working .clawd .g-eyes { animation: none; }
+  .clawd .eyes,
+  body.working .clawd .g-all, body.working .clawd .g-eyes,
+  body.working .clawd .g-armL, body.working .clawd .g-armR,
+  body.working .clawd .g-leg1, body.working .clawd .g-leg2,
+  body.working .clawd .g-leg3, body.working .clawd .g-leg4 { animation: none; }
 }
 
 /* ── Rowline — U1 (rice "rowline") ──────────────────────────────────────────
@@ -131,10 +164,14 @@ body[data-rice^="audiowave_orb"] #orb { display: block; }
 #bento .top .toprow { display: flex; align-items: baseline; gap: 8px; }
 #bento .top .bar { height: 6px; }
 #bento .top .pct { font-size: 23px; }
-#bento .top .lbl { margin-left: 8px; font-size: 9px; }
+#bento .top .lbl { margin-left: 8px; font-size: 12px; }
+/* Full size: reset sits inside the Current cell (pushed to the far right of the
+   label row); the header copy is hidden. Compact flips this below. */
+#bento .top .toprow .rst-top { position: static; transform: none; margin-left: auto; font-size: 10px; }
+#bento .hd-reset { display: none; }
 #bento .cel { padding: 7px 9px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
 #bento .celtop { display: flex; align-items: baseline; justify-content: space-between; }
-#bento .cel .lbl { font-size: 8px; }
+#bento .cel .lbl { font-size: 11px; }
 #bento .cel .pct { font-size: 15px; }
 #bento .cel .bar { height: 5px; }
 /* Compact: shrink, and the cells drop their bars to stack label over value. */
@@ -142,8 +179,15 @@ body.compact #bento { width: 120px; height: 112px; padding: 8px; gap: 5px; }
 body.compact #bento .ttl { font-size: 11px; }
 body.compact #bento .top { padding: 6px 9px; }
 body.compact #bento .top .pct { font-size: 18px; }
+/* Compact: reset moves to the header corner, freeing the cell so the "Current"
+   label sits beside the number (middle-aligned against it). */
+body.compact #bento .hd-reset { display: block; }
+body.compact #bento .top .toprow { align-items: center; }
+body.compact #bento .top .lbl { display: inline; font-size: 11px; }
+body.compact #bento .top .toprow .rst-top { display: none; } /* the in-cell copy */
 body.compact #bento .cel { padding: 5px 7px; }
 body.compact #bento .cel .pct { font-size: 12px; }
+body.compact #bento .cel .lbl { font-size: 8px; }
 body.compact #bento .cel .bar, body.compact #bento .top .bar { display: none; }
 body.compact #bento .celtop { flex-direction: column; align-items: flex-start; gap: 2px; }
 

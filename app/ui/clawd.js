@@ -25,8 +25,14 @@
 
   function sprite(px) {
     const w = (17 * px).toFixed(1), h = (11.9 * px).toFixed(1);
+    // Legs and arms are wrapped in their own groups so the random per-turn
+    // working animations can move them independently (leg-tap, arm-knead).
+    // The body silhouette is unchanged; groups only add transform hooks.
     return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">` +
-      `<g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g>` +
+      `<g class="g-all"><g fill="currentColor">${r(BODY)}` +
+      `<g class="g-armL">${r(ARM_L)}</g><g class="g-armR">${r(ARM_R)}</g>` +
+      `<g class="g-leg1">${r(LEGS[0])}</g><g class="g-leg2">${r(LEGS[1])}</g>` +
+      `<g class="g-leg3">${r(LEGS[2])}</g><g class="g-leg4">${r(LEGS[3])}</g></g>` +
       `<g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
   }
 
