@@ -86,7 +86,7 @@ body:not(.working) .fx{opacity:0}
 @keyframes scurry{0%,100%{transform:translateX(-9px)}50%{transform:translateX(9px)}}
 
 /* ============================================================
-   NEW — 20 concepts. transform/opacity only, no seam reveal.
+   NEW — 24 concepts. transform/opacity only, no seam reveal.
    ============================================================ */
 
 /* ── Body ─────────────────────────────────────── */
@@ -174,6 +174,47 @@ body:not(.working) .fx{opacity:0}
   background:var(--coral);animation:nx-prog 1.4s linear infinite}
 @keyframes nx-prog{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
 
+/* ── Body (round 2) ───────────────────────────── */
+[data-anim="tilt"] .g-all{transform-origin:50px 64.8px;animation:nx-tilt 3.4s ease-in-out infinite}
+@keyframes nx-tilt{0%,18%{transform:rotate(0)}34%,54%{transform:rotate(-7deg)}70%,90%{transform:rotate(6deg)}100%{transform:rotate(0)}}
+
+[data-anim="wobble"] .g-all{transform-origin:50px 64.8px;animation:nx-wobble 1.6s ease-in-out infinite}
+@keyframes nx-wobble{0%,100%{transform:skewX(0)}25%{transform:skewX(5deg)}75%{transform:skewX(-5deg)}}
+
+[data-anim="pop"] .g-all{transform-origin:50px 64.8px;animation:nx-pop 1.5s ease-in-out infinite}
+@keyframes nx-pop{0%,58%,100%{transform:scale(1)}72%{transform:scale(1.12)}86%{transform:scale(.97)}}
+
+[data-anim="drift"] .g-all{animation:nx-drift 4s ease-in-out infinite}
+@keyframes nx-drift{0%,100%{transform:translate(0,0)}25%{transform:translate(4px,-3px)}50%{transform:translate(0,-5px)}75%{transform:translate(-4px,-3px)}}
+
+/* ── Eyes (round 2) ───────────────────────────── */
+[data-anim="dart"] .g-eyes{animation:nx-dart 2.8s steps(1,end) infinite}
+@keyframes nx-dart{0%,20%{transform:translateX(0)}25%,40%{transform:translateX(3.4px)}45%,60%{transform:translateX(-3.4px)}65%,80%{transform:translateX(2px)}85%,100%{transform:translateX(0)}}
+
+[data-anim="rolleyes"] .g-eyes{animation:nx-roll 2.2s ease-in-out infinite}
+@keyframes nx-roll{0%,100%{transform:translate(0,0)}25%{transform:translate(2.6px,-2px)}50%{transform:translate(0,-3px)}62%{transform:translate(-2.6px,-2px)}75%{transform:translate(0,0)}}
+
+/* ── Legs (round 2) ───────────────────────────── */
+[data-anim="tiptoe"] .g-all{transform-origin:50px 64.8px;animation:nx-tiptoe 2.6s ease-in-out infinite}
+[data-anim="tiptoe"] .g-leg1,[data-anim="tiptoe"] .g-leg2,[data-anim="tiptoe"] .g-leg3,[data-anim="tiptoe"] .g-leg4{transform-origin:50px 64.8px;animation:nx-tiptoeleg 2.6s ease-in-out infinite}
+@keyframes nx-tiptoe{0%,15%,100%{transform:translateY(0)}45%,75%{transform:translateY(-3px)}}
+@keyframes nx-tiptoeleg{0%,15%,100%{transform:scaleY(1)}45%,75%{transform:scaleY(.7)}}
+
+[data-anim="stomp"] .g-leg1{transform-origin:20.6px 47.6px;animation:nx-stomp 2s ease-in-out infinite}
+[data-anim="stomp"] .g-leg2{transform-origin:38.2px 47.6px;animation:nx-stomp 2s .2s infinite}
+[data-anim="stomp"] .g-leg3{transform-origin:61.7px 47.6px;animation:nx-stomp 2s .4s infinite}
+[data-anim="stomp"] .g-leg4{transform-origin:79.3px 47.6px;animation:nx-stomp 2s .6s infinite}
+@keyframes nx-stomp{0%{transform:scaleY(1)}6%{transform:scaleY(.55)}14%,100%{transform:scaleY(1)}}
+
+/* ── Arms (round 2) ───────────────────────────── */
+[data-anim="reach"] .g-armL{transform-origin:15.8px 35.8px;animation:nx-reach 3s ease-in-out infinite}
+[data-anim="reach"] .g-armR{transform-origin:84.2px 35.8px;animation:nx-reach 3s ease-in-out infinite}
+@keyframes nx-reach{0%,15%,100%{transform:translateY(0)}45%,75%{transform:translateY(-6px)}}
+
+[data-anim="airtype"] .g-armL{transform-origin:15.8px 26.3px;animation:nx-airtype .34s ease-in-out infinite}
+[data-anim="airtype"] .g-armR{transform-origin:84.2px 26.3px;animation:nx-airtype .34s ease-in-out .17s infinite}
+@keyframes nx-airtype{0%,100%{transform:translateY(0)}50%{transform:translateY(2.2px)}}
+
 /* ── Combo ────────────────────────────────────── */
 [data-anim="walk"] .g-all{transform-origin:50px 64.8px;animation:bob .5s ease-in-out infinite}
 [data-anim="walk"] .g-leg1,[data-anim="walk"] .g-leg3{transform-origin:20.6px 47.6px;animation:nx-march .5s ease-in-out infinite}
@@ -196,7 +237,7 @@ body:not(.working) .fx{opacity:0}
 <h2 class="sec">Shipped <span>kept in the build — main.js CLAWD_ANIMS</span></h2>
 <div class="grid" id="gridKept"></div>
 
-<h2 class="sec">New concepts <span>15 · transform/opacity only · no duplicates</span></h2>
+<h2 class="sec">New concepts <span>24 · transform/opacity only · no duplicates</span></h2>
 <div class="grid" id="gridNew"></div>
 
 <script>
@@ -233,6 +274,7 @@ const KEPT=[
  ["turn","Turn-around","Flips to face away and back, like checking behind.","all·scaleX",null],
  ["sway","Sway","Slow lean side to side. Lazy-river calm.","all·translateX",null],
  ["squat","Squat","Sinks into a knee-bend and back up. Heavy lifting.","all + legs·scaleY",null],
+ ["walk","Walk Cycle","March + arm swing + bob — a full walk on the spot.","combo",null],
 ];
 
 const NEW=[
@@ -250,7 +292,16 @@ const NEW=[
  ["sparks","Sparks","Coral ✳ drift up around a still Clawd. Matches Baking…","overlay·transform","<i>✳</i><i>✳</i><i>✳</i>"],
  ["glow","Warm Pulse","Soft coral glow breathes behind. Zero body motion.","overlay·opacity+scale","GLOW"],
  ["prog","Progress","An indeterminate bar sweeps beneath. Crunching.","overlay·translateX","PROG"],
- ["walk","Walk Cycle","March + arm swing + bob — a full walk on the spot.","combo",null],
+ ["tilt","Curious Tilt","Head tilts to one side, holds, then the other. Puzzling it out.","all·rotate",null],
+ ["wobble","Jelly Wobble","Skews side to side like set jelly. Loose and springy.","all·skewX",null],
+ ["pop","Excited Pop","A quick scale-up pop on the beat. Barely containing it.","all·scale",null],
+ ["drift","Float","Drifts in a slow lazy circle. Weightless thinking.","all·translate",null],
+ ["dart","Darting Eyes","Eyes snap between spots — scanning fast for the fix.","eyes·steps",null],
+ ["rolleyes","Eye Roll","Eyes loop a slow circle. Mulling it over.","eyes·translate",null],
+ ["tiptoe","Tiptoe","Rises onto compressed legs and holds. Peeking over.","all + legs·scaleY",null],
+ ["stomp","Stomp","Legs stomp down in a heavy rolling wave, then rest.","legs·scaleY",null],
+ ["reach","Reach Up","Both claws stretch up and hold. Reaching for it.","arms·translateY",null],
+ ["airtype","Air Typing","Claws patter up and down fast — hammering the keys.","arms·translateY",null],
 ];
 
 function fxHtml(fx){
