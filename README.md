@@ -8,32 +8,36 @@ Unofficial Windows desktop HUD for Claude Code usage limits.
 
 ## Skins
 
-Five looks, switchable any time from the tray menu (right-click the tray icon
+Six looks, switchable any time from the tray menu (right-click the tray icon
 → *RICE*). All of them show the same numbers — only the presentation differs.
 
-| Classic | Bento Box | Audiowave Orb — LED Bloom |
+| Classic | Rowline | Bento Box |
 |:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="240" alt="Classic HUD skin: a charcoal card titled Usage with the clawd mascot top-left, showing Current, Weekly, and Fable usage as labelled bars"> | <img src="docs/images/hud-bento.png" width="240" alt="Bento Box HUD skin: a charcoal panel titled Usage with the clawd mascot, a large Current percentage across the top and Weekly and Fable cells below"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Audiowave Orb LED Bloom skin: a ring of 5-segment LED-style rungs per bar, colored by usage zone, blooming outward from bass to treble hits"> |
-| Current, Weekly, and Fable as labelled bars under a centered title, with the reset countdown top-right. | Current as a hero percentage, with Weekly and Fable in their own cells and the reset countdown top-right. | 5-segment LED rungs per bar, colored by usage zone, with kick/snare/hat hits blooming outward across their own bass-to-treble arc. |
+| <img src="docs/images/hud-classic.png" width="210" alt="Classic HUD skin: a charcoal card titled Usage with the clawd mascot top-left, showing Current, Weekly, and Fable each as a label, a percentage, and a threshold underline"> | <img src="docs/images/hud-rowline.png" width="210" alt="Rowline HUD skin: a compact charcoal card with Current, Weekly, and Fable as labelled bars under a centered title"> | <img src="docs/images/hud-bento.png" width="210" alt="Bento Box HUD skin: a charcoal panel titled Usage with the clawd mascot, a large Current percentage and bar across the top and Weekly and Fable cells below"> |
+| Current, Weekly, and Fable each as a label, percentage, and threshold underline under a centered title — the default. | The same three as labelled bars; the most compact card, its labels becoming 5H / 7D / FBL when shrunk. | Current as a hero percentage with its own bar, and Weekly and Fable in their own cells. |
 
-| Audiowave Orb — Bars | Audiowave Orb — Peak hold |
-|:---:|:---:|
-| <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
-| A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
+| Audiowave Orb — LED Bloom | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
+|:---:|:---:|:---:|
+| <img src="docs/images/hud-audiowave-led.png" width="160" alt="Audiowave Orb LED Bloom skin: a ring of 5-segment LED-style rungs per bar, colored by usage zone, blooming outward from bass to treble hits"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
+| 5-segment LED rungs per bar, colored by usage zone, with kick/snare/hat hits blooming outward across their own bass-to-treble arc. | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
 
-**Classic** is the plain readout, and is what the tray tooltip and statusline
-mirror. Current, Weekly, and Fable each get a labelled bar; the bars turn
-blue → yellow → red as you approach a limit, and the card pulses a red ring
-past 90%.
+**Classic** is the default — an editorial readout, and what the tray tooltip and
+statusline mirror. Current, Weekly, and Fable each show as a label, a
+percentage, and a thin threshold underline that turns blue → yellow → red as you
+approach a limit.
 
-**Bento Box** lays the same three numbers out as self-contained cells instead
-of a hierarchy: Current is a hero percentage across the top, with Weekly and
-Fable in their own cells below. Both card skins carry the clawd mascot top-left
-and the 5-hour reset countdown top-right.
+**Rowline** is the same three as labelled bars — the most compact card. When
+shrunk to Compact size its row labels become 5H / 7D / FBL.
+
+**Bento Box** lays the numbers out as self-contained cells instead of a
+hierarchy: Current is a hero percentage with its own bar across the top, with
+Weekly and Fable in their own cells below. All three card skins carry the clawd
+mascot top-left and the 5-hour reset countdown top-right, and none pulse or ring
+— the bar/underline color is the only limit cue.
 
 The three **Audiowave Orb** skins are "rice" — the ring reacts to whatever your
 speakers are playing. To do that the HUD opens a WASAPI **loopback** capture of
-your system audio output while an orb skin is selected (Classic starts no
+your system audio output while an orb skin is selected (the card skins start no
 capture at all). The audio is turned into bar heights inside the process and
 then discarded: nothing is recorded, written to disk, or sent anywhere —
 consistent with the no-network guarantee below. It also captures only the
@@ -193,14 +197,14 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
 - **Tray icon, right-click:** menu with *Show/Hide*, *Refresh usage* (runs a
   headless `claude /usage` now), *RICE*, *Compact size*, *Opacity*, *Start with
   Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
-- **RICE:** picks the skin — *Classic*, *Bento Box*, or *Audiowave Orb* →
-  *Bars* / *Peak hold* / *LED Bloom* (see [Skins](#skins)). One radio group, so exactly one
-  is ever checked. Switching resizes the HUD (the orb is a 160×160 square;
-  Classic and Bento Box each have their own card size) and is remembered across
-  restarts. Selecting an orb skin starts the system-audio loopback capture;
-  going back to Classic or Bento Box stops it.
+- **RICE:** picks the skin — *Classic*, *Rowline*, *Bento Box*, or *Audiowave
+  Orb* → *Bars* / *Peak hold* / *LED Bloom* (see [Skins](#skins)). One radio group, so exactly
+  one is ever checked. Switching resizes the HUD (the orb is a 160×160 square;
+  each card skin has its own size) and is remembered across restarts. Selecting
+  an orb skin starts the system-audio loopback capture; going back to a card
+  skin stops it.
 - **Compact size:** shrinks the card to roughly half width (the same numbers,
-  with single-letter row labels on Classic). Also toggled by
+  with 5H / 7D / FBL row labels on Rowline). Also toggled by
   double-clicking the card. Remembered across restarts.
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
@@ -291,33 +295,37 @@ HUD không chính thức cho Windows, hiển thị giới hạn sử dụng củ
 
 ## Giao diện (Skins)
 
-Năm kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
-tượng khay → *RICE*). Cả năm đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
+Sáu kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
+tượng khay → *RICE*). Cả sáu đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
 
-| Classic | Bento Box | Audiowave Orb — LED Bloom |
+| Classic | Rowline | Bento Box |
 |:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="240" alt="Giao diện Classic: thẻ than chì tiêu đề Usage với linh vật clawd góc trên trái, hiện Current, Weekly, Fable dưới dạng thanh có nhãn"> | <img src="docs/images/hud-bento.png" width="240" alt="Giao diện Bento Box: bảng than chì tiêu đề Usage với linh vật clawd, phần trăm Current lớn trên cùng và ô Weekly, Fable bên dưới"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Giao diện Audiowave Orb LED Bloom: vòng thanh LED 5 đoạn mỗi thanh, đổi màu theo ngưỡng sử dụng, nở rộng từ tiếng bass đến treble"> |
-| Current, Weekly, Fable dưới dạng thanh có nhãn dưới tiêu đề căn giữa, kèm đếm ngược reset ở góc trên phải. | Current là phần trăm chính trên cùng, Weekly và Fable trong ô riêng, kèm đếm ngược reset ở góc trên phải. | Mỗi thanh là 5 đoạn LED, đổi màu theo ngưỡng sử dụng, nở rộng theo từng cú đánh bass/snare/hat trong cung riêng của nó. |
+| <img src="docs/images/hud-classic.png" width="210" alt="Giao diện Classic: thẻ than chì tiêu đề Usage với linh vật clawd góc trên trái, mỗi mục Current, Weekly, Fable là một nhãn, phần trăm, và gạch chân đổi màu theo ngưỡng"> | <img src="docs/images/hud-rowline.png" width="210" alt="Giao diện Rowline: thẻ than chì gọn với Current, Weekly, Fable dưới dạng thanh có nhãn dưới tiêu đề căn giữa"> | <img src="docs/images/hud-bento.png" width="210" alt="Giao diện Bento Box: bảng than chì tiêu đề Usage với linh vật clawd, phần trăm Current lớn kèm thanh trên cùng và ô Weekly, Fable bên dưới"> |
+| Mỗi mục Current, Weekly, Fable là một nhãn, phần trăm, và gạch chân theo ngưỡng dưới tiêu đề căn giữa — giao diện mặc định. | Cùng ba mục đó dưới dạng thanh có nhãn; thẻ gọn nhất, nhãn thành 5H / 7D / FBL khi thu nhỏ. | Current là phần trăm chính kèm thanh riêng, Weekly và Fable trong ô riêng. |
 
-| Audiowave Orb — Bars | Audiowave Orb — Peak hold |
-|:---:|:---:|
-| <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
-| Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
+| Audiowave Orb — LED Bloom | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
+|:---:|:---:|:---:|
+| <img src="docs/images/hud-audiowave-led.png" width="160" alt="Giao diện Audiowave Orb LED Bloom: vòng thanh LED 5 đoạn mỗi thanh, đổi màu theo ngưỡng sử dụng, nở rộng từ tiếng bass đến treble"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
+| Mỗi thanh là 5 đoạn LED, đổi màu theo ngưỡng sử dụng, nở rộng theo từng cú đánh bass/snare/hat trong cung riêng của nó. | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
 
-**Classic** là bản đọc số thuần túy, cũng là thứ mà tooltip khay và statusline
-phản chiếu. Current, Weekly, và Fable mỗi mục có một thanh có nhãn; các thanh
-chuyển xanh dương → vàng → đỏ khi bạn tiến gần giới hạn, và thẻ nhấp nháy viền
-đỏ khi vượt 90%.
+**Classic** là giao diện mặc định — kiểu đọc số editorial, cũng là thứ mà
+tooltip khay và statusline phản chiếu. Current, Weekly, và Fable mỗi mục hiện
+một nhãn, một phần trăm, và một gạch chân mảnh đổi xanh dương → vàng → đỏ khi bạn
+tiến gần giới hạn.
 
-**Bento Box** trình bày cùng ba con số đó thành các ô độc lập thay vì một hệ
-thống phân cấp: Current là phần trăm chính trải ngang trên cùng, còn Weekly và
-Fable nằm trong ô riêng bên dưới. Cả hai giao diện thẻ đều đặt linh vật clawd ở
-góc trên trái và đếm ngược reset của cửa sổ 5 giờ ở góc trên phải.
+**Rowline** là cùng ba mục đó dưới dạng thanh có nhãn — thẻ gọn nhất. Khi thu về
+Compact, nhãn hàng thành 5H / 7D / FBL.
+
+**Bento Box** trình bày các con số thành các ô độc lập thay vì một hệ thống phân
+cấp: Current là phần trăm chính kèm thanh riêng trải ngang trên cùng, còn Weekly
+và Fable nằm trong ô riêng bên dưới. Cả ba giao diện thẻ đều đặt linh vật clawd ở
+góc trên trái và đếm ngược reset của cửa sổ 5 giờ ở góc trên phải, và không cái
+nào nhấp nháy hay viền — màu thanh/gạch chân là tín hiệu giới hạn duy nhất.
 
 Ba giao diện **Audiowave Orb** là "rice" — vòng phổ phản ứng theo bất cứ thứ
 gì loa của bạn đang phát. Để làm vậy, HUD mở một luồng thu **loopback** WASAPI
-từ đầu ra âm thanh hệ thống trong lúc giao diện orb được chọn (Classic không mở
-luồng thu nào). Âm thanh được chuyển thành chiều cao các thanh ngay trong tiến
+từ đầu ra âm thanh hệ thống trong lúc giao diện orb được chọn (các giao diện thẻ
+không mở luồng thu nào). Âm thanh được chuyển thành chiều cao các thanh ngay trong tiến
 trình rồi bỏ đi: không ghi lại, không lưu ra đĩa, không gửi đi đâu — đúng với
 cam kết không-mạng bên dưới. Nó cũng chỉ thu bản trộn đầu ra của hệ thống,
 không bao giờ thu micro.
@@ -482,14 +490,14 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
   (chạy `claude /usage` headless ngay lập tức), *RICE*, *Compact size*,
   *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa
   HKCU Run hiện tại), và *Quit*.
-- **RICE:** chọn giao diện — *Classic*, *Bento Box*, hoặc *Audiowave Orb* →
-  *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả năm là một nhóm
-  radio, nên luôn chỉ đúng một cái được tích. Đổi giao diện sẽ đổi kích thước
-  HUD (orb là ô vuông 160×160; Classic và Bento Box mỗi cái có kích thước thẻ
-  riêng) và được nhớ qua các lần khởi động. Chọn giao diện orb sẽ bật luồng thu
-  loopback âm thanh hệ thống; quay lại Classic hoặc Bento Box sẽ tắt nó.
+- **RICE:** chọn giao diện — *Classic*, *Rowline*, *Bento Box*, hoặc *Audiowave
+  Orb* → *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả sáu là một
+  nhóm radio, nên luôn chỉ đúng một cái được tích. Đổi giao diện sẽ đổi kích
+  thước HUD (orb là ô vuông 160×160; mỗi giao diện thẻ có kích thước riêng) và
+  được nhớ qua các lần khởi động. Chọn giao diện orb sẽ bật luồng thu loopback âm
+  thanh hệ thống; quay lại một giao diện thẻ sẽ tắt nó.
 - **Compact size:** thu thẻ còn khoảng nửa chiều rộng (vẫn các con số đó, với
-  nhãn hàng một chữ cái trên Classic). Cũng bật/tắt được bằng cách
+  nhãn hàng 5H / 7D / FBL trên Rowline). Cũng bật/tắt được bằng cách
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
 - **Opacity:** 100/85/70/55% — giúp thẻ luôn-nổi-trên-cùng bớt che khuất.
   Cũng mở được bằng chuột phải vào thẻ. Được nhớ qua các lần khởi động.

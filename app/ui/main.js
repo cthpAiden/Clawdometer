@@ -1,6 +1,7 @@
-// Default skin (Classic — U1 "Rowline"). Contract: `state-updated` (usage data)
-// and `ui-prefs` (opacity/compact/rice) events in; `ui-ready` and
-// `toggle-compact` events out.
+// Globals (drag / context menu / compact / opacity / working) + renderer for the
+// Underline (U8, the "classic" default) and Rowline (U1, "rowline") cards, which
+// share one payload. Contract: `state-updated` (usage data) and `ui-prefs`
+// (opacity/compact/rice) events in; `ui-ready` and `toggle-compact` events out.
 
 // If Tauri's bridge injection ever fails, show a hint instead of throwing
 // mid-setup (an uncaught throw here would also kill render/setInterval below).
@@ -53,6 +54,15 @@ const els = {
   txt5h: document.getElementById("txt5h"),
   txt7d: document.getElementById("txt7d"),
   txtfb: document.getElementById("txtfb"),
+  // Underline (U8) — the "classic" default skin. renderRow paints its .uline <i>
+  // exactly like a bar fill, so it shares this render path with the Rowline card.
+  ureset: document.getElementById("ureset"),
+  uln5h: document.getElementById("uln5h"),
+  uln7d: document.getElementById("uln7d"),
+  ulnfb: document.getElementById("ulnfb"),
+  utxt5h: document.getElementById("utxt5h"),
+  utxt7d: document.getElementById("utxt7d"),
+  utxtfb: document.getElementById("utxtfb"),
 };
 
 let current = null; // last payload
@@ -102,23 +112,29 @@ function render() {
   const state = current && current.state;
   if (!state || !state.rate_limits) {
     els.countdown.textContent = "—";
-    els.countdown.style.color = "";
+    els.ureset.textContent = "—";
     renderRow(null, els.bar5h, els.txt5h);
     renderRow(null, els.bar7d, els.txt7d);
     renderRow(null, els.barfb, els.txtfb);
-    document.body.classList.remove("critical");
+    renderRow(null, els.uln5h, els.utxt5h);
+    renderRow(null, els.uln7d, els.utxt7d);
+    renderRow(null, els.ulnfb, els.utxtfb);
     return;
   }
-  const fh = state.rate_limits.five_hour;
-  els.countdown.textContent = fmtCountdown(fh && fh.resets_at, nowMs, compactMode);
-  renderRow(fh, els.bar5h, els.txt5h);
-  renderRow(state.rate_limits.seven_day, els.bar7d, els.txt7d);
-  renderRow(state.rate_limits.fable_week, els.barfb, els.txtfb);
-
-  const fivePct = fh && typeof fh.used_percentage === "number" ? fh.used_percentage : 0;
-  const critical = fivePct >= 90;
-  document.body.classList.toggle("critical", critical);
-  els.countdown.style.color = critical ? "#e5484d" : "";
+  const rl = state.rate_limits;
+  const resetAt = rl.five_hour && rl.five_hour.resets_at;
+  // One payload feeds both card skins; only the visible one shows (CSS), the
+  // other's writes are cheap off-screen no-ops. Rowline (172px) drops the
+  // "Resets" word so a long "2h 47m" never collides with the centred title;
+  // Underline (200px) has room for the full phrasing.
+  els.countdown.textContent = fmtCountdown(resetAt, nowMs, true);
+  els.ureset.textContent = fmtCountdown(resetAt, nowMs, compactMode);
+  renderRow(rl.five_hour, els.bar5h, els.txt5h);
+  renderRow(rl.seven_day, els.bar7d, els.txt7d);
+  renderRow(rl.fable_week, els.barfb, els.txtfb);
+  renderRow(rl.five_hour, els.uln5h, els.utxt5h);
+  renderRow(rl.seven_day, els.uln7d, els.utxt7d);
+  renderRow(rl.fable_week, els.ulnfb, els.utxtfb);
 }
 
 logRejection(window.__TAURI__.event.listen("state-updated", (event) => {
@@ -132,7 +148,7 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   document.body.classList.toggle("compact", compactMode);
   const opacity = typeof p.opacity === "number" ? p.opacity : 1;
   els.card.style.opacity = opacity;
-  for (const id of ["bento", "orb"]) {
+  for (const id of ["bento", "orb", "underline"]) {
     const el = document.getElementById(id);
     if (el) el.style.opacity = opacity;
   }

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body data-rice="classic">
   <div id="card">
     <div id="header">
       <span class="clawd-i" data-px="1.15"></span>
@@ -13,17 +13,17 @@
     </div>
     <div class="rows">
       <div class="r">
-        <span class="lbl"><span class="lf">Current</span><span class="lc">C</span></span>
+        <span class="lbl"><span class="lf">Current</span><span class="lc">5H</span></span>
         <div class="bar"><div id="bar5h" class="fill"></div></div>
         <span id="txt5h" class="pct">—</span>
       </div>
       <div class="r">
-        <span class="lbl"><span class="lf">Weekly</span><span class="lc">W</span></span>
+        <span class="lbl"><span class="lf">Weekly</span><span class="lc">7D</span></span>
         <div class="bar"><div id="bar7d" class="fill"></div></div>
         <span id="txt7d" class="pct">—</span>
       </div>
       <div class="r">
-        <span class="lbl"><span class="lf">Fable</span><span class="lc">F</span></span>
+        <span class="lbl"><span class="lf">Fable</span><span class="lc">FBL</span></span>
         <div class="bar"><div id="barfb" class="fill"></div></div>
         <span id="txtfb" class="pct">—</span>
       </div>
@@ -36,8 +36,8 @@
       <span id="brtop" class="rst-top">—</span>
     </div>
     <div class="top card">
-      <span class="v" id="b5v">—</span>
-      <span class="lbl">Current</span>
+      <div class="toprow"><span class="v" id="b5v">—</span><span class="lbl">Current</span></div>
+      <div class="bar"><div id="b5b" class="fill"></div></div>
     </div>
     <div class="cel card">
       <div class="celtop"><span class="lbl">Weekly</span><span class="v" id="b7v">—</span></div>
@@ -47,6 +47,16 @@
       <div class="celtop"><span class="lbl">Fable</span><span class="v" id="bfv">—</span></div>
       <div class="bar"><div id="bfb" class="fill"></div></div>
     </div>
+  </div>
+  <div id="underline">
+    <div class="uhead">
+      <span class="clawd-i" data-px="1.15"></span>
+      <span class="ttl">Usage</span>
+      <span id="ureset" class="rst-top">—</span>
+    </div>
+    <div class="u"><div class="urow"><span class="lbl">Current</span><span id="utxt5h" class="pct">—</span></div><div class="uline"><i id="uln5h"></i></div></div>
+    <div class="u"><div class="urow"><span class="lbl">Weekly</span><span id="utxt7d" class="pct">—</span></div><div class="uline"><i id="uln7d"></i></div></div>
+    <div class="u"><div class="urow"><span class="lbl">Fable</span><span id="utxtfb" class="pct">—</span></div><div class="uline"><i id="ulnfb"></i></div></div>
   </div>
   <div id="orb">
     <div class="ring"></div>

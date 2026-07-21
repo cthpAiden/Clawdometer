@@ -20,37 +20,35 @@ html, body { background: transparent; overflow: hidden; }
 }
 
 /* ── Shared "Usage" look ───────────────────────────────────────────────────
-   Classic (#card) and Bento Box (#bento) are two layouts of the same panel:
-   opaque charcoal surface, serif title dead-centre, sans numbers, a coral
-   mascot top-left, and the 5h reset countdown top-right. Both are card-shaped,
-   so the near-limit pulse and the window sizing treat them the same.
-   Scoped to #card/#bento so none of it leaks into the orb (which reuses .bar). */
-#card, #bento {
+   The three card skins — Classic (#underline, U8), Rowline (#card, U1), and
+   Bento Box (#bento) — are layouts of one panel: opaque charcoal surface, serif
+   title dead-centre, sans numbers, coral mascot top-left, 5h reset top-right.
+   Scoped to those ids so none of it leaks into the orb (which reuses .bar). */
+#card, #bento, #underline {
   color: #e7e4d9; background: var(--cc-panel);
   border-radius: 14px; overflow: hidden;
   font: 12px/1.4 var(--font-sans); font-variant-numeric: tabular-nums;
 }
 /* Title centred over the whole header; clawd (left) and resets (right) are
    absolute so they never shove it off the midline. */
-#card .ttl, #bento .ttl {
+#card .ttl, #bento .ttl, #underline .ttl {
   position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
   text-align: center; font-family: var(--font-serif); font-weight: 500;
   color: #f2f0e8; line-height: 1;
 }
-#card .rst-top, #bento .rst-top {
+#card .rst-top, #bento .rst-top, #underline .rst-top {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
   font-family: var(--font-sans); font-weight: 500; color: #9a958b;
   line-height: 1; white-space: nowrap; font-size: 9px; letter-spacing: .2px;
 }
-body.compact #card .rst-top, body.compact #bento .rst-top { font-size: 8px; }
-/* Numbers stay off-white; the bars carry the threshold color (usage-color.js
-   paints --u on each .fill). The near-limit pulse below is the number-side
-   warning both skins share. */
-#card .pct, #bento .pct {
+body.compact #card .rst-top, body.compact #bento .rst-top, body.compact #underline .rst-top { font-size: 8px; }
+/* Numbers stay off-white; the bars/underlines carry the threshold color
+   (usage-color.js paints --u on each fill). */
+#card .pct, #bento .pct, #underline .pct {
   font-family: var(--font-sans); font-weight: 800; color: #f4f2ea;
   letter-spacing: -.3px; line-height: 1;
 }
-#card .lbl, #bento .lbl { font-family: var(--font-sans); font-weight: 600; color: #a9a59a; }
+#card .lbl, #bento .lbl, #underline .lbl { font-family: var(--font-sans); font-weight: 600; color: #a9a59a; }
 #card .bar, #bento .bar { border-radius: 99px; background: #141413; overflow: hidden; }
 /* --u is set per-element by UsageColor.paint (usage-color.js); the literal is
    only what shows before the first payload lands. */
@@ -79,14 +77,13 @@ body.working .clawd .g-eyes { animation: cv-scan 3.2s ease-in-out infinite; }
   .clawd .eyes, body.working .clawd .g-all, body.working .clawd .g-eyes { animation: none; }
 }
 
-/* ── Classic — U1 "Rowline" ────────────────────────────────────────────────
-   Centred title, then three tidy label · bar · % rows (Current / Weekly /
-   Fable). No footer: the mascot conveys isWorking, and the panel stays small
-   so it never blocks the screen. The window is sized to this in apply_prefs —
-   a stale number there clips the bottom row. */
+/* ── Rowline — U1 (rice "rowline") ──────────────────────────────────────────
+   The original rows card: centred title, then three label · bar · % rows
+   (Current / Weekly / Fable). No longer the default — "classic" now selects the
+   Underline skin below. Shown only when rice == "rowline" (see visibility). */
 #card {
-  width: 206px; height: 100px; padding: 10px 12px;
-  display: flex; flex-direction: column;
+  width: 172px; height: 100px; padding: 10px 12px;
+  flex-direction: column;
 }
 #card #header { position: relative; min-height: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 #card .ttl { font-size: 14px; }
@@ -95,14 +92,14 @@ body.working .clawd .g-eyes { animation: cv-scan 3.2s ease-in-out infinite; }
 #card .r .lbl { width: 46px; font-size: 9px; }
 #card .r .bar { flex: 1; height: 7px; }
 #card .r .pct { width: 30px; text-align: right; font-size: 11px; }
-/* Compact drops the row labels to single letters (C / W / F). */
+/* Compact swaps the row labels to short window codes (5H / 7D / FBL). */
 #card .lc { display: none; }
 body.compact #card { width: 120px; height: 100px; padding: 8px 9px; }
 body.compact #card #header { margin-bottom: 6px; }
 body.compact #card .ttl { font-size: 11px; }
 body.compact #card .rows { gap: 7px; }
 body.compact #card .r { gap: 6px; }
-body.compact #card .r .lbl { width: 12px; font-size: 8px; }
+body.compact #card .r .lbl { width: 22px; font-size: 8px; }
 body.compact #card .r .bar { height: 5px; }
 body.compact #card .r .pct { width: 26px; font-size: 9px; }
 body.compact #card .lf { display: none; }
@@ -114,17 +111,25 @@ body.compact #card .lc { display: inline; }
    old Bento is gone — the reset countdown lives top-right like Classic's, and
    an avg/peak cell would have to invent a number nothing stores. Card-shaped,
    so it shares Classic's pulse and window size branch (see apply_prefs). */
-#bento { display: none; }
-body[data-rice="bento"] #card { display: none; }
+/* ── Skin visibility ────────────────────────────────────────────────────────
+   Every card/orb is hidden by default; the active rice profile shows exactly
+   one. "classic" = Underline (U8, the default); "rowline" = the rows card
+   (#card); "bento" = the grid; the "audiowave_orb" prefix shows the ring. */
+#card, #bento, #orb, #underline { display: none; }
+body[data-rice="classic"] #underline { display: flex; flex-direction: column; }
+body[data-rice="rowline"] #card { display: flex; }
 body[data-rice="bento"] #bento { display: grid; }
+body[data-rice^="audiowave_orb"] #orb { display: block; }
 #bento {
-  width: 206px; height: 130px; padding: 10px;
+  width: 206px; height: 138px; padding: 10px;
   grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 7px;
 }
 #bento .hd2 { grid-column: 1 / 3; position: relative; min-height: 14px; display: flex; align-items: center; gap: 6px; }
 #bento .ttl { font-size: 13px; }
 #bento .card { background: var(--cc-card); border: 1px solid var(--cc-line); border-radius: 11px; }
-#bento .top { grid-column: 1 / 3; padding: 8px 11px; display: flex; align-items: center; }
+#bento .top { grid-column: 1 / 3; padding: 8px 11px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+#bento .top .toprow { display: flex; align-items: baseline; gap: 8px; }
+#bento .top .bar { height: 6px; }
 #bento .top .pct { font-size: 23px; }
 #bento .top .lbl { margin-left: 8px; font-size: 9px; }
 #bento .cel { padding: 7px 9px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
@@ -139,17 +144,27 @@ body.compact #bento .top { padding: 6px 9px; }
 body.compact #bento .top .pct { font-size: 18px; }
 body.compact #bento .cel { padding: 5px 7px; }
 body.compact #bento .cel .pct { font-size: 12px; }
-body.compact #bento .cel .bar { display: none; }
+body.compact #bento .cel .bar, body.compact #bento .top .bar { display: none; }
 body.compact #bento .celtop { flex-direction: column; align-items: flex-start; gap: 2px; }
 
-/* Near-limit (>=90%): pulse an inset red ring — the number-side warning both
-   card skins share (the bars alone can't flag Bento's bar-less hero cell).
-   Inset so the transparent WebView2 window (sized to the card) never clips it. */
-body.critical #card, body.critical #bento { animation: pulse 1.8s ease-in-out infinite; }
-@keyframes pulse {
-  0%, 100% { box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.35); }
-  50%      { box-shadow: inset 0 0 0 2.5px rgba(229, 72, 77, 0.85); }
-}
+/* ── Classic — U8 "Underline" (default skin, rice "classic") ────────────────
+   Editorial rows: label left, % right, a hairline progress underline beneath
+   each of Current / Weekly / Fable. Shares the centred serif header, clawd, and
+   reset with the other cards; the <i> underline fill is threshold-painted by
+   renderRow (main.js), exactly like a bar. */
+#underline { width: 200px; height: 122px; padding: 9px 13px; }
+#underline .uhead { position: relative; min-height: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+#underline .ttl { font-size: 14px; }
+#underline .u { padding: 3px 0; }
+#underline .urow { display: flex; align-items: baseline; line-height: 1; }
+#underline .urow .lbl { font-size: 10px; }
+#underline .urow .pct { margin-left: auto; font-size: 14px; }
+#underline .uline { margin-top: 5px; height: 3px; border-radius: 99px; background: #141413; overflow: hidden; }
+#underline .uline i { display: block; height: 100%; width: 0%; background: var(--u, #3f7fbf); border-radius: 99px; transition: width .3s; }
+body.compact #underline { width: 120px; height: 114px; padding: 8px 10px; }
+body.compact #underline .ttl { font-size: 12px; }
+body.compact #underline .urow .lbl { font-size: 9px; }
+body.compact #underline .urow .pct { font-size: 12px; }
 
 /* ── Audiowave Orb rice skin ──────────────────────────────────────────────
    A circular 54-bar ring that reacts to system audio, wrapped around a center
@@ -157,10 +172,6 @@ body.critical #card, body.critical #bento { animation: pulse 1.8s ease-in-out in
    is hidden and the window is a 160×160 square (see apply_prefs). Bars animate
    with transform/opacity only — the transparent WebView2 window never repaints
    background changes (same rule as the mascot). */
-#orb { display: none; }
-/* Prefix match: both "audiowave_orb" (Bars) and "audiowave_orb_peak" show the ring. */
-body[data-rice^="audiowave_orb"] #card { display: none; }
-body[data-rice^="audiowave_orb"] #orb { display: block; }
 #orb {
   position: relative; width: 160px; height: 160px; border-radius: 50%;
   background: radial-gradient(circle at 50% 50%, #14161c 0 60%, #0e1014 100%);

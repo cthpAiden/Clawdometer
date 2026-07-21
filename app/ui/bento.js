@@ -13,7 +13,7 @@
 
   const els = {
     brtop: document.getElementById("brtop"),
-    b5v: document.getElementById("b5v"),
+    b5v: document.getElementById("b5v"), b5b: document.getElementById("b5b"),
     b7v: document.getElementById("b7v"), b7b: document.getElementById("b7b"),
     bfv: document.getElementById("bfv"), bfb: document.getElementById("bfb"),
   };
@@ -23,12 +23,6 @@
   const clampPct = (v) => Math.max(0, Math.min(100, v));
   const pctText = (win) =>
     win && typeof win.used_percentage === "number" ? `${win.used_percentage}%` : "—";
-
-  // The hero cell: value only, no bar. Its threshold level rides the shared
-  // near-limit pulse (there's no bar here to carry the color).
-  function renderHero(win) {
-    els.b5v.textContent = pctText(win);
-  }
 
   // A usage cell with a bar. Absent → "—", never 0% (fable_week is missing
   // until a /usage refresh has seen it, and until Fable is used this week —
@@ -57,7 +51,7 @@
 
   function render() {
     const rl = lastPayload && lastPayload.state && lastPayload.state.rate_limits;
-    renderHero(rl && rl.five_hour);
+    renderCell(rl && rl.five_hour, els.b5v, els.b5b);
     renderCell(rl && rl.seven_day, els.b7v, els.b7b);
     renderCell(rl && rl.fable_week, els.bfv, els.bfb);
     renderReset(rl && rl.five_hour, Date.now());
