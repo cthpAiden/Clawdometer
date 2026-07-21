@@ -73,8 +73,9 @@ body.compact #card .rst-top, body.compact #bento .rst-top, body.compact #underli
 
 /* One working animation per turn; main.js sets data-canim on <body> from a
    no-repeat shuffle of the pool (coder / a1 leg-typing / a2 knead / a10 scurry /
-   hop / shiver / turn / sway / squat / walk) each time isWorking flips true. All
-   transform-only, compositor-safe. */
+   hop / shiver / sway / squat / walk / clap / cheer / darteyes / stomp / reachup
+   / jelly / float / march / squint) each time isWorking flips true. All
+   transform/opacity-only, compositor-safe. */
 
 /* coder — worker-bob + eye-scan (the original) */
 body.working[data-canim="coder"] .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-bob .7s ease-in-out infinite; }
@@ -103,9 +104,6 @@ body.working[data-canim="hop"] .clawd .g-all { transform-origin: 50px 64.8px; an
 /* shiver — fast caffeinated micro-jitter */
 body.working[data-canim="shiver"] .clawd .g-all { animation: cv-shiver .11s linear infinite; }
 
-/* turn — flips to face away and back, like checking behind */
-body.working[data-canim="turn"] .clawd .g-all { transform-origin: 50px 35px; animation: cv-turn 3s ease-in-out infinite; }
-
 /* sway — slow lean side to side */
 body.working[data-canim="sway"] .clawd .g-all { animation: cv-sway 3s ease-in-out infinite; }
 
@@ -124,6 +122,42 @@ body.working[data-canim="walk"] .clawd .g-leg3 { transform-origin: 61.7px 47.6px
 body.working[data-canim="walk"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px; animation: cv-tap .84s .42s infinite; }
 body.working[data-canim="walk"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px; animation: cv-tap .84s .42s infinite; }
 
+/* clap — both claws snap inward and back (from clawd-working-anim mockup) */
+body.working[data-canim="clap"] .clawd .g-armL { transform-origin: 15.8px 26.3px; animation: cv-clap-l .5s ease-in-out infinite; }
+body.working[data-canim="clap"] .clawd .g-armR { transform-origin: 84.2px 26.3px; animation: cv-clap-r .5s ease-in-out infinite; }
+
+/* cheer — both claws punch up in celebration */
+body.working[data-canim="cheer"] .clawd .g-armL { transform-origin: 15.8px 26.3px; animation: cv-cheer .9s ease-in-out infinite; }
+body.working[data-canim="cheer"] .clawd .g-armR { transform-origin: 84.2px 26.3px; animation: cv-cheer .9s ease-in-out infinite; }
+
+/* darteyes — eyes snap between spots, body still (mockup "dart") */
+body.working[data-canim="darteyes"] .clawd .g-eyes { animation: cv-dart 2.8s steps(1, end) infinite; }
+
+/* stomp — legs stomp down in a heavy rolling wave, then rest */
+body.working[data-canim="stomp"] .clawd .g-leg1 { transform-origin: 20.6px 47.6px; animation: cv-stomp 2s ease-in-out infinite; }
+body.working[data-canim="stomp"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px; animation: cv-stomp 2s .2s infinite; }
+body.working[data-canim="stomp"] .clawd .g-leg3 { transform-origin: 61.7px 47.6px; animation: cv-stomp 2s .4s infinite; }
+body.working[data-canim="stomp"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px; animation: cv-stomp 2s .6s infinite; }
+
+/* reachup — both claws stretch up and hold (mockup "reach") */
+body.working[data-canim="reachup"] .clawd .g-armL { transform-origin: 15.8px 35.8px; animation: cv-reach 3s ease-in-out infinite; }
+body.working[data-canim="reachup"] .clawd .g-armR { transform-origin: 84.2px 35.8px; animation: cv-reach 3s ease-in-out infinite; }
+
+/* jelly — skews side to side like set jelly (mockup "wobble") */
+body.working[data-canim="jelly"] .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-wobble 1.6s ease-in-out infinite; }
+
+/* float — drifts in a slow lazy circle (mockup "drift") */
+body.working[data-canim="float"] .clawd .g-all { animation: cv-drift 4s ease-in-out infinite; }
+
+/* march — legs lift in alternating pairs, walking in place */
+body.working[data-canim="march"] .clawd .g-leg1 { transform-origin: 20.6px 47.6px; animation: cv-march .6s ease-in-out infinite; }
+body.working[data-canim="march"] .clawd .g-leg3 { transform-origin: 20.6px 47.6px; animation: cv-march .6s ease-in-out infinite; }
+body.working[data-canim="march"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px; animation: cv-march .6s ease-in-out .3s infinite; }
+body.working[data-canim="march"] .clawd .g-leg4 { transform-origin: 38.2px 47.6px; animation: cv-march .6s ease-in-out .3s infinite; }
+
+/* squint — eyes narrow in concentration between blinks */
+body.working[data-canim="squint"] .clawd .g-eyes { transform-origin: 50px 12.05px; animation: cv-squint 2.4s ease-in-out infinite; }
+
 @keyframes cv-bob { 0%, 100% { transform: translateY(0) scaleY(1); } 35% { transform: translateY(-2.6px) scaleY(1.015); } 70% { transform: translateY(.4px) scaleY(.975); } }
 @keyframes cv-scan { 0%, 18%, 100% { transform: translateX(0); } 28%, 46% { transform: translateX(-3.2px); } 58%, 80% { transform: translateX(3.2px); } }
 @keyframes cv-tap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.72); } }
@@ -131,11 +165,20 @@ body.working[data-canim="walk"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px
 @keyframes cv-scurry { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
 @keyframes cv-hop { 0%, 100% { transform: translateY(0) scaleY(1); } 12% { transform: translateY(0) scaleY(.9); } 40% { transform: translateY(-11px) scaleY(1.06); } 58% { transform: translateY(0) scaleY(.9); } 72% { transform: translateY(0) scaleY(1.02); } 86% { transform: translateY(0) scaleY(1); } }
 @keyframes cv-shiver { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.1px); } 75% { transform: translateX(1.1px); } }
-@keyframes cv-turn { 0%, 38% { transform: scaleX(1); } 50%, 60% { transform: scaleX(-1); } 72%, 100% { transform: scaleX(1); } }
 @keyframes cv-sway { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(6px); } }
 @keyframes cv-squat { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(2.5px) scaleY(.97); } }
 @keyframes cv-squatleg { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.78); } }
 @keyframes cv-walkbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.8px); } }
+@keyframes cv-clap-l { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+@keyframes cv-clap-r { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+@keyframes cv-cheer { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } 45% { transform: translateY(-3px); } 60% { transform: translateY(-5px); } }
+@keyframes cv-dart { 0%, 20% { transform: translateX(0); } 25%, 40% { transform: translateX(3.4px); } 45%, 60% { transform: translateX(-3.4px); } 65%, 80% { transform: translateX(2px); } 85%, 100% { transform: translateX(0); } }
+@keyframes cv-stomp { 0% { transform: scaleY(1); } 6% { transform: scaleY(.55); } 14%, 100% { transform: scaleY(1); } }
+@keyframes cv-reach { 0%, 15%, 100% { transform: translateY(0); } 45%, 75% { transform: translateY(-6px); } }
+@keyframes cv-wobble { 0%, 100% { transform: skewX(0); } 25% { transform: skewX(5deg); } 75% { transform: skewX(-5deg); } }
+@keyframes cv-drift { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(4px, -3px); } 50% { transform: translate(0, -5px); } 75% { transform: translate(-4px, -3px); } }
+@keyframes cv-march { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes cv-squint { 0%, 12%, 100% { transform: scaleY(1); } 38%, 72% { transform: scaleY(.4); } }
 @media (prefers-reduced-motion: reduce) {
   /* No motion: freeze the mascot (still visible, just static). */
   .clawd .eyes,

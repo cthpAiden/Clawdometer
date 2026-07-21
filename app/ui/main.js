@@ -106,7 +106,10 @@ function renderRow(win, bar, txt) {
 // Clawd's working animation is picked per turn from a no-repeat shuffle bag:
 // draw down the whole pool before reshuffling, and never let a reshuffle
 // repeat the last-shown one back-to-back. The CSS keys off body[data-canim].
-const CLAWD_ANIMS = ["coder", "a1", "a2", "a10", "hop", "shiver", "turn", "sway", "squat", "walk"];
+const CLAWD_ANIMS = [
+  "coder", "a1", "a2", "a10", "hop", "shiver", "sway", "squat", "walk",
+  "clap", "cheer", "darteyes", "stomp", "reachup", "jelly", "float", "march", "squint",
+];
 let clawdBag = [];
 let clawdCur = null;
 let wasWorking = false;
