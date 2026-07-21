@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clawd · isWorking Animations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=Hanken+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-serif:"Newsreader",Georgia,serif;
+  --font-sans:"Hanken Grotesk",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --stage:#161615;--panel:#1e1e1c;--card:#30302d;--line:#3a3a36;
+  --text:#e7e4d9;--text2:#b1ada0;--muted:#7c776b;--coral:#d97757;
+  --clawd:#e17956;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--stage);color:var(--text);font-family:var(--font-sans);padding:34px 40px 60px}
+h1{font-family:var(--font-serif);font-weight:500;font-size:26px;letter-spacing:.2px}
+p.sub{color:var(--muted);font-size:12.5px;margin-top:6px;max-width:660px;line-height:1.5}
+.bar{display:flex;align-items:center;gap:14px;margin:22px 0 26px}
+button.tgl{font-family:var(--font-sans);font-weight:600;font-size:12px;letter-spacing:.3px;
+  background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:99px;
+  padding:7px 16px;cursor:pointer}
+button.tgl.on{background:var(--coral);border-color:var(--coral);color:#161615}
+.state{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+h2.sec{font-family:var(--font-serif);font-weight:500;font-size:16px;color:var(--text2);
+  margin:30px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h2.sec span{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-left:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:18px;max-width:1340px}
+.cardA{background:var(--panel);border-radius:14px;overflow:hidden}
+.stageA{height:150px;display:flex;align-items:center;justify-content:center;position:relative;background:#191917}
+.meta{padding:11px 14px 13px;position:relative}
+.meta b{display:block;font-family:var(--font-serif);font-weight:500;font-size:14.5px;color:var(--text)}
+.meta span{display:block;margin-top:3px;font-size:11px;line-height:1.45;color:var(--muted)}
+.tagrow{margin-top:6px;font-family:var(--font-mono);font-size:9.5px;color:#6f6a5e}
+.pill{position:absolute;top:10px;right:12px;font-family:var(--font-mono);font-size:9px;letter-spacing:.4px;
+  color:var(--coral);border:1px solid rgba(217,119,87,.4);border-radius:99px;padding:2px 7px}
+
+/* ---- sprite ---- */
+.clawd{display:inline-flex;color:var(--clawd)!important;line-height:0}
+.clawd svg{image-rendering:auto;shape-rendering:geometricPrecision;overflow:visible}
+/* idle blink — always on, every concept */
+.clawd .eyes{transform-origin:50% 12.05px;animation:blink 4.6s infinite;animation-delay:calc(var(--bi,0)*.31s)}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+/* part hooks — all transforms happen on <g> wrappers, transform-origin in viewBox units */
+.clawd .g-body,.clawd .g-armL,.clawd .g-armR,.clawd .g-leg1,.clawd .g-leg2,.clawd .g-leg3,.clawd .g-leg4,.clawd .g-eyes,.clawd .g-all{transform-box:view-box}
+
+/* animations run only when body.working */
+body:not(.working) .stageA *{animation-play-state:paused}
+body:not(.working) .clawd .eyes{animation-play-state:running} /* blink survives idle */
+body:not(.working) .fx{opacity:0}
+.fx{transition:opacity .3s}
+
+/* ============================================================
+   KEPT — the four shipped in the build (main.js CLAWD_ANIMS)
+   ============================================================ */
+
+/* coder — body bob + eye scan (grinding through the task) */
+[data-anim="coder"] .g-all{transform-origin:50px 64.8px;animation:bob .7s ease-in-out infinite}
+[data-anim="coder"] .g-eyes{animation:scan 3.2s ease-in-out infinite}
+
+/* a1 — Leg Typing */
+[data-anim="a1"] .g-leg1{transform-origin:20.6px 47.6px;animation:tap .46s infinite}
+[data-anim="a1"] .g-leg2{transform-origin:38.2px 47.6px;animation:tap .46s .115s infinite}
+[data-anim="a1"] .g-leg3{transform-origin:61.7px 47.6px;animation:tap .46s .23s infinite}
+[data-anim="a1"] .g-leg4{transform-origin:79.3px 47.6px;animation:tap .46s .345s infinite}
+
+/* a2 — Kneading Arms */
+[data-anim="a2"] .g-armL{transform-origin:15.8px 26.3px;animation:kneadL .7s ease-in-out infinite}
+[data-anim="a2"] .g-armR{transform-origin:84.2px 26.3px;animation:kneadL .7s ease-in-out .35s infinite}
+
+/* a10 — Busy Scurry */
+[data-anim="a10"] .g-all{animation:scurry 2.6s ease-in-out infinite}
+[data-anim="a10"] .g-leg1{transform-origin:20.6px 47.6px;animation:tap .3s infinite}
+[data-anim="a10"] .g-leg2{transform-origin:38.2px 47.6px;animation:tap .3s .075s infinite}
+[data-anim="a10"] .g-leg3{transform-origin:61.7px 47.6px;animation:tap .3s .15s infinite}
+[data-anim="a10"] .g-leg4{transform-origin:79.3px 47.6px;animation:tap .3s .225s infinite}
+
+/* shared keyframes used by kept set */
+@keyframes tap{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.72)}}
+@keyframes kneadL{0%,100%{transform:translateY(0)}50%{transform:translateY(-3.4px)}}
+@keyframes bob{0%,100%{transform:translateY(0) scaleY(1)}35%{transform:translateY(-2.6px) scaleY(1.015)}70%{transform:translateY(.4px) scaleY(.975)}}
+@keyframes scan{0%,18%,100%{transform:translateX(0)}28%,46%{transform:translateX(-3.2px)}58%,80%{transform:translateX(3.2px)}}
+@keyframes scurry{0%,100%{transform:translateX(-9px)}50%{transform:translateX(9px)}}
+
+/* ============================================================
+   NEW — 20 concepts. transform/opacity only, no seam reveal.
+   ============================================================ */
+
+/* ── Body ─────────────────────────────────────── */
+[data-anim="breathe"] .g-all{transform-origin:50px 64.8px;animation:nx-breathe 2s ease-in-out infinite}
+@keyframes nx-breathe{0%,100%{transform:scale(1)}50%{transform:scaleY(1.04) scaleX(1.015)}}
+
+[data-anim="rock"] .g-all{transform-origin:50px 64.8px;animation:nx-rock 1.7s ease-in-out infinite}
+@keyframes nx-rock{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
+
+[data-anim="hop"] .g-all{transform-origin:50px 64.8px;animation:nx-hop 1.1s ease-in-out infinite}
+@keyframes nx-hop{0%,100%{transform:translateY(0) scaleY(1)}12%{transform:translateY(0) scaleY(.9)}40%{transform:translateY(-11px) scaleY(1.06)}58%{transform:translateY(0) scaleY(.9)}72%{transform:translateY(0) scaleY(1.02)}86%{transform:translateY(0) scaleY(1)}}
+
+[data-anim="shiver"] .g-all{animation:nx-shiver .11s linear infinite}
+@keyframes nx-shiver{0%,100%{transform:translateX(0)}25%{transform:translateX(-1.1px)}75%{transform:translateX(1.1px)}}
+
+[data-anim="turn"] .g-all{transform-origin:50px 35px;animation:nx-turn 3s ease-in-out infinite}
+@keyframes nx-turn{0%,38%{transform:scaleX(1)}50%,60%{transform:scaleX(-1)}72%,100%{transform:scaleX(1)}}
+
+[data-anim="sway"] .g-all{animation:nx-sway 3s ease-in-out infinite}
+@keyframes nx-sway{0%,100%{transform:translateX(-6px)}50%{transform:translateX(6px)}}
+
+/* ── Eyes ─────────────────────────────────────── */
+[data-anim="lookup"] .g-eyes{animation:nx-lookup 2.6s ease-in-out infinite}
+@keyframes nx-lookup{0%,18%,100%{transform:translateY(0)}42%,74%{transform:translateY(-2.4px)}}
+
+[data-anim="squint"] .g-eyes{transform-origin:50px 12.05px;animation:nx-squint 2.4s ease-in-out infinite}
+@keyframes nx-squint{0%,12%,100%{transform:scaleY(1)}38%,72%{transform:scaleY(.4)}}
+
+[data-anim="wide"] .g-eyes{transform-origin:50px 12.05px;animation:nx-wide 1.6s ease-in-out infinite}
+@keyframes nx-wide{0%,100%{transform:scale(1)}50%{transform:scale(1.28)}}
+
+/* ── Legs ─────────────────────────────────────── */
+[data-anim="march"] .g-leg1,[data-anim="march"] .g-leg3{transform-origin:20.6px 47.6px;animation:nx-march .6s ease-in-out infinite}
+[data-anim="march"] .g-leg2,[data-anim="march"] .g-leg4{transform-origin:38.2px 47.6px;animation:nx-march .6s ease-in-out .3s infinite}
+@keyframes nx-march{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+[data-anim="squat"] .g-all{transform-origin:50px 64.8px;animation:nx-squat 1.4s ease-in-out infinite}
+[data-anim="squat"] .g-leg1{transform-origin:20.6px 47.6px}
+[data-anim="squat"] .g-leg2{transform-origin:38.2px 47.6px}
+[data-anim="squat"] .g-leg3{transform-origin:61.7px 47.6px}
+[data-anim="squat"] .g-leg4{transform-origin:79.3px 47.6px}
+[data-anim="squat"] .g-leg1,[data-anim="squat"] .g-leg2,[data-anim="squat"] .g-leg3,[data-anim="squat"] .g-leg4{animation:nx-squatleg 1.4s ease-in-out infinite}
+@keyframes nx-squat{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(2.5px) scaleY(.97)}}
+@keyframes nx-squatleg{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.78)}}
+
+[data-anim="kick"] .g-leg1{transform-origin:20.6px 47.6px;animation:nx-kickL .8s ease-in-out infinite}
+[data-anim="kick"] .g-leg4{transform-origin:79.3px 47.6px;animation:nx-kickR .8s ease-in-out .4s infinite}
+@keyframes nx-kickL{0%,100%{transform:rotate(0)}50%{transform:rotate(-9deg)}}
+@keyframes nx-kickR{0%,100%{transform:rotate(0)}50%{transform:rotate(9deg)}}
+
+/* ── Arms ─────────────────────────────────────── */
+[data-anim="wave"] .g-armR{transform-origin:84.2px 17.5px;animation:nx-wave .9s ease-in-out infinite}
+@keyframes nx-wave{0%,100%{transform:rotate(4deg)}50%{transform:rotate(-22deg)}}
+
+[data-anim="clap"] .g-armL{transform-origin:15.8px 26.3px;animation:nx-clapL .5s ease-in-out infinite}
+[data-anim="clap"] .g-armR{transform-origin:84.2px 26.3px;animation:nx-clapR .5s ease-in-out infinite}
+@keyframes nx-clapL{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+@keyframes nx-clapR{0%,100%{transform:translateX(0)}50%{transform:translateX(-5px)}}
+
+[data-anim="cheer"] .g-armL{transform-origin:15.8px 26.3px;animation:nx-cheer .9s ease-in-out infinite}
+[data-anim="cheer"] .g-armR{transform-origin:84.2px 26.3px;animation:nx-cheer .9s ease-in-out infinite}
+@keyframes nx-cheer{0%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}45%{transform:translateY(-3px)}60%{transform:translateY(-5px)}}
+
+/* ── Overlays (opacity/transform) ─────────────── */
+[data-anim="dots"] .fx{position:absolute;left:50%;top:22px;transform:translateX(-50%);display:flex;gap:6px}
+[data-anim="dots"] .fx i{width:5px;height:5px;border-radius:50%;background:var(--coral);opacity:.15;animation:nx-dot 1.15s infinite}
+[data-anim="dots"] .fx i:nth-child(2){animation-delay:.18s}
+[data-anim="dots"] .fx i:nth-child(3){animation-delay:.36s}
+@keyframes nx-dot{0%,60%,100%{opacity:.15;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+[data-anim="sparks"] .fx i{position:absolute;font-family:var(--font-sans);color:var(--coral);font-size:13px;line-height:1;opacity:0;animation:nx-spark 2.1s infinite}
+[data-anim="sparks"] .fx i:nth-child(1){left:calc(50% - 40px);top:26px}
+[data-anim="sparks"] .fx i:nth-child(2){left:calc(50% + 28px);top:16px;animation-delay:.7s;font-size:10px}
+[data-anim="sparks"] .fx i:nth-child(3){left:calc(50% + 40px);top:44px;animation-delay:1.4s;font-size:8px}
+@keyframes nx-spark{0%,100%{opacity:0;transform:translateY(4px) scale(.6) rotate(0)}18%{opacity:1}45%{opacity:.9;transform:translateY(-5px) scale(1) rotate(70deg)}75%{opacity:0;transform:translateY(-12px) scale(.7) rotate(140deg)}}
+
+[data-anim="glow"] .glow{position:absolute;left:50%;top:50%;width:120px;height:96px;transform:translate(-50%,-50%);
+  background:radial-gradient(closest-side,rgba(217,119,87,.32),transparent 70%);border-radius:50%;
+  animation:nx-pulse 1.8s ease-in-out infinite}
+@keyframes nx-pulse{0%,100%{opacity:.25;transform:translate(-50%,-50%) scale(.92)}50%{opacity:.85;transform:translate(-50%,-50%) scale(1.06)}}
+
+[data-anim="prog"] .prog{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);width:96px;height:5px;
+  border-radius:99px;background:rgba(217,119,87,.14);overflow:hidden}
+[data-anim="prog"] .prog .seg{position:absolute;top:0;left:0;height:100%;width:28%;border-radius:99px;
+  background:var(--coral);animation:nx-prog 1.4s linear infinite}
+@keyframes nx-prog{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
+
+/* ── Combo ────────────────────────────────────── */
+[data-anim="walk"] .g-all{transform-origin:50px 64.8px;animation:bob .5s ease-in-out infinite}
+[data-anim="walk"] .g-leg1,[data-anim="walk"] .g-leg3{transform-origin:20.6px 47.6px;animation:nx-march .5s ease-in-out infinite}
+[data-anim="walk"] .g-leg2,[data-anim="walk"] .g-leg4{transform-origin:38.2px 47.6px;animation:nx-march .5s ease-in-out .25s infinite}
+[data-anim="walk"] .g-armL{transform-origin:15.8px 26.3px;animation:nx-swing .5s ease-in-out infinite}
+[data-anim="walk"] .g-armR{transform-origin:84.2px 26.3px;animation:nx-swing .5s ease-in-out .25s infinite}
+@keyframes nx-swing{0%,100%{transform:translateX(-1.6px)}50%{transform:translateX(1.6px)}}
+</style>
+</head>
+<body class="working">
+
+<h1>Clawd · isWorking animation concepts</h1>
+<p class="sub">Every concept is transform/opacity only (WebView2 transparent-window constraint). Eye-blink stays on always — these layer on top only while working. Toggle to compare against idle.</p>
+
+<div class="bar">
+  <button class="tgl on" id="tglBtn">✳ Working</button>
+  <span class="state" id="stateLbl">isWorking = true</span>
+</div>
+
+<h2 class="sec">Shipped <span>kept in the build — main.js CLAWD_ANIMS</span></h2>
+<div class="grid" id="gridKept"></div>
+
+<h2 class="sec">New concepts <span>15 · transform/opacity only · no duplicates</span></h2>
+<div class="grid" id="gridNew"></div>
+
+<script>
+// LOCKED clawd sprite — geometry from clawd-mascot-spec, wrapped in per-part groups for animation.
+// Locked outer silhouette; inner edges overlap ~1u UNDER the body so abutting
+// anti-alias seams don't trace each part. Outer edges are unchanged.
+const BODY=[15.8,0,84.2,47.6];
+const ARM_L=[5.2,16.9,16.8,35.8], ARM_R=[83.2,16.9,94.8,35.8];
+const LEGS=[[15.8,46.6,25.5,64.8],[33.4,46.6,43.1,64.8],[56.9,46.6,66.6,64.8],[74.5,46.6,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+const r=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+function sprite(px){
+  const w=(17*px).toFixed(1),h=(11.9*px).toFixed(1);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+    <g class="g-all">
+      <g fill="currentColor">
+        <g class="g-body">${r(BODY)}</g>
+        <g class="g-armL">${r(ARM_L)}</g><g class="g-armR">${r(ARM_R)}</g>
+        <g class="g-leg1">${r(LEGS[0])}</g><g class="g-leg2">${r(LEGS[1])}</g>
+        <g class="g-leg3">${r(LEGS[2])}</g><g class="g-leg4">${r(LEGS[3])}</g>
+      </g>
+      <g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g>
+    </g>
+  </svg>`;
+}
+
+const KEPT=[
+ ["coder","Coder","Body bobs while the eyes scan line to line. The default grind loop.","all·bob + eyes·scan",null],
+ ["a1","Leg Typing","Legs tap in a rolling wave like keystrokes. Body stays planted.","legs·scaleY",null],
+ ["a2","Kneading Arms","Arms alternate up/down — crab kneading dough. Calm.","arms·translateY",null],
+ ["a10","Busy Scurry","Shuffles side to side while all four legs patter. Max energy.","all·X + legs",null],
+ ["hop","Hop","Little jump with squash-and-stretch takeoff and landing.","all·translateY+scaleY",null],
+ ["shiver","Caffeinated","Fast micro-jitter — Clawd had one espresso too many.","all·translateX",null],
+ ["turn","Turn-around","Flips to face away and back, like checking behind.","all·scaleX",null],
+ ["sway","Sway","Slow lean side to side. Lazy-river calm.","all·translateX",null],
+ ["squat","Squat","Sinks into a knee-bend and back up. Heavy lifting.","all + legs·scaleY",null],
+];
+
+const NEW=[
+ ["breathe","Breathing","Whole body inhales from the feet. The subtlest tell.","all·scale",null],
+ ["rock","Metronome","Gentle ±2° rock from the feet. Thinking, not dancing.","all·rotate",null],
+ ["lookup","Pondering","Eyes drift up and hold — searching for the answer.","eyes·translateY",null],
+ ["squint","Squint","Eyes narrow in concentration between blinks.","eyes·scaleY",null],
+ ["wide","Alert","Eyes pop wide — found something.","eyes·scale",null],
+ ["march","March","Legs lift in alternating pairs — walking in place.","legs·translateY",null],
+ ["kick","Shuffle","Outer legs kick out in turn — a little tap dance.","legs·rotate",null],
+ ["wave","Wave","One claw swings up in a hello.","arm·rotate",null],
+ ["clap","Clap","Both claws snap inward — applause.","arms·translateX",null],
+ ["cheer","Cheer","Claws punch up in celebration.","arms·translateY",null],
+ ["dots","Thinking Dots","Three coral dots ripple overhead — a quiet ellipsis.","overlay·opacity","<i></i><i></i><i></i>"],
+ ["sparks","Sparks","Coral ✳ drift up around a still Clawd. Matches Baking…","overlay·transform","<i>✳</i><i>✳</i><i>✳</i>"],
+ ["glow","Warm Pulse","Soft coral glow breathes behind. Zero body motion.","overlay·opacity+scale","GLOW"],
+ ["prog","Progress","An indeterminate bar sweeps beneath. Crunching.","overlay·translateX","PROG"],
+ ["walk","Walk Cycle","March + arm swing + bob — a full walk on the spot.","combo",null],
+];
+
+function fxHtml(fx){
+  if(!fx) return '';
+  if(fx==='GLOW') return '<div class="glow fx"></div>';
+  if(fx==='PROG') return '<div class="prog fx"><span class="seg"></span></div>';
+  return `<div class="fx">${fx}</div>`;
+}
+function render(list,mount,kept){
+  list.forEach(([id,name,desc,tag,fx],i)=>{
+    const card=document.createElement('div');
+    card.className='cardA';card.dataset.anim=id;
+    card.innerHTML=`<div class="stageA">
+        <span class="clawd" style="--bi:${i%7}">${sprite(3.4)}</span>
+        ${fxHtml(fx)}
+      </div>
+      <div class="meta">${kept?'<span class="pill">IN BUILD</span>':''}<b>${name}</b><span>${desc}</span><div class="tagrow">${id} · ${tag}</div></div>`;
+    mount.appendChild(card);
+  });
+}
+render(KEPT,document.getElementById('gridKept'),true);
+render(NEW,document.getElementById('gridNew'),false);
+
+const btn=document.getElementById('tglBtn'),lbl=document.getElementById('stateLbl');
+btn.onclick=()=>{
+  const on=document.body.classList.toggle('working');
+  btn.classList.toggle('on',on);
+  btn.textContent=on?'✳ Working':'Idle';
+  lbl.textContent='isWorking = '+on;
+};
+</script>
+</body>
+</html>

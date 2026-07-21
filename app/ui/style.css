@@ -72,8 +72,9 @@ body.compact #card .rst-top, body.compact #bento .rst-top, body.compact #underli
 .clawd .g-leg1, .clawd .g-leg2, .clawd .g-leg3, .clawd .g-leg4 { transform-box: view-box; }
 
 /* One working animation per turn; main.js sets data-canim on <body> from a
-   no-repeat shuffle of the pool (coder / a1 leg-typing / a2 knead / a10 scurry)
-   each time isWorking flips true. All transform-only, compositor-safe. */
+   no-repeat shuffle of the pool (coder / a1 leg-typing / a2 knead / a10 scurry /
+   hop / shiver / turn / sway / squat) each time isWorking flips true. All
+   transform-only, compositor-safe. */
 
 /* coder — worker-bob + eye-scan (the original) */
 body.working[data-canim="coder"] .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-bob .7s ease-in-out infinite; }
@@ -96,11 +97,36 @@ body.working[data-canim="a10"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px;
 body.working[data-canim="a10"] .clawd .g-leg3 { transform-origin: 61.7px 47.6px; animation: cv-tap .3s .15s infinite; }
 body.working[data-canim="a10"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px; animation: cv-tap .3s .225s infinite; }
 
+/* hop — little jump with squash-and-stretch takeoff and landing */
+body.working[data-canim="hop"] .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-hop 1.1s ease-in-out infinite; }
+
+/* shiver — fast caffeinated micro-jitter */
+body.working[data-canim="shiver"] .clawd .g-all { animation: cv-shiver .11s linear infinite; }
+
+/* turn — flips to face away and back, like checking behind */
+body.working[data-canim="turn"] .clawd .g-all { transform-origin: 50px 35px; animation: cv-turn 3s ease-in-out infinite; }
+
+/* sway — slow lean side to side */
+body.working[data-canim="sway"] .clawd .g-all { animation: cv-sway 3s ease-in-out infinite; }
+
+/* squat — sinks into a knee-bend and back up (legs compress with the body) */
+body.working[data-canim="squat"] .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-squat 1.4s ease-in-out infinite; }
+body.working[data-canim="squat"] .clawd .g-leg1 { transform-origin: 20.6px 47.6px; animation: cv-squatleg 1.4s ease-in-out infinite; }
+body.working[data-canim="squat"] .clawd .g-leg2 { transform-origin: 38.2px 47.6px; animation: cv-squatleg 1.4s ease-in-out infinite; }
+body.working[data-canim="squat"] .clawd .g-leg3 { transform-origin: 61.7px 47.6px; animation: cv-squatleg 1.4s ease-in-out infinite; }
+body.working[data-canim="squat"] .clawd .g-leg4 { transform-origin: 79.3px 47.6px; animation: cv-squatleg 1.4s ease-in-out infinite; }
+
 @keyframes cv-bob { 0%, 100% { transform: translateY(0) scaleY(1); } 35% { transform: translateY(-2.6px) scaleY(1.015); } 70% { transform: translateY(.4px) scaleY(.975); } }
 @keyframes cv-scan { 0%, 18%, 100% { transform: translateX(0); } 28%, 46% { transform: translateX(-3.2px); } 58%, 80% { transform: translateX(3.2px); } }
 @keyframes cv-tap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.72); } }
 @keyframes cv-knead { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3.4px); } }
 @keyframes cv-scurry { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
+@keyframes cv-hop { 0%, 100% { transform: translateY(0) scaleY(1); } 12% { transform: translateY(0) scaleY(.9); } 40% { transform: translateY(-11px) scaleY(1.06); } 58% { transform: translateY(0) scaleY(.9); } 72% { transform: translateY(0) scaleY(1.02); } 86% { transform: translateY(0) scaleY(1); } }
+@keyframes cv-shiver { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.1px); } 75% { transform: translateX(1.1px); } }
+@keyframes cv-turn { 0%, 38% { transform: scaleX(1); } 50%, 60% { transform: scaleX(-1); } 72%, 100% { transform: scaleX(1); } }
+@keyframes cv-sway { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(6px); } }
+@keyframes cv-squat { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(2.5px) scaleY(.97); } }
+@keyframes cv-squatleg { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.78); } }
 @media (prefers-reduced-motion: reduce) {
   /* No motion: freeze the mascot (still visible, just static). */
   .clawd .eyes,
