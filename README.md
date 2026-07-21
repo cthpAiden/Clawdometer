@@ -13,8 +13,8 @@ Five looks, switchable any time from the tray menu (right-click the tray icon
 
 | Classic | Bento Box | Audiowave Orb — LED Bloom |
 |:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="200" alt="Classic HUD skin: a small card showing the 5-hour session bar, plus weekly and Fable weekly bars"> | <img src="docs/images/hud-bento.png" width="200" alt="Bento Box HUD skin: a 2x2 grid of cells for 5H, 7D, Fable, and a reset countdown"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Audiowave Orb LED Bloom skin: a ring of 5-segment LED-style rungs per bar, colored by usage zone, blooming outward from bass to treble hits"> |
-| The default card. Session bar with a countdown to the next reset, plus the weekly and Fable weekly bars. | A 2x2 grid: 5H, 7D, and Fable percentages, plus a reset countdown cell. | 5-segment LED rungs per bar, colored by usage zone, with kick/snare/hat hits blooming outward across their own bass-to-treble arc. |
+| <img src="docs/images/hud-classic.png" width="240" alt="Classic HUD skin: a charcoal card titled Usage with the clawd mascot top-left, showing Current, Weekly, and Fable usage as labelled bars"> | <img src="docs/images/hud-bento.png" width="240" alt="Bento Box HUD skin: a charcoal panel titled Usage with the clawd mascot, a large Current percentage across the top and Weekly and Fable cells below"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Audiowave Orb LED Bloom skin: a ring of 5-segment LED-style rungs per bar, colored by usage zone, blooming outward from bass to treble hits"> |
+| Current, Weekly, and Fable as labelled bars under a centered title, with the reset countdown top-right. | Current as a hero percentage, with Weekly and Fable in their own cells and the reset countdown top-right. | 5-segment LED rungs per bar, colored by usage zone, with kick/snare/hat hits blooming outward across their own bass-to-treble arc. |
 
 | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
 |:---:|:---:|
@@ -22,14 +22,14 @@ Five looks, switchable any time from the tray menu (right-click the tray icon
 | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
 
 **Classic** is the plain readout, and is what the tray tooltip and statusline
-mirror. Its bars turn blue → yellow → red as you approach a limit, and the card
-pulses a red ring past 90%.
+mirror. Current, Weekly, and Fable each get a labelled bar; the bars turn
+blue → yellow → red as you approach a limit, and the card pulses a red ring
+past 90%.
 
-**Bento Box** lays the same four numbers out as self-contained cells instead of
-a hierarchy. The fourth cell isn't an average or a peak — nothing stores usage
-history — it's the 5-hour window's reset countdown, with a bar that fills as
-the window elapses. Parked next to 5H's usage bar, the pair reads as pace: if
-the usage bar is ahead of the reset bar, you're burning faster than the clock.
+**Bento Box** lays the same three numbers out as self-contained cells instead
+of a hierarchy: Current is a hero percentage across the top, with Weekly and
+Fable in their own cells below. Both card skins carry the clawd mascot top-left
+and the 5-hour reset countdown top-right.
 
 The three **Audiowave Orb** skins are "rice" — the ring reacts to whatever your
 speakers are playing. To do that the HUD opens a WASAPI **loopback** capture of
@@ -195,23 +195,24 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
   Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
 - **RICE:** picks the skin — *Classic*, *Bento Box*, or *Audiowave Orb* →
   *Bars* / *Peak hold* / *LED Bloom* (see [Skins](#skins)). One radio group, so exactly one
-  is ever checked. Switching resizes the HUD (the orb is a 160×160 square,
-  Classic and Bento Box keep the card size) and is remembered across restarts.
-  Selecting an orb skin starts the system-audio loopback capture; going back
-  to Classic or Bento Box stops it.
-- **Compact size:** shrinks the card to roughly half width (bars and
-  percentages only — no footer or reset times). Also toggled by
+  is ever checked. Switching resizes the HUD (the orb is a 160×160 square;
+  Classic and Bento Box each have their own card size) and is remembered across
+  restarts. Selecting an orb skin starts the system-audio loopback capture;
+  going back to Classic or Bento Box stops it.
+- **Compact size:** shrinks the card to roughly half width (the same numbers,
+  with single-letter row labels on Classic). Also toggled by
   double-clicking the card. Remembered across restarts.
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
   restarts.
-- **Activity animation:** the card gently breathes and shows a green ring while
-  any Claude Code session is generating, and freezes when everything is idle.
-  Unlike the usage numbers, this doesn't depend on the statusline hook (so it
-  works even in GUI clients that don't run it): the HUD reads the turn state
-  from Claude Code's transcript files under `~/.claude/projects/` — locally, no
-  network — and stays lit through long "thinking" pauses, stopping the moment a
-  turn completes. Respects `prefers-reduced-motion` (static ring, no motion).
+- **Activity animation:** the clawd mascot runs a little "working" animation — a
+  gentle bob with its eyes scanning left to right — while any Claude Code session
+  is generating, and rests when everything is idle. Unlike the usage numbers,
+  this doesn't depend on the statusline hook (so it works even in GUI clients
+  that don't run it): the HUD reads the turn state from Claude Code's transcript
+  files under `~/.claude/projects/` — locally, no network — and stays lit through
+  long "thinking" pauses, stopping the moment a turn completes. Respects
+  `prefers-reduced-motion` (the mascot holds still, no motion).
 - **Footer:** data age ("as of 1m ago"). Data only arrives while Claude Code
   is in use, so aging is normal; past 30 minutes the footer turns red with
   "open Claude Code to refresh" — a reminder, not an error. When a limit
@@ -295,8 +296,8 @@ tượng khay → *RICE*). Cả năm đều hiện cùng một dữ liệu — c
 
 | Classic | Bento Box | Audiowave Orb — LED Bloom |
 |:---:|:---:|:---:|
-| <img src="docs/images/hud-classic.png" width="200" alt="Giao diện Classic: thẻ nhỏ hiện thanh phiên 5 giờ, kèm thanh tuần và thanh Fable tuần"> | <img src="docs/images/hud-bento.png" width="200" alt="Giao diện Bento Box: lưới 2x2 gồm 5H, 7D, Fable, và ô đếm ngược reset"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Giao diện Audiowave Orb LED Bloom: vòng thanh LED 5 đoạn mỗi thanh, đổi màu theo ngưỡng sử dụng, nở rộng từ tiếng bass đến treble"> |
-| Thẻ mặc định. Thanh phiên kèm đếm ngược tới lần reset kế tiếp, cùng thanh tuần và thanh Fable tuần. | Lưới 2x2: phần trăm 5H, 7D, Fable, cùng một ô đếm ngược reset. | Mỗi thanh là 5 đoạn LED, đổi màu theo ngưỡng sử dụng, nở rộng theo từng cú đánh bass/snare/hat trong cung riêng của nó. |
+| <img src="docs/images/hud-classic.png" width="240" alt="Giao diện Classic: thẻ than chì tiêu đề Usage với linh vật clawd góc trên trái, hiện Current, Weekly, Fable dưới dạng thanh có nhãn"> | <img src="docs/images/hud-bento.png" width="240" alt="Giao diện Bento Box: bảng than chì tiêu đề Usage với linh vật clawd, phần trăm Current lớn trên cùng và ô Weekly, Fable bên dưới"> | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Giao diện Audiowave Orb LED Bloom: vòng thanh LED 5 đoạn mỗi thanh, đổi màu theo ngưỡng sử dụng, nở rộng từ tiếng bass đến treble"> |
+| Current, Weekly, Fable dưới dạng thanh có nhãn dưới tiêu đề căn giữa, kèm đếm ngược reset ở góc trên phải. | Current là phần trăm chính trên cùng, Weekly và Fable trong ô riêng, kèm đếm ngược reset ở góc trên phải. | Mỗi thanh là 5 đoạn LED, đổi màu theo ngưỡng sử dụng, nở rộng theo từng cú đánh bass/snare/hat trong cung riêng của nó. |
 
 | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
 |:---:|:---:|
@@ -304,15 +305,14 @@ tượng khay → *RICE*). Cả năm đều hiện cùng một dữ liệu — c
 | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
 
 **Classic** là bản đọc số thuần túy, cũng là thứ mà tooltip khay và statusline
-phản chiếu. Thanh của nó chuyển xanh dương → vàng → đỏ khi bạn tiến gần giới
-hạn, và thẻ nhấp nháy viền đỏ khi vượt 90%.
+phản chiếu. Current, Weekly, và Fable mỗi mục có một thanh có nhãn; các thanh
+chuyển xanh dương → vàng → đỏ khi bạn tiến gần giới hạn, và thẻ nhấp nháy viền
+đỏ khi vượt 90%.
 
-**Bento Box** trình bày cùng bốn con số đó thành các ô độc lập thay vì một hệ
-thống phân cấp. Ô thứ tư không phải trung bình hay đỉnh — không nơi nào lưu
-lịch sử sử dụng cả — mà là đếm ngược reset của cửa sổ 5 giờ, với thanh chạy
-đầy dần theo thời gian trôi qua. Đặt cạnh thanh sử dụng của 5H, cặp này đọc
-được nhịp độ: nếu thanh sử dụng chạy nhanh hơn thanh reset, bạn đang dùng
-nhanh hơn tốc độ đồng hồ.
+**Bento Box** trình bày cùng ba con số đó thành các ô độc lập thay vì một hệ
+thống phân cấp: Current là phần trăm chính trải ngang trên cùng, còn Weekly và
+Fable nằm trong ô riêng bên dưới. Cả hai giao diện thẻ đều đặt linh vật clawd ở
+góc trên trái và đếm ngược reset của cửa sổ 5 giờ ở góc trên phải.
 
 Ba giao diện **Audiowave Orb** là "rice" — vòng phổ phản ứng theo bất cứ thứ
 gì loa của bạn đang phát. Để làm vậy, HUD mở một luồng thu **loopback** WASAPI
@@ -485,21 +485,22 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
 - **RICE:** chọn giao diện — *Classic*, *Bento Box*, hoặc *Audiowave Orb* →
   *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả năm là một nhóm
   radio, nên luôn chỉ đúng một cái được tích. Đổi giao diện sẽ đổi kích thước
-  HUD (orb là ô vuông 160×160, Classic và Bento Box giữ kích thước thẻ) và
-  được nhớ qua các lần khởi động. Chọn giao diện orb sẽ bật luồng thu loopback
-  âm thanh hệ thống; quay lại Classic hoặc Bento Box sẽ tắt nó.
-- **Compact size:** thu thẻ còn khoảng nửa chiều rộng (chỉ thanh và phần
-  trăm — không có chân và thời điểm reset). Cũng bật/tắt được bằng cách
+  HUD (orb là ô vuông 160×160; Classic và Bento Box mỗi cái có kích thước thẻ
+  riêng) và được nhớ qua các lần khởi động. Chọn giao diện orb sẽ bật luồng thu
+  loopback âm thanh hệ thống; quay lại Classic hoặc Bento Box sẽ tắt nó.
+- **Compact size:** thu thẻ còn khoảng nửa chiều rộng (vẫn các con số đó, với
+  nhãn hàng một chữ cái trên Classic). Cũng bật/tắt được bằng cách
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
 - **Opacity:** 100/85/70/55% — giúp thẻ luôn-nổi-trên-cùng bớt che khuất.
   Cũng mở được bằng chuột phải vào thẻ. Được nhớ qua các lần khởi động.
-- **Hiệu ứng hoạt động:** thẻ khẽ "thở" và hiện vòng viền xanh khi bất kỳ phiên
-  Claude Code nào đang tạo phản hồi, và đứng yên khi mọi thứ rảnh. Khác với các
-  con số sử dụng, hiệu ứng này không phụ thuộc hook statusline (nên chạy được cả
-  trên client GUI không gọi hook): HUD đọc trạng thái lượt (turn) từ các file
-  transcript của Claude Code trong `~/.claude/projects/` — tại chỗ, không mạng —
-  và vẫn sáng suốt các quãng "suy nghĩ" dài, dừng ngay khi một lượt kết thúc.
-  Tôn trọng `prefers-reduced-motion` (chỉ vòng viền tĩnh, không chuyển động).
+- **Hiệu ứng hoạt động:** linh vật clawd chạy một hiệu ứng "đang làm việc" nhỏ —
+  khẽ nhún người với đôi mắt quét trái sang phải — khi bất kỳ phiên Claude Code
+  nào đang tạo phản hồi, và nghỉ khi mọi thứ rảnh. Khác với các con số sử dụng,
+  hiệu ứng này không phụ thuộc hook statusline (nên chạy được cả trên client GUI
+  không gọi hook): HUD đọc trạng thái lượt (turn) từ các file transcript của
+  Claude Code trong `~/.claude/projects/` — tại chỗ, không mạng — và vẫn sáng
+  suốt các quãng "suy nghĩ" dài, dừng ngay khi một lượt kết thúc. Tôn trọng
+  `prefers-reduced-motion` (linh vật đứng yên, không chuyển động).
 - **Chân HUD:** tuổi dữ liệu ("as of 1m ago"). Dữ liệu chỉ đến khi Claude
   Code đang được dùng, nên dữ liệu cũ dần là bình thường; quá 30 phút phần
   chân chuyển đỏ với "open Claude Code to refresh" — một lời nhắc, không

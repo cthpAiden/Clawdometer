@@ -1,78 +1,63 @@
-// Bento Box skin. The same snapshot Classic renders, laid out as a 2×2 of
-// self-contained cells: 5H (hero), 7D, Fable, RESET. Fed by "state-updated";
-// no animation loop of its own, so it costs nothing but four DOM writes per
-// payload (the working stripes ride Classic's .bar.main rule in style.css).
+// Bento Box skin (U10 "Mini Bento"). The same snapshot Classic renders, laid
+// out as a compact grid: Current is the hero cell across the top, Weekly and
+// Fable share the bottom two. Fed by "state-updated"; no animation loop of its
+// own, so it costs nothing but a few DOM writes per payload (the mascot's
+// working animation is pure CSS in style.css, shared with Classic).
 (function () {
   if (!window.__TAURI__) return;
 
-  // The 5h window's full length. resets_at marks its end, so the elapsed
-  // fraction — what the RESET bar draws — is whatever isn't still remaining.
-  const WINDOW_SECS = 5 * 3600;
-
   // Shared threshold table, same as the card and the orb: the three skins must
-  // never disagree about what 76% looks like.
-  const { paint, num: numColor } = window.UsageColor;
+  // never disagree about what 76% looks like. Only the bars are colored (the
+  // numbers stay off-white), so we take paint() but not num().
+  const { paint } = window.UsageColor;
 
   const els = {
-    b5v: document.getElementById("b5v"), b5b: document.getElementById("b5b"),
+    brtop: document.getElementById("brtop"),
+    b5v: document.getElementById("b5v"),
     b7v: document.getElementById("b7v"), b7b: document.getElementById("b7b"),
     bfv: document.getElementById("bfv"), bfb: document.getElementById("bfb"),
-    brv: document.getElementById("brv"), brb: document.getElementById("brb"),
   };
 
   let lastPayload = null;
 
   const clampPct = (v) => Math.max(0, Math.min(100, v));
+  const pctText = (win) =>
+    win && typeof win.used_percentage === "number" ? `${win.used_percentage}%` : "—";
 
-  // A usage cell. An absent window renders "—", never 0% — fable_week is
-  // missing until a /usage refresh has seen it, and missing entirely until
-  // Fable is used this week, neither of which means "none used".
-  function renderCell(win, val, bar) {
-    const pct = win && typeof win.used_percentage === "number" ? win.used_percentage : null;
-    if (pct === null) {
-      val.textContent = "—";
-      val.style.color = "";
-      bar.style.width = "0%";
-      return;
-    }
-    // textContent + createElement, never innerHTML: the state files are the
-    // input here, and a template injection sink is one refactor away from XSS.
-    val.textContent = "";
-    val.append(String(pct));
-    const unit = document.createElement("span");
-    unit.className = "u";
-    unit.textContent = "%";
-    val.append(unit);
-    val.style.color = numColor(pct);
-    bar.style.width = clampPct(pct) + "%";
-    paint(bar, pct);
+  // The hero cell: value only, no bar. Its threshold level rides the shared
+  // near-limit pulse (there's no bar here to carry the color).
+  function renderHero(win) {
+    els.b5v.textContent = pctText(win);
   }
 
-  // The RESET cell: time left as the value, elapsed share of the window as the
-  // bar. Past the reset the window is gone until the next request opens one
-  // (the backend has already derived 0%), so an empty bar is the honest draw —
-  // a full one would claim the window is about to turn over.
+  // A usage cell with a bar. Absent → "—", never 0% (fable_week is missing
+  // until a /usage refresh has seen it, and until Fable is used this week —
+  // neither of which means "none used").
+  function renderCell(win, val, bar) {
+    val.textContent = pctText(win);
+    if (win && typeof win.used_percentage === "number") {
+      bar.style.width = clampPct(win.used_percentage) + "%";
+      paint(bar, win.used_percentage);
+    } else {
+      bar.style.width = "0%";
+    }
+  }
+
+  // 5h reset countdown, top-right — mirrors Classic's fmtCountdown. Compact
+  // drops the word to fit; past the reset the window is gone (the backend has
+  // derived 0%), so it reads a plain "reset".
   function renderReset(fh, nowMs) {
     const at = fh && fh.resets_at;
-    if (!Number.isFinite(at)) {
-      els.brv.textContent = "—";
-      els.brb.style.width = "0%";
-      return;
-    }
+    if (!Number.isFinite(at)) { els.brtop.textContent = "—"; return; }
     const mins = Math.ceil((at * 1000 - nowMs) / 60000);
-    if (mins <= 0) {
-      els.brv.textContent = "reset";
-      els.brb.style.width = "0%";
-      return;
-    }
-    els.brv.textContent = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
-    const remaining = (at * 1000 - nowMs) / 1000;
-    els.brb.style.width = clampPct((1 - remaining / WINDOW_SECS) * 100) + "%";
+    if (mins <= 0) { els.brtop.textContent = "reset"; return; }
+    const core = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    els.brtop.textContent = document.body.classList.contains("compact") ? core : `Resets ${core}`;
   }
 
   function render() {
     const rl = lastPayload && lastPayload.state && lastPayload.state.rate_limits;
-    renderCell(rl && rl.five_hour, els.b5v, els.b5b);
+    renderHero(rl && rl.five_hour);
     renderCell(rl && rl.seven_day, els.b7v, els.b7b);
     renderCell(rl && rl.fable_week, els.bfv, els.bfb);
     renderReset(rl && rl.five_hour, Date.now());
@@ -82,6 +67,11 @@
     lastPayload = e.payload;
     render();
   }).catch(console.error);
+
+  // Re-render on prefs changes too, so the reset line switches between its full
+  // and compact wording the moment the size toggles (main.js registers first,
+  // so body.compact is already updated when this fires).
+  window.__TAURI__.event.listen("ui-prefs", () => render()).catch(console.error);
 
   // The reset countdown ticks locally between snapshots (minute granularity).
   setInterval(render, 30000);

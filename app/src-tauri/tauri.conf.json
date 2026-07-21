@@ -15,8 +15,8 @@
       {
         "label": "hud",
         "title": "Clawdometer",
-        "width": 200,
-        "height": 112,
+        "width": 206,
+        "height": 100,
         "decorations": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,

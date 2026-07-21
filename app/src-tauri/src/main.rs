@@ -66,15 +66,17 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
 fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
     if let Some(win) = app.get_webview_window("hud") {
         // The Audiowave Orb skin is a square ring stage; Classic and Bento Box
-        // share the regular or compact card size.
-        // Must match #card in style.css exactly — the window is sized to the
-        // card, so a stale number here clips the footer off the bottom.
+        // are separate card layouts with their own footprints.
+        // Must match #card / #bento in style.css exactly — the window is sized
+        // to the card, so a stale number here clips the bottom row off.
         let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
             (160.0, 160.0)
+        } else if prefs.rice == "bento" {
+            if prefs.compact { (120.0, 112.0) } else { (206.0, 130.0) }
         } else if prefs.compact {
-            (120.0, 106.0)
+            (120.0, 100.0)
         } else {
-            (200.0, 136.0)
+            (206.0, 100.0)
         };
         let _ = win.set_size(tauri::LogicalSize::new(w, h));
     }

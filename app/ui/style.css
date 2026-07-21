@@ -1,182 +1,162 @@
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 html, body { background: transparent; overflow: hidden; }
-/* The 5h window has no label row of its own: the big number IS its value and
-   the main bar sits beside it, so "5H" would only name what the number
-   already says. The two weekly windows share that convention below it. */
+
+/* Bundled locally — the HUD runs under an offline CSP (default-src 'self'), so
+   web fonts can't load; font-src falls back to 'self', so these self-hosted
+   woff2 files need no CSP change. Newsreader is the Anthropic-style serif for
+   the "Usage" title; Hanken Grotesk is the sans for numbers and labels. */
+@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/newsreader-500.woff2") format("woff2"); }
+@font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/hanken-500.woff2") format("woff2"); }
+@font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/hanken-600.woff2") format("woff2"); }
+@font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 800; font-display: swap; src: url("fonts/hanken-800.woff2") format("woff2"); }
+
+:root {
+  /* Claude Code desktop-app palette (warm charcoal), shared by both card skins. */
+  --cc-panel: #1e1e1c;   /* the card / panel surface */
+  --cc-card:  #30302d;   /* raised inner cell (Bento) */
+  --cc-line:  #3a3a36;   /* hairline on dark */
+  --font-sans: "Hanken Grotesk", "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+}
+
+/* ── Shared "Usage" look ───────────────────────────────────────────────────
+   Classic (#card) and Bento Box (#bento) are two layouts of the same panel:
+   opaque charcoal surface, serif title dead-centre, sans numbers, a coral
+   mascot top-left, and the 5h reset countdown top-right. Both are card-shaped,
+   so the near-limit pulse and the window sizing treat them the same.
+   Scoped to #card/#bento so none of it leaks into the orb (which reuses .bar). */
+#card, #bento {
+  color: #e7e4d9; background: var(--cc-panel);
+  border-radius: 14px; overflow: hidden;
+  font: 12px/1.4 var(--font-sans); font-variant-numeric: tabular-nums;
+}
+/* Title centred over the whole header; clawd (left) and resets (right) are
+   absolute so they never shove it off the midline. */
+#card .ttl, #bento .ttl {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  text-align: center; font-family: var(--font-serif); font-weight: 500;
+  color: #f2f0e8; line-height: 1;
+}
+#card .rst-top, #bento .rst-top {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  font-family: var(--font-sans); font-weight: 500; color: #9a958b;
+  line-height: 1; white-space: nowrap; font-size: 9px; letter-spacing: .2px;
+}
+body.compact #card .rst-top, body.compact #bento .rst-top { font-size: 8px; }
+/* Numbers stay off-white; the bars carry the threshold color (usage-color.js
+   paints --u on each .fill). The near-limit pulse below is the number-side
+   warning both skins share. */
+#card .pct, #bento .pct {
+  font-family: var(--font-sans); font-weight: 800; color: #f4f2ea;
+  letter-spacing: -.3px; line-height: 1;
+}
+#card .lbl, #bento .lbl { font-family: var(--font-sans); font-weight: 600; color: #a9a59a; }
+#card .bar, #bento .bar { border-radius: 99px; background: #141413; overflow: hidden; }
+/* --u is set per-element by UsageColor.paint (usage-color.js); the literal is
+   only what shows before the first payload lands. */
+#card .fill, #bento .fill {
+  height: 100%; width: 0%; border-radius: 99px; background: var(--u, #3f7fbf);
+  transition: width .3s;
+}
+
+/* ── Mascot ────────────────────────────────────────────────────────────────
+   LOCKED orange (never recolored). At rest only the eyes blink; while
+   isWorking it runs the "Coder" combo — a gentle worker-bob with the eyes
+   scanning left/right. All transform/opacity, so the transparent WebView2
+   window (which never repaints background changes) animates it on the
+   compositor and the card itself never jitters. */
+.clawd { display: inline-block; line-height: 0; color: #e17956; }
+.clawd svg { display: block; image-rendering: auto; shape-rendering: geometricPrecision; overflow: visible; }
+.clawd .eyes { transform-box: fill-box; transform-origin: center; animation: gv-blink 4.6s infinite; }
+@keyframes gv-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.08); } }
+.clawd .g-all, .clawd .g-eyes { transform-box: view-box; }
+body.working .clawd .g-all { transform-origin: 50px 64.8px; animation: cv-bob .7s ease-in-out infinite; }
+body.working .clawd .g-eyes { animation: cv-scan 3.2s ease-in-out infinite; }
+@keyframes cv-bob { 0%, 100% { transform: translateY(0) scaleY(1); } 35% { transform: translateY(-2.6px) scaleY(1.015); } 70% { transform: translateY(.4px) scaleY(.975); } }
+@keyframes cv-scan { 0%, 18%, 100% { transform: translateX(0); } 28%, 46% { transform: translateX(-3.2px); } 58%, 80% { transform: translateX(3.2px); } }
+@media (prefers-reduced-motion: reduce) {
+  /* No motion: freeze the mascot (still visible, just static). */
+  .clawd .eyes, body.working .clawd .g-all, body.working .clawd .g-eyes { animation: none; }
+}
+
+/* ── Classic — U1 "Rowline" ────────────────────────────────────────────────
+   Centred title, then three tidy label · bar · % rows (Current / Weekly /
+   Fable). No footer: the mascot conveys isWorking, and the panel stays small
+   so it never blocks the screen. The window is sized to this in apply_prefs —
+   a stale number there clips the bottom row. */
 #card {
-  width: 200px; height: 136px; padding: 11px 13px;
-  background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
-  border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
-  display: grid; column-gap: 8px; row-gap: 5px; align-items: center;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto auto auto 1fr;
-  grid-template-areas:
-    "header  header"
-    "num     bar"
-    "wlabel  wbar"
-    "flabel  fbar"
-    "footer  footer";
+  width: 206px; height: 100px; padding: 10px 12px;
+  display: flex; flex-direction: column;
 }
-#header { grid-area: header; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-#label { font-weight: 600; font-size: 10px; }
-#countdown { margin-left: auto; margin-right: 3px; white-space: nowrap;
-  color: #b8b8c0; background: #2c2c32; font-size: 10px; padding: 2px 7px; border-radius: 8px; }
-#txt5h { grid-area: num; font-weight: 600; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
-#txt5h .u { font-size: 0.58em; }
-.bar.main { grid-area: bar; height: 8px; }
-.wlabel { grid-area: wlabel; color: #8a8a92; }
-.wbar { grid-area: wbar; display: flex; align-items: center; gap: 8px; }
-.flabel { grid-area: flabel; color: #8a8a92; }
-.fbar { grid-area: fbar; display: flex; align-items: center; gap: 8px; }
-.bar { background: #2c2c32; border-radius: 4px; overflow: hidden; }
-.bar.thin { flex: 1; height: 4px; border-radius: 2px; }
-/* --u / --u-lit are set per-element by UsageColor.paint (usage-color.js); the
-   literals here are only what shows before the first payload lands. */
-.fill { height: 100%; width: 0%; background: var(--u, #3f7fbf); border-radius: inherit; transition: width .3s;
-  position: relative; overflow: hidden; }
-.pct { min-width: 34px; text-align: right; color: #a8a8b0; font-variant-numeric: tabular-nums; }
-/* margin-bottom lifts the line off the card's bottom edge — align-self:end
-   would otherwise park it right against the border. */
-#footer { grid-area: footer; align-self: end; margin-bottom: 2px;
-  display: flex; justify-content: space-between;
-  gap: 8px; color: #6a6a72; font-size: 10px; white-space: nowrap; }
-#footer.stale #age { color: #f87171; }
-#reset { color: #8a8a92; }
-#reset b { color: #6aa9e8; font-weight: 400; }
+#card #header { position: relative; min-height: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+#card .ttl { font-size: 14px; }
+#card .rows { display: flex; flex-direction: column; gap: 8px; }
+#card .r { display: flex; align-items: center; gap: 8px; }
+#card .r .lbl { width: 46px; font-size: 9px; }
+#card .r .bar { flex: 1; height: 7px; }
+#card .r .pct { width: 30px; text-align: right; font-size: 11px; }
+/* Compact drops the row labels to single letters (C / W / F). */
+#card .lc { display: none; }
+body.compact #card { width: 120px; height: 100px; padding: 8px 9px; }
+body.compact #card #header { margin-bottom: 6px; }
+body.compact #card .ttl { font-size: 11px; }
+body.compact #card .rows { gap: 7px; }
+body.compact #card .r { gap: 6px; }
+body.compact #card .r .lbl { width: 12px; font-size: 8px; }
+body.compact #card .r .bar { height: 5px; }
+body.compact #card .r .pct { width: 26px; font-size: 9px; }
+body.compact #card .lf { display: none; }
+body.compact #card .lc { display: inline; }
 
-/* Compact: 120x92 near-square — "Current" + countdown, inline num/bar, weekly.
-   No footer, so the weekly reset day/time only shows in the regular size. */
-body.compact #card {
-  width: 120px; height: 106px; padding: 10px 11px; column-gap: 8px; row-gap: 5px;
-  grid-template-rows: auto auto auto auto;
-  grid-template-areas:
-    "header header"
-    "num    bar"
-    "wlabel wbar"
-    "flabel fbar";
+/* ── Bento Box — U10 "Mini Bento" ──────────────────────────────────────────
+   The same numbers as a compact grid: Current spans the top as a hero cell,
+   Weekly and Fable share the bottom two. The RESET-elapsed pace cell of the
+   old Bento is gone — the reset countdown lives top-right like Classic's, and
+   an avg/peak cell would have to invent a number nothing stores. Card-shaped,
+   so it shares Classic's pulse and window size branch (see apply_prefs). */
+#bento { display: none; }
+body[data-rice="bento"] #card { display: none; }
+body[data-rice="bento"] #bento { display: grid; }
+#bento {
+  width: 206px; height: 130px; padding: 10px;
+  grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 7px;
 }
-body.compact .lsfx { display: none; }
-body.compact #footer { display: none; }
-body.compact #label { font-size: 10px; }
-body.compact #countdown { font-size: 8px; padding: 2px 5px; }
-body.compact #txt5h { font-size: 19px; }
-body.compact #txt5h .u { font-size: 0.6em; }
-body.compact .bar.main { height: 7px; }
-body.compact .wlabel, body.compact .flabel { font-size: 10px; }
-body.compact .pct { min-width: 24px; font-size: 10px; }
-body.compact .wbar, body.compact .fbar { gap: 6px; }
+#bento .hd2 { grid-column: 1 / 3; position: relative; min-height: 14px; display: flex; align-items: center; gap: 6px; }
+#bento .ttl { font-size: 13px; }
+#bento .card { background: var(--cc-card); border: 1px solid var(--cc-line); border-radius: 11px; }
+#bento .top { grid-column: 1 / 3; padding: 8px 11px; display: flex; align-items: center; }
+#bento .top .pct { font-size: 23px; }
+#bento .top .lbl { margin-left: 8px; font-size: 9px; }
+#bento .cel { padding: 7px 9px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+#bento .celtop { display: flex; align-items: baseline; justify-content: space-between; }
+#bento .cel .lbl { font-size: 8px; }
+#bento .cel .pct { font-size: 15px; }
+#bento .cel .bar { height: 5px; }
+/* Compact: shrink, and the cells drop their bars to stack label over value. */
+body.compact #bento { width: 120px; height: 112px; padding: 8px; gap: 5px; }
+body.compact #bento .ttl { font-size: 11px; }
+body.compact #bento .top { padding: 6px 9px; }
+body.compact #bento .top .pct { font-size: 18px; }
+body.compact #bento .cel { padding: 5px 7px; }
+body.compact #bento .cel .pct { font-size: 12px; }
+body.compact #bento .cel .bar { display: none; }
+body.compact #bento .celtop { flex-direction: column; align-items: flex-start; gap: 2px; }
 
-/* Near-limit (>=90%): pulse an inset red ring. Inset so the transparent
-   WebView2 window (sized to the card) never clips it. Bento Box is a
-   card-shaped 1:1 swap for Classic, so it carries the same ring — switching
-   skins must not cost the near-limit warning. */
+/* Near-limit (>=90%): pulse an inset red ring — the number-side warning both
+   card skins share (the bars alone can't flag Bento's bar-less hero cell).
+   Inset so the transparent WebView2 window (sized to the card) never clips it. */
 body.critical #card, body.critical #bento { animation: pulse 1.8s ease-in-out infinite; }
 @keyframes pulse {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.35); }
   50%      { box-shadow: inset 0 0 0 2.5px rgba(229, 72, 77, 0.85); }
 }
 
-/* Working: the main bar flows with drifting diagonal stripes while Claude
-   burns tokens. The card itself never moves, so the HUD doesn't jitter.
-   Regular and compact sizes share .bar.main, so this covers both. The
-   stripes are gated on body.working, so they appear and vanish cleanly with
-   the state — idle falls back to the solid fill.
-   Base hook for future skin animations: skins override this block. */
-/* The stripes live on a pseudo-element moved with transform: translateX, not
-   an animated background-position — background animations run on the main
-   thread and this transparent WebView2 window never repaints for them (the
-   stripes froze). Transform animates on the compositor, like the old breathe
-   did. 22.07px = one horizontal period of the 20px pattern at 115deg
-   (20 / sin 115deg), so the loop wraps seamlessly; the extra left overhang
-   keeps the fill covered mid-cycle, and .fill's overflow:hidden stops the
-   stripes leaking past its right edge into the empty track.
-   The stripes read --u/--u-lit off the .fill they cover, so a working bar
-   stays at its own threshold level. Hard-coding the hue here (as this did)
-   painted the bar green at 94% — the red the level called for was drawn, then
-   covered up, exactly when it mattered most. */
-body.working .bar.main .fill::after {
-  content: ""; position: absolute; top: 0; bottom: 0; left: -22.07px; right: 0;
-  background: repeating-linear-gradient(115deg,
-    var(--u, #3f7fbf) 0 10px, var(--u-lit, #5b98d4) 10px 20px);
-  animation: flow 0.9s linear infinite;
-}
-@keyframes flow {
-  to { transform: translateX(22.07px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  /* No motion: freeze the stripes in place — the static striped bar still
-     marks "working" without moving. */
-  body.working .bar.main .fill::after { animation: none; }
-}
-
-/* ── Bento Box rice skin ─────────────────────────────────────────────────
-   The same four numbers as Classic, but as a 2×2 of self-contained cells
-   instead of a hierarchy: 5H (hero), 7D, Fable, and RESET. Card-sized in both
-   regular and compact, so apply_prefs needs no branch for it.
-   RESET's bar is the fraction of the 5h window already elapsed — parked next
-   to 5H's usage bar, the two together read as pace (usage bar ahead of the
-   time bar = burning faster than the clock). It is the only other real datum
-   the snapshot carries; an avg/peak cell would have to invent its number,
-   since nothing stores usage history.
-   Cells reuse .bar/.fill, so threshold colors (usage-color.js) and the
-   working stripes below apply here for free. */
-#bento { display: none; }
-body[data-rice="bento"] #card { display: none; }
-body[data-rice="bento"] #bento { display: grid; }
-#bento {
-  width: 200px; height: 136px; padding: 11px;
-  color: #e8e8ea;
-  font: 12px/1.4 "Segoe UI", sans-serif;
-  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px;
-}
-#bento .bc {
-  background: rgba(24, 24, 28, 0.92); border: 1px solid rgba(255, 255, 255, .08);
-  border-radius: 9px; padding: 8px 9px; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: center;
-}
-#bento .top { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
-#bento .k {
-  font-size: 8px; line-height: 1; letter-spacing: 1.2px;
-  color: #8a8a92; font-weight: 600; white-space: nowrap;
-}
-/* nowrap so a too-wide value overflows visibly instead of silently wrapping to
-   a second line and pushing its own bar out of the cell. */
-#bento .v {
-  font-size: 14px; font-weight: 700; line-height: 1;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-#bento .v .u { font-size: 0.62em; opacity: .75; }
-#bento .bar { height: 5px; border-radius: 99px; margin-top: 7px; }
-/* 5H is the headline window, same as Classic's big number. */
-#bento .bc.hero .v { font-size: 19px; }
-#bento .bar.main { height: 6px; }
-/* RESET is time, not usage: never threshold-colored, or a grey clock would
-   read as a fourth limit going red. Overrides .fill's var(--u) background. */
-/* Its label is the ↻ glyph, not the word — "RESET" plus "2h 14m" wants ~75px
-   of a 68px cell, and ↻ is already this app's mark for a reset countdown
-   (see fmtCountdown in main.js). */
-#bento .bc.time .k { font-size: 10px; letter-spacing: 0; }
-#bento .bc.time .v { font-size: 12px; color: #b8b8c0; }
-#bento .bc.time .fill { background: #4a4a54; }
-
-/* Compact: 47px of cell can't hold a label and its value side by side
-   ("FABLE" + "54%" wants ~53px), so the label stacks over the value rather
-   than shrinking either past legibility. */
-body.compact #bento { width: 120px; height: 106px; padding: 9px; gap: 5px; border-radius: 9px; }
-body.compact #bento .bc { padding: 5px 7px; border-radius: 7px; }
-body.compact #bento .top { flex-direction: column; align-items: flex-start; gap: 2px; }
-body.compact #bento .k { font-size: 7px; letter-spacing: .8px; }
-body.compact #bento .v { font-size: 11px; }
-body.compact #bento .bc.hero .v { font-size: 13px; }
-body.compact #bento .bc.time .v { font-size: 9px; }
-body.compact #bento .bar, body.compact #bento .bar.main { height: 4px; margin-top: 4px; }
-
 /* ── Audiowave Orb rice skin ──────────────────────────────────────────────
    A circular 54-bar ring that reacts to system audio, wrapped around a center
    usage disc. Hidden unless the RICE profile selects it; when shown, the card
-   is hidden and the window is a 180×180 square (see apply_prefs). Bars animate
+   is hidden and the window is a 160×160 square (see apply_prefs). Bars animate
    with transform/opacity only — the transparent WebView2 window never repaints
-   background changes (same rule as the working stripes). */
+   background changes (same rule as the mascot). */
 #orb { display: none; }
 /* Prefix match: both "audiowave_orb" (Bars) and "audiowave_orb_peak" show the ring. */
 body[data-rice^="audiowave_orb"] #card { display: none; }
