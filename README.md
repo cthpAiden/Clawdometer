@@ -21,27 +21,37 @@ Six looks, switchable any time from the tray menu (right-click the tray icon
 | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Audiowave Orb LED Bloom skin: a ring of 5-segment LED-style rungs per bar, colored by usage zone, blooming outward from bass to treble hits"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Audiowave Orb Bars skin: a circular spectrum ring around 5H and 7D percentage bars"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Audiowave Orb Peak hold skin: the same ring with falling peak caps above each bar"> |
 | 5-segment LED rungs per bar, colored by usage zone, with kick/snare/hat hits blooming outward across their own bass-to-treble arc. | A ring of 54 spectrum bars around the 5-hour and 7-day percentages. | Same ring, plus peak caps that hang at each bar's high point and fall back down. |
 
-**Classic** is the default — an editorial readout, and what the tray tooltip and
-statusline mirror. Current, Weekly, and Fable each show as a label, a
-percentage, and a thin threshold underline that turns blue → yellow → red as you
-approach a limit.
+## Install
 
-**Rowline** is the same three as labelled bars — the most compact card. When
-shrunk to Compact size its row labels become 5H / 7D / FBL.
+### From GitHub Releases
 
-**Bento Box** lays the numbers out as self-contained cells instead of a
-hierarchy: Current is a hero percentage with its own bar across the top, with
-Weekly and Fable in their own cells below. All three card skins carry the clawd
-mascot top-left and the 5-hour reset countdown top-right, and none pulse or ring
-— the bar/underline color is the only limit cue.
+1. Download the installer (`Clawdometer_<version>_x64-setup.exe`) from the
+   [latest release](../../releases/latest).
+2. Run it. **Windows SmartScreen will warn you** ("Windows protected your
+   PC") because the binary is not code-signed — code-signing certificates
+   cost money this hobby project doesn't have. Click *More info* → *Run
+   anyway*, but only if you downloaded it from this repository's Releases
+   page. If that trust step bothers you (it should!), build from source
+   instead — see below.
+3. Launch **Clawdometer** from the Start menu. A tray icon appears and the
+   HUD window shows up. If you have no statusline configured, the HUD sets
+   itself up as Claude Code's statusline automatically (one-time, with a
+   settings backup) — from then on every Claude Code response updates the
+   HUD. Send any message in Claude Code and the percentages appear.
 
-The three **Audiowave Orb** skins are "rice" — the ring reacts to whatever your
-speakers are playing. To do that the HUD opens a WASAPI **loopback** capture of
-your system audio output while an orb skin is selected (the card skins start no
-capture at all). The audio is turned into bar heights inside the process and
-then discarded: nothing is recorded, written to disk, or sent anywhere —
-consistent with the no-network guarantee below. It also captures only the
-system output mix, never a microphone.
+If you already have your own statusline, the HUD won't touch it — use the
+CLI (`clawdometer.exe`, from the same release if attached, or built from
+source) to chain it: see "Getting started" below.
+
+### From source
+
+Requires Rust (the MSVC toolchain is pinned via `rust-toolchain.toml`) and
+[tauri-cli](https://tauri.app):
+
+```
+cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe (CLI)
+cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
+```
 
 ## What it does
 
@@ -68,9 +78,8 @@ in third-party tools, and this app should never put your account at risk.)
 The HUD header shows a countdown to the 5-hour window reset (limits are
 account-wide, so a model name would add nothing). When a window's reset time
 passes while your machine is idle, the HUD derives the truthful 0% locally —
-no network needed. The footer shows data age; past 30 minutes it reminds you
-that opening Claude Code refreshes the numbers (usage made on claude.ai
-web/mobile only shows up on the next Claude Code response).
+no network needed. (Usage made on claude.ai web/mobile only shows up on the
+next Claude Code response.)
 
 If you already had a statusline configured, the HUD leaves it alone —
 run `clawdometer install` (CLI) to chain it: your original statusline still
@@ -144,38 +153,6 @@ the standard HKCU Run registry key, only when you click it.
   hook, so the HUD only updates while Claude Code is in use. (Clawdometer
   honors `%CLAUDE_CONFIG_DIR%` if you've relocated `~/.claude`.)
 
-## Install
-
-### From GitHub Releases
-
-1. Download the installer (`Clawdometer_<version>_x64-setup.exe`) from the
-   [latest release](../../releases/latest).
-2. Run it. **Windows SmartScreen will warn you** ("Windows protected your
-   PC") because the binary is not code-signed — code-signing certificates
-   cost money this hobby project doesn't have. Click *More info* → *Run
-   anyway*, but only if you downloaded it from this repository's Releases
-   page. If that trust step bothers you (it should!), build from source
-   instead — see below.
-3. Launch **Clawdometer** from the Start menu. A tray icon appears and the
-   HUD window shows up. If you have no statusline configured, the HUD sets
-   itself up as Claude Code's statusline automatically (one-time, with a
-   settings backup) — from then on every Claude Code response updates the
-   HUD. Send any message in Claude Code and the percentages appear.
-
-If you already have your own statusline, the HUD won't touch it — use the
-CLI (`clawdometer.exe`, from the same release if attached, or built from
-source) to chain it: see "Getting started" below.
-
-### From source
-
-Requires Rust (the MSVC toolchain is pinned via `rust-toolchain.toml`) and
-[tauri-cli](https://tauri.app):
-
-```
-cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe (CLI)
-cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
-```
-
 ## Getting started
 
 1. **Run the HUD** (`Clawdometer.exe`). A tray icon appears and the HUD
@@ -209,20 +186,21 @@ cd app/src-tauri && cargo tauri build      # -> HUD app + NSIS installer
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
   restarts.
-- **Activity animation:** the clawd mascot runs a little "working" animation — a
-  gentle bob with its eyes scanning left to right — while any Claude Code session
-  is generating, and rests when everything is idle. Unlike the usage numbers,
-  this doesn't depend on the statusline hook (so it works even in GUI clients
-  that don't run it): the HUD reads the turn state from Claude Code's transcript
-  files under `~/.claude/projects/` — locally, no network — and stays lit through
-  long "thinking" pauses, stopping the moment a turn completes. Respects
+- **Activity animation:** while any Claude Code session is generating, the clawd
+  mascot plays a "working" animation — one picked at random each turn from a pool
+  of little motions (a worker bob, hops, a march, clapping, a jelly wobble, and
+  more), drawn without repeats so it rarely does the same thing twice in a row.
+  It rests when everything is idle. Unlike the usage numbers, this doesn't depend
+  on the statusline hook (so it works even in GUI clients that don't run it): the
+  HUD reads the turn state from Claude Code's transcript files under
+  `~/.claude/projects/` — locally, no network — and stays lit through long
+  "thinking" pauses, stopping the moment a turn completes. Respects
   `prefers-reduced-motion` (the mascot holds still, no motion).
-- **Footer:** data age ("as of 1m ago"). Data only arrives while Claude Code
-  is in use, so aging is normal; past 30 minutes the footer turns red with
-  "open Claude Code to refresh" — a reminder, not an error. When a limit
+- **Empty state:** before any data has ever arrived, the percentages show as
+  "—" and the tray tooltip reads "waiting for first usage refresh" — the
+  headless refresher fetches within about a minute of launch. When a limit
   window's reset time passes, the HUD shows 0% for it on its own (derived
-  locally, no network). Before any data ever arrives, the card and the tray
-  tooltip say "waiting for data — open Claude Code".
+  locally, no network).
 
 ## CLI
 
@@ -308,27 +286,36 @@ tượng khay → *RICE*). Cả sáu đều hiện cùng một dữ liệu — c
 | <img src="docs/images/hud-audiowave-led.png" width="160" alt="Giao diện Audiowave Orb LED Bloom: vòng thanh LED 5 đoạn mỗi thanh, đổi màu theo ngưỡng sử dụng, nở rộng từ tiếng bass đến treble"> | <img src="docs/images/hud-audiowave-bars.png" width="160" alt="Giao diện Audiowave Orb Bars: vòng phổ âm thanh bao quanh phần trăm 5H và 7D"> | <img src="docs/images/hud-audiowave-peak.png" width="160" alt="Giao diện Audiowave Orb Peak hold: cùng vòng phổ, thêm các chóp đỉnh rơi xuống"> |
 | Mỗi thanh là 5 đoạn LED, đổi màu theo ngưỡng sử dụng, nở rộng theo từng cú đánh bass/snare/hat trong cung riêng của nó. | Vòng 54 thanh phổ bao quanh phần trăm 5 giờ và 7 ngày. | Cùng vòng đó, thêm chóp đỉnh treo ở mức cao nhất của mỗi thanh rồi rơi dần xuống. |
 
-**Classic** là giao diện mặc định — kiểu đọc số editorial, cũng là thứ mà
-tooltip khay và statusline phản chiếu. Current, Weekly, và Fable mỗi mục hiện
-một nhãn, một phần trăm, và một gạch chân mảnh đổi xanh dương → vàng → đỏ khi bạn
-tiến gần giới hạn.
+## Cài đặt
 
-**Rowline** là cùng ba mục đó dưới dạng thanh có nhãn — thẻ gọn nhất. Khi thu về
-Compact, nhãn hàng thành 5H / 7D / FBL.
+### Từ GitHub Releases
 
-**Bento Box** trình bày các con số thành các ô độc lập thay vì một hệ thống phân
-cấp: Current là phần trăm chính kèm thanh riêng trải ngang trên cùng, còn Weekly
-và Fable nằm trong ô riêng bên dưới. Cả ba giao diện thẻ đều đặt linh vật clawd ở
-góc trên trái và đếm ngược reset của cửa sổ 5 giờ ở góc trên phải, và không cái
-nào nhấp nháy hay viền — màu thanh/gạch chân là tín hiệu giới hạn duy nhất.
+1. Tải bộ cài (`Clawdometer_<version>_x64-setup.exe`) từ
+   [release mới nhất](../../releases/latest).
+2. Chạy nó. **Windows SmartScreen sẽ cảnh báo** ("Windows protected your
+   PC") vì binary chưa được ký số — chứng chỉ code-signing tốn tiền mà dự án
+   sở thích này không có. Bấm *More info* → *Run anyway*, nhưng chỉ khi bạn
+   tải từ trang Releases của chính repository này. Nếu bước tin tưởng đó làm
+   bạn lấn cấn (và nên thế!), hãy tự biên dịch từ mã nguồn — xem bên dưới.
+3. Mở **Clawdometer** từ Start menu. Biểu tượng khay xuất hiện cùng cửa sổ
+   HUD. Nếu bạn chưa cấu hình statusline nào, HUD tự đặt mình làm statusline
+   của Claude Code (một lần duy nhất, có sao lưu settings) — từ đó mỗi phản
+   hồi của Claude Code đều cập nhật HUD. Gửi bất kỳ tin nhắn nào trong
+   Claude Code là phần trăm hiện ra.
 
-Ba giao diện **Audiowave Orb** là "rice" — vòng phổ phản ứng theo bất cứ thứ
-gì loa của bạn đang phát. Để làm vậy, HUD mở một luồng thu **loopback** WASAPI
-từ đầu ra âm thanh hệ thống trong lúc giao diện orb được chọn (các giao diện thẻ
-không mở luồng thu nào). Âm thanh được chuyển thành chiều cao các thanh ngay trong tiến
-trình rồi bỏ đi: không ghi lại, không lưu ra đĩa, không gửi đi đâu — đúng với
-cam kết không-mạng bên dưới. Nó cũng chỉ thu bản trộn đầu ra của hệ thống,
-không bao giờ thu micro.
+Nếu bạn đã có statusline riêng, HUD sẽ không động vào — hãy dùng CLI
+(`clawdometer.exe`, tải từ cùng release nếu có đính kèm hoặc tự biên dịch)
+để nối chuỗi: xem mục "Bắt đầu" bên dưới.
+
+### Từ mã nguồn
+
+Cần Rust (toolchain MSVC, ghim qua `rust-toolchain.toml`) và
+[tauri-cli](https://tauri.app):
+
+```
+cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe (CLI)
+cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSIS
+```
 
 ## Ứng dụng làm gì
 
@@ -356,9 +343,8 @@ phép đặt tài khoản của bạn vào rủi ro.)
 
 Phần đầu HUD hiển thị đếm ngược tới lúc reset cửa sổ 5 giờ. Khi thời điểm
 reset của một cửa sổ trôi qua trong lúc máy rảnh, HUD tự suy ra con số trung
-thực 0% ngay tại chỗ — không cần mạng. Phần chân hiển thị tuổi dữ liệu; quá
-30 phút nó nhắc bạn mở Claude Code để làm mới (mức sử dụng phát sinh trên
-claude.ai web/mobile chỉ hiện ra ở phản hồi Claude Code kế tiếp).
+thực 0% ngay tại chỗ — không cần mạng. (Mức sử dụng phát sinh trên claude.ai
+web/mobile chỉ hiện ra ở phản hồi Claude Code kế tiếp.)
 
 Nếu bạn đã có statusline cấu hình sẵn, HUD sẽ không động vào — hãy chạy
 `clawdometer install` (CLI) để nối chuỗi: statusline gốc vẫn hiển thị output
@@ -437,37 +423,6 @@ registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
   của nó, nên HUD chỉ cập nhật khi Claude Code đang được dùng. (Clawdometer
   tôn trọng `%CLAUDE_CONFIG_DIR%` nếu bạn đã di dời `~/.claude`.)
 
-## Cài đặt
-
-### Từ GitHub Releases
-
-1. Tải bộ cài (`Clawdometer_<version>_x64-setup.exe`) từ
-   [release mới nhất](../../releases/latest).
-2. Chạy nó. **Windows SmartScreen sẽ cảnh báo** ("Windows protected your
-   PC") vì binary chưa được ký số — chứng chỉ code-signing tốn tiền mà dự án
-   sở thích này không có. Bấm *More info* → *Run anyway*, nhưng chỉ khi bạn
-   tải từ trang Releases của chính repository này. Nếu bước tin tưởng đó làm
-   bạn lấn cấn (và nên thế!), hãy tự biên dịch từ mã nguồn — xem bên dưới.
-3. Mở **Clawdometer** từ Start menu. Biểu tượng khay xuất hiện cùng cửa sổ
-   HUD. Nếu bạn chưa cấu hình statusline nào, HUD tự đặt mình làm statusline
-   của Claude Code (một lần duy nhất, có sao lưu settings) — từ đó mỗi phản
-   hồi của Claude Code đều cập nhật HUD. Gửi bất kỳ tin nhắn nào trong
-   Claude Code là phần trăm hiện ra.
-
-Nếu bạn đã có statusline riêng, HUD sẽ không động vào — hãy dùng CLI
-(`clawdometer.exe`, tải từ cùng release nếu có đính kèm hoặc tự biên dịch)
-để nối chuỗi: xem mục "Bắt đầu" bên dưới.
-
-### Từ mã nguồn
-
-Cần Rust (toolchain MSVC, ghim qua `rust-toolchain.toml`) và
-[tauri-cli](https://tauri.app):
-
-```
-cargo build --release -p clawdometer-cli   # -> target/release/clawdometer.exe (CLI)
-cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSIS
-```
-
 ## Bắt đầu
 
 1. **Chạy HUD** (`Clawdometer.exe`). Biểu tượng khay xuất hiện cùng cửa sổ
@@ -501,21 +456,21 @@ cd app/src-tauri && cargo tauri build      # -> ứng dụng HUD + bộ cài NSI
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
 - **Opacity:** 100/85/70/55% — giúp thẻ luôn-nổi-trên-cùng bớt che khuất.
   Cũng mở được bằng chuột phải vào thẻ. Được nhớ qua các lần khởi động.
-- **Hiệu ứng hoạt động:** linh vật clawd chạy một hiệu ứng "đang làm việc" nhỏ —
-  khẽ nhún người với đôi mắt quét trái sang phải — khi bất kỳ phiên Claude Code
-  nào đang tạo phản hồi, và nghỉ khi mọi thứ rảnh. Khác với các con số sử dụng,
-  hiệu ứng này không phụ thuộc hook statusline (nên chạy được cả trên client GUI
-  không gọi hook): HUD đọc trạng thái lượt (turn) từ các file transcript của
-  Claude Code trong `~/.claude/projects/` — tại chỗ, không mạng — và vẫn sáng
-  suốt các quãng "suy nghĩ" dài, dừng ngay khi một lượt kết thúc. Tôn trọng
-  `prefers-reduced-motion` (linh vật đứng yên, không chuyển động).
-- **Chân HUD:** tuổi dữ liệu ("as of 1m ago"). Dữ liệu chỉ đến khi Claude
-  Code đang được dùng, nên dữ liệu cũ dần là bình thường; quá 30 phút phần
-  chân chuyển đỏ với "open Claude Code to refresh" — một lời nhắc, không
-  phải lỗi. Khi thời điểm reset của một cửa sổ giới hạn trôi qua, HUD tự
-  hiển thị 0% cho nó (suy ra tại chỗ, không cần mạng). Trước khi có dữ liệu
-  lần đầu, thẻ và tooltip khay hiển thị "waiting for data — open Claude
-  Code".
+- **Hiệu ứng hoạt động:** khi bất kỳ phiên Claude Code nào đang tạo phản hồi,
+  linh vật clawd chạy một hiệu ứng "đang làm việc" — mỗi lượt bốc ngẫu nhiên một
+  động tác từ một tập hợp (nhún nhảy kiểu thợ, nhảy cóc, giậm bước, vỗ tay, rung
+  như thạch, và nhiều nữa), rút không lặp nên hiếm khi làm lại y hệt hai lần liền.
+  Nó nghỉ khi mọi thứ rảnh. Khác với các con số sử dụng, hiệu ứng này không phụ
+  thuộc hook statusline (nên chạy được cả trên client GUI không gọi hook): HUD đọc
+  trạng thái lượt (turn) từ các file transcript của Claude Code trong
+  `~/.claude/projects/` — tại chỗ, không mạng — và vẫn sáng suốt các quãng "suy
+  nghĩ" dài, dừng ngay khi một lượt kết thúc. Tôn trọng `prefers-reduced-motion`
+  (linh vật đứng yên, không chuyển động).
+- **Trạng thái trống:** trước khi có dữ liệu lần đầu, phần trăm hiển thị "—"
+  và tooltip khay ghi "waiting for first usage refresh" — trình làm mới
+  headless sẽ lấy số liệu trong khoảng một phút sau khi mở. Khi thời điểm
+  reset của một cửa sổ giới hạn trôi qua, HUD tự hiển thị 0% cho nó (suy ra
+  tại chỗ, không cần mạng).
 
 ## CLI
 
