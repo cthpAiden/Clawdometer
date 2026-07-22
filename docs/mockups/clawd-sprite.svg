@@ -1,0 +1,29 @@
+<!-- Clawd mascot — canonical sprite. Cloned pixel-for-pixel from the reference,
+     verified via PNG rasterize/compare. viewBox 100×70. Body #e17956, eyes #111.
+     Geometry: wide flat-top body · two square eyes · side arms below the eyes ·
+     4 legs (outer two flush with body sides, inner two moved toward center,
+     wide-ish center gap, narrow side slits). Do NOT redraw by eye — reuse this.
+
+     LOCKED as of 2026-07-23 — this is the approved final Clawd. Arms reach 17u
+     past each body edge (x -1.2 and 101.2), so they leave the 100-unit box. The
+     app keeps viewBox "0 0 100 70" and lets them overflow (widening it would
+     shift the view-box-relative animation origins); this standalone file has no
+     CSS to make overflow visible, so its box is padded 1.2u on each side
+     instead. Everything else is identical. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.2 0 102.4 70" width="348" height="238" shape-rendering="crispEdges">
+  <!-- body / arms / legs -->
+  <g fill="#e17956">
+    <rect x="15.8" y="0"    width="68.4" height="47.6"/>  <!-- body -->
+    <rect x="-1.2" y="16.9" width="17"   height="18.9"/>  <!-- left arm -->
+    <rect x="84.2" y="16.9" width="17"   height="18.9"/>  <!-- right arm -->
+    <rect x="15.8" y="47.6" width="9.7"  height="17.2"/>  <!-- leg 1 (flush left) -->
+    <rect x="33.4" y="47.6" width="9.7"  height="17.2"/>  <!-- leg 2 (inner) -->
+    <rect x="56.9" y="47.6" width="9.7"  height="17.2"/>  <!-- leg 3 (inner) -->
+    <rect x="74.5" y="47.6" width="9.7"  height="17.2"/>  <!-- leg 4 (flush right) -->
+  </g>
+  <!-- eyes -->
+  <g fill="#111111">
+    <rect x="24.9" y="7.8" width="7.8" height="8.5"/>
+    <rect x="67.3" y="7.8" width="7.8" height="8.5"/>
+  </g>
+</svg>

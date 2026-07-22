@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clawd — mascot only</title>
+<style>
+  :root{ --clay:#e17956; --eye:#111; --bg:#f4f1ea; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--bg);display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:26px;min-height:100vh;
+       font:13px/1.5 "Segoe UI",system-ui,sans-serif;color:#8a857c}
+  /* arms reach 1.2u past the 100-unit viewBox — same rule app/ui/style.css carries */
+  #clawd svg{display:block;overflow:visible}
+  .row{display:flex;align-items:center;gap:10px}
+  .row label{color:#9a948a}
+  input[type=range]{width:220px}
+  .sw{width:16px;height:16px;border-radius:3px;border:1px solid rgba(0,0,0,.15);background:var(--clay)}
+  code{background:rgba(0,0,0,.05);padding:1px 6px;border-radius:5px;color:#6a655c}
+  .controls{display:flex;flex-direction:column;gap:10px;align-items:center}
+</style>
+</head>
+<body>
+  <div id="clawd"></div>
+
+  <div class="controls">
+    <div class="row"><label>size</label>
+      <input id="size" type="range" min="6" max="30" step="0.5" value="18" />
+    </div>
+    <div class="row"><label>body</label>
+      <input id="col" type="color" value="#e17956" />
+      <span class="sw" id="sw"></span>
+      <code id="hex">#e17956</code>
+    </div>
+  </div>
+
+<script>
+/* exact geometry — identical to the shared sprite in clawd-mascot-skins.html
+   viewBox 100×70. body/arms/legs = currentColor; eyes = near-black. */
+const CLAWD_RECTS = [
+  [15.8, 0,   84.2, 47.6], // body
+  [-1.2, 16.9,15.8, 35.8], // left arm  (reach 17 past the body edge)
+  [84.2, 16.9,101.2,35.8], // right arm (reach 17 past the body edge)
+  [15.8, 47.6,25.5, 64.8], // leg 1 (flush left)
+  [33.4, 47.6,43.1, 64.8], // leg 2 (inner)
+  [56.9, 47.6,66.6, 64.8], // leg 3 (inner)
+  [74.5, 47.6,84.2, 64.8], // leg 4 (flush right)
+];
+const CLAWD_EYES = [
+  [24.9, 7.8, 32.7, 16.3],
+  [67.3, 7.8, 75.1, 16.3],
+];
+function sprite(px, eye){
+  px = px || 18; eye = eye || "#111";
+  const w=(17*px).toFixed(1), h=(11.9*px).toFixed(1);
+  const r=(a,f)=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}" fill="${f}"/>`;
+  const body = CLAWD_RECTS.map(a=>r(a,"currentColor")).join("");
+  const eyes = CLAWD_EYES.map(a=>r(a,eye)).join("");
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${body}${eyes}</svg>`;
+}
+
+const box = document.getElementById("clawd");
+function render(){
+  const px = parseFloat(document.getElementById("size").value);
+  box.innerHTML = sprite(px);
+}
+const colIn = document.getElementById("col");
+function setColor(){
+  document.documentElement.style.setProperty("--clay", colIn.value);
+  box.style.color = colIn.value;
+  document.getElementById("sw").style.background = colIn.value;
+  document.getElementById("hex").textContent = colIn.value;
+}
+document.getElementById("size").addEventListener("input", render);
+colIn.addEventListener("input", setColor);
+box.style.color = getComputedStyle(document.documentElement).getPropertyValue("--clay").trim();
+render();
+</script>
+</body>
+</html>
