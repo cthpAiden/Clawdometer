@@ -34,13 +34,13 @@
   .band .tag{font:700 10px var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 
   /* ── build status ──────────────────────────────────────────────────────────
-     QUEUED = picked for the ClawdBoy tray submenu, not built yet.
+     SHIPPED = live in the app, under the tray's RICE > ClawdBoy submenu.
      CONCEPT = drawn only; nothing in the app references it. */
   figure.skin{position:relative}
   .st{position:absolute;top:12px;right:12px;z-index:2;
       font:800 8px var(--font-sans);letter-spacing:1.1px;text-transform:uppercase;
       padding:3px 8px;border-radius:99px}
-  .st.queued{background:#2f6f4e;color:#eaf5ee}
+  .st.shipped{background:#2f6f4e;color:#eaf5ee}
   .st.concept{background:var(--paper-3);color:var(--muted);border:1px solid var(--line)}
   .key{max-width:1360px;margin:0 auto;display:flex;gap:16px;align-items:center;
        font-size:11.5px;color:var(--muted)}
@@ -154,10 +154,15 @@
     <span class="sw" style="background:#1a1b18;margin-left:14px"></span>ink <code>#1a1b18</code>
     · payload <code>5H 62%</code> · <code>7D 41%</code> · <code>Fable 18%</code> · <code>reset 2h47m</code>
     · full 200×136 + compact 120×106.</p>
+  <p class="sub"><b>What shipped differs from these tiles in two ways.</b> The cream card behind the console is gone —
+    the plastic is the whole HUD window now, which buys the glass 58px of width. That width paid for type roughly 40%
+    larger everywhere, at both sizes, because at the size drawn here the numbers were hard to read on a real desktop.
+    Layout, palette and the two-color rule are unchanged; see <code>docs/images/hud-clawdboy-*.png</code> for the
+    shipped renders.</p>
 </header>
 
 <div class="key">
-  <span class="st queued">Queued</span><span>picked for the <b>ClawdBoy</b> tray submenu — not built yet</span>
+  <span class="st shipped">Shipped</span><span>live in the app, under the tray's <b>RICE &rsaquo; ClawdBoy</b> submenu</span>
   <span class="st concept" style="margin-left:10px">Concept</span><span>drawn only; nothing in the app references it</span>
 </div>
 
@@ -178,7 +183,7 @@
 [data-skin="m1"] .compact .rw.rst{font-size:6px}
 </style>
 <figure class="skin" data-skin="m1">
-  <span class="st queued">Queued</span>
+  <span class="st shipped">Shipped</span>
   <figcaption><b>M1 · Table</b> — clawd on the left, a four-row key/value table on the right, the reset split off below a
     rule because it is a time and not a percentage. The most legible of the set and the least decorated.<br>
     <b>Revised:</b> clawd 23→25px wide (compact 16→18), body type 7→8px, hero 10→11.5px, reset 6.5→7.5px.</figcaption>
@@ -366,7 +371,7 @@
 [data-skin="m5"] .compact .li{font-size:6.5px;line-height:1.2}
 </style>
 <figure class="skin" data-skin="m5">
-  <span class="st queued">Queued</span>
+  <span class="st shipped">Shipped</span>
   <figcaption><b>M5 · Menu</b> — the four values as a pause-menu list, the active window inverted the way a mono menu
     highlights a row. Row order is fixed so the eye learns positions. Scales down better than any other variant because
     it is only text.<br>
@@ -416,7 +421,7 @@
 [data-skin="m6"] .compact .q .k{font-size:5px;letter-spacing:.2px}
 </style>
 <figure class="skin" data-skin="m6">
-  <span class="st queued">Queued</span>
+  <span class="st shipped">Shipped</span>
   <figcaption><b>M6 · Quad</b> — the glass divided into four equal cells by hairlines, one number each, clawd replacing
     the label in the cell it owns. Every value gets identical weight and the grid survives being shrunk further than
     any other layout here.<br>
