@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>U8 Classic — trim bottom gap</title>
+  <!-- Links the live app stylesheet: #underline renders exactly as the HUD. The
+       only overrides are the trimmed heights + a scoped compact replica. -->
+  <link rel="stylesheet" href="../../app/ui/style.css" />
+  <style>
+    html, body { background: #0d0d0c !important; overflow: auto !important; }
+    body { font-family: var(--font-sans); color: #c8c5ba; padding: 28px 32px 70px; }
+    h1 { font: 600 18px var(--font-sans); color: #e7e4d9; margin-bottom: 5px; }
+    .sub { font-size: 12px; color: #8b877c; max-width: 640px; line-height: 1.55; }
+    h2 { font: 600 13px var(--font-sans); color: #d97757; margin: 32px 0 14px; letter-spacing: .3px; }
+    .row { display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; }
+    .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .frame { background: #161615; padding: 16px; border-radius: 12px; display: inline-flex; }
+    .cap { font-size: 11px; color: #a9a59a; text-align: center; line-height: 1.4; max-width: 160px; }
+    .cap b { color: #e7e4d9; font-weight: 600; }
+    .rec .frame { box-shadow: 0 0 0 2px #7dd37d55; }
+    .rec .cap b { color: #7dd37d; }
+    .now .frame { box-shadow: 0 0 0 1px #ffffff1a; }
+
+    /* Show the underline skin on this non-app page. */
+    #underline { display: flex !important; flex-direction: column; }
+
+    /* Trimmed full height (140 -> 122): content 104 + 9 + 9, symmetric padding. */
+    .trim.full #underline { height: 122px; }
+
+    /* Scoped compact replica (body.compact is global, so mirror its rules here). */
+    .mk-c #underline { width: 120px; height: 116px; padding: 8px 10px; }
+    .mk-c #underline .ttl { font-size: 12px; }
+    .mk-c #underline .urow .lbl { font-size: 9px; }
+    .mk-c #underline .urow .pct { font-size: 12px; }
+    .mk-c #underline .rst-top { font-size: 8px; }
+    .mk-c.trim #underline { height: 114px; }
+    /* arms reach past the 100-unit viewBox — same rule app/ui/style.css carries */
+    .clawd svg { overflow: visible; }
+  </style>
+</head>
+<body data-rice="classic">
+  <h1>U8 Classic — trim the bottom gap</h1>
+  <p class="sub">The card is taller than its content, so the flex column leaves all the slack at the bottom. Trimming the height evens the top/bottom spacing. Demo values match your screenshot (15 / 35 / 11%).</p>
+
+  <h2>Full size</h2>
+  <div class="row">
+    <div class="tile now full">
+      <div class="frame"><div id="underline" data-px="1.15" data-r="Resets 4h 24m"></div></div>
+      <div class="cap"><b>Now</b> · 140px<br>~30px dead space at bottom</div>
+    </div>
+    <div class="tile rec trim full">
+      <div class="frame"><div id="underline" data-px="1.15" data-r="Resets 4h 24m"></div></div>
+      <div class="cap"><b>Trimmed</b> · 122px<br>even 9px top &amp; bottom</div>
+    </div>
+  </div>
+
+  <h2>Compact size</h2>
+  <div class="row">
+    <div class="tile now mk-c">
+      <div class="frame"><div id="underline" data-px="1.0" data-r="4h 24m"></div></div>
+      <div class="cap"><b>Now</b> · 116px</div>
+    </div>
+    <div class="tile rec trim mk-c">
+      <div class="frame"><div id="underline" data-px="1.0" data-r="4h 24m"></div></div>
+      <div class="cap"><b>Trimmed</b> · 114px</div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    const BODY = [15.8, 0, 84.2, 47.6];
+    const ARM_L = [-1.2, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 101.2, 35.8];
+    const LEGS = [[15.8, 46.6, 25.5, 64.8], [33.4, 46.6, 43.1, 64.8], [56.9, 46.6, 66.6, 64.8], [74.5, 46.6, 84.2, 64.8]];
+    const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
+    const r = (a) => `<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+    function sprite(px) {
+      const w = (17*px).toFixed(1), h = (11.9*px).toFixed(1);
+      return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg"><g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g><g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+    }
+    const V = [["Current", 15], ["Weekly", 35], ["Fable", 11]];
+    document.querySelectorAll("#underline").forEach((u) => {
+      const px = u.dataset.px || "1.15";
+      u.innerHTML =
+        `<div class="uhead"><span class="clawd-i" data-px="${px}"></span><span class="ttl">Usage</span><span class="rst-top">${u.dataset.r}</span></div>` +
+        V.map(([l, p]) => `<div class="u"><div class="urow"><span class="lbl">${l}</span><span class="pct">${p}%</span></div><div class="uline"><i style="width:${p}%"></i></div></div>`).join("");
+    });
+    document.querySelectorAll(".clawd-i").forEach((el) => { el.classList.add("clawd"); el.innerHTML = sprite(parseFloat(el.dataset.px || "1.15")); });
+  })();
+  </script>
+</body>
+</html>

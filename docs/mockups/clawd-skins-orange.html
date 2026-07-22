@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clawdometer · Clawd Skins — cream + Claude Code dark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Anthropic-style type system (real names first, closest free web matches as fallback) */
+    --font-sans:"Hanken Grotesk","Styrene A","Styrene",-apple-system,"Segoe UI",sans-serif;
+    --font-serif:"Newsreader","Copernicus","Tiempos",Georgia,serif;
+    --font-mono:"JetBrains Mono","Fira Code",ui-monospace,"Courier New",monospace;
+    /* Anthropic brand palette (cream) */
+    --paper:#F0EEE6;      /* signature warm cream */
+    --paper-2:#FAF9F5;    /* lightest card */
+    --paper-3:#E7E1D3;    /* deeper cream */
+    --manila:#EBDBBC;
+    --kraft:#D4A27F;
+    --ink:#141413;        /* near-black surface / text */
+    --ink-soft:#3D3B36;   /* secondary text on light */
+    --muted:#6E6A60;      /* labels on light */
+    --line:#E0DACB;       /* hairline on cream */
+    --clay:#CC785C;       /* Anthropic coral accent */
+    --clay-lit:#E8A488;
+    --clay-deep:#B8543A;
+    --clawd:#e17956;      /* LOCKED mascot orange */
+    /* Claude Code desktop app palette (warm charcoal dark) */
+    --cc-bg:#262624;      /* main app background */
+    --cc-panel:#1e1e1c;   /* darker panel */
+    --cc-card:#30302d;    /* raised card */
+    --cc-line:#3a3a36;    /* hairline on dark */
+    --cc-text:#e7e4d9;    /* primary warm off-white */
+    --cc-text-2:#b1ada0;  /* secondary text */
+    --cc-muted:#7c776b;   /* muted labels */
+    --cc-coral:#d97757;   /* Claude Code coral accent */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font:14px/1.5 var(--font-sans)}
+  body{padding:40px 26px 96px}
+  header{max-width:1360px;margin:0 auto 30px}
+  h1{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.2px;color:var(--ink)}
+  h1 span{color:var(--muted);font-size:17px;font-weight:400}
+  .sub{color:var(--ink-soft);font-size:13.5px;margin-top:9px;max-width:900px;line-height:1.6}
+  .legend{color:var(--muted);font-size:12px;margin-top:11px}
+  .legend code{background:var(--paper-3);padding:1px 6px;border-radius:5px;color:var(--ink-soft);font-family:var(--font-mono);font-size:11px}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--clawd);vertical-align:-1px;margin-right:5px}
+  .band{max-width:1360px;margin:34px auto 16px;display:flex;align-items:center;gap:12px}
+  .band h2{font-family:var(--font-serif);font-weight:500;font-size:19px;color:var(--ink);white-space:nowrap}
+  .band .rule{flex:1;height:1px;background:var(--line)}
+  .band .tag{font:700 10px var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+
+  .grid{max-width:1360px;margin:0 auto;display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  figure.skin{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;
+        padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+  figure.skin figcaption{order:2;color:var(--ink-soft);font-size:12px;line-height:1.5}
+  figure.skin figcaption b{color:var(--ink);font-weight:700;font-size:13px}
+  .tiles{order:1;display:flex;align-items:flex-end;gap:16px;justify-content:center;
+        background:var(--paper-3);border-radius:12px;padding:18px 12px;min-height:176px;
+        background-image:radial-gradient(circle at 1px 1px,rgba(60,50,35,.07) 1px,transparent 0);
+        background-size:14px 14px}
+  /* dark skins get a dark stage so the charcoal tiles read true */
+  figure.skin.dk .tiles{background:#161615;
+        background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.05) 1px,transparent 0)}
+
+  /* true HUD footprints — never overridden per-skin */
+  .tile{position:relative;overflow:hidden;border-radius:14px;flex:none;font-family:var(--font-sans);
+        font-variant-numeric:tabular-nums;background:#fff;
+        box-shadow:0 6px 18px rgba(40,33,20,.16);border:1px solid rgba(20,20,19,.06)}
+  .tile.full{width:200px;height:136px}
+  .tile.compact{width:120px;height:106px}
+  /* guardrail: a skin must never detach its tile from flow */
+  .tiles .tile{position:relative !important}
+  /* content layer helper (child of tile — safe to absolutely fill) */
+  .in{position:absolute;inset:0}
+
+  /* mascot — LOCKED orange, cannot be recolored by any skin. Only the eyes animate (blink). */
+  .clawd{display:inline-block;line-height:0;color:#e17956 !important}
+  .clawd svg{display:block;image-rendering:pixelated;overflow:visible}
+  .clawd .eyes{transform-box:fill-box;transform-origin:center;
+        animation:gv-blink 4.6s infinite;animation-delay:calc(var(--bi,0)*0.31s)}
+  @keyframes gv-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+  /* isWorking "Coder" combo — worker-bob + eye-scan, transform-only. Idle = blink only. */
+  .clawd .g-all,.clawd .g-eyes{transform-box:view-box}
+  body.working .clawd .g-all{transform-origin:50px 64.8px;animation:cv-bob .7s ease-in-out infinite;
+        animation-delay:calc(var(--bi,0)*0.09s)}
+  body.working .clawd .g-eyes{animation:cv-scan 3.2s ease-in-out infinite;
+        animation-delay:calc(var(--bi,0)*0.13s)}
+  @keyframes cv-bob{0%,100%{transform:translateY(0) scaleY(1)}35%{transform:translateY(-2.6px) scaleY(1.015)}70%{transform:translateY(.4px) scaleY(.975)}}
+  @keyframes cv-scan{0%,18%,100%{transform:translateX(0)}28%,46%{transform:translateX(-3.2px)}58%,80%{transform:translateX(3.2px)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Clawd skins <span>— cream classics + Claude Code dark</span></h1>
+  <p class="sub">Two kept cream skins (Warm Bento, Coral Marquee) in Anthropic's house look, plus six new dark skins in the <b>Claude Code desktop app</b> palette — warm charcoal <code>#262624</code>, off-white text, and the coral accent. Clawd keeps its exact orange <code>#e17956</code> in every one. At rest <b>only its eyes blink</b>; while <code>isWorking</code> it runs the <b>Coder</b> combo — a gentle worker-bob with the eyes scanning left/right.</p>
+  <p class="legend"><span class="dot"></span>clawd is always this orange · payload <code>5H 62%</code> · <code>7D 41%</code> · <code>Fable 18%</code> · <code>reset 2h47m</code> · each shown full 200×136 + compact 120×106.</p>
+</header>
+
+<div class="band"><h2>Cream</h2><span class="tag">Anthropic paper</span><span class="rule"></span></div>
+<div class="grid">
+
+<!-- ══ 02 · Warm Bento ══ -->
+<style>
+[data-skin="02"] .tile{background:var(--paper-3)}
+[data-skin="02"] .in{padding:8px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:5px}
+[data-skin="02"] .cell{background:var(--paper-2);border-radius:9px;border:1px solid var(--line);padding:6px 8px}
+[data-skin="02"] .hero{grid-column:1/3;display:flex;align-items:center;gap:9px;background:var(--paper)}
+[data-skin="02"] .big{font-family:var(--font-serif);font-weight:600;font-size:29px;line-height:1;color:var(--ink)}
+[data-skin="02"] .big b{font-size:12px;font-weight:600;color:var(--clay)}
+[data-skin="02"] .k{font:700 8px var(--font-sans);color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+[data-skin="02"] .cell .v{font-family:var(--font-serif);font-weight:600;font-size:16px;color:var(--ink)}
+[data-skin="02"] .cell .rail{margin-top:3px;height:5px;border-radius:99px;background:var(--paper-3);overflow:hidden}
+[data-skin="02"] .cell .fl{height:100%;border-radius:99px;background:var(--clay)}
+[data-skin="02"] .compact .in{grid-template-columns:1fr;grid-template-rows:auto auto;padding:7px;gap:4px}
+[data-skin="02"] .compact .cell{padding:5px 7px}
+[data-skin="02"] .compact .big{font-size:18px}
+[data-skin="02"] .sub{text-transform:none;letter-spacing:.2px;white-space:nowrap}
+/* full-tile eyes: anti-alias so crispEdges pixel-snapping can't make one eye look bigger */
+[data-skin="02"] .tile.full .clawd .eyes{shape-rendering:geometricPrecision}
+/* drop the 62% down to clawd's vertical level (visual only — clawd stays put) */
+[data-skin="02"] .tile.full .big{position:relative;top:9px}
+</style>
+<figure class="skin" data-skin="02">
+  <figcaption><b>02 · Warm Bento</b> — Anthropic's cream bento cards with hairline borders; a serif headline number and coral fills. The paper palette keeps the orange cozy, not loud.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="cell hero"><span class="clawd-i" data-px="2.6"></span><div style="text-align:center"><div class="big">62<b>%</b></div><div class="k sub">Current · resets in 2h47m</div></div></div>
+      <div class="cell"><div class="k">Weekly</div><div class="v">41%</div><div class="rail"><div class="fl" style="width:41%"></div></div></div>
+      <div class="cell"><div class="k">Fable</div><div class="v">18%</div><div class="rail"><div class="fl" style="width:18%"></div></div></div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="cell hero" style="flex-direction:column;gap:3px;align-items:center;text-align:center"><span class="clawd-i" data-px="1.8"></span><div class="big">62<b>%</b></div></div>
+      <div class="cell" style="display:flex;flex-direction:column;gap:2px;justify-content:center;text-align:center">
+        <div class="k">↻ 2h47m</div>
+        <div style="display:flex;justify-content:space-around;font:800 11px var(--font-sans);color:#6a5236"><span>7D 41%</span><span>FB 18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ 06 · Coral Marquee ══ -->
+<style>
+[data-skin="06"] .tile{background:var(--paper-2)}
+[data-skin="06"] .in{padding:12px 14px}
+[data-skin="06"] .top{display:flex;align-items:center;gap:11px}
+[data-skin="06"] .word{font:800 12px var(--font-sans);letter-spacing:3px;color:var(--ink);text-transform:uppercase}
+[data-skin="06"] .word b{display:block;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:0;color:var(--clay);margin-top:2px}
+[data-skin="06"] .tubes{margin-top:11px;display:flex;flex-direction:column;gap:8px}
+[data-skin="06"] .tube{display:flex;align-items:center;gap:8px;font:700 8px var(--font-sans);color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+[data-skin="06"] .tube .rail{flex:1;height:5px;border-radius:99px;background:var(--paper-3)}
+[data-skin="06"] .tube .glow{height:100%;border-radius:99px;background:var(--clay)}
+[data-skin="06"] .compact .word b{font-size:20px}
+</style>
+<figure class="skin" data-skin="06">
+  <figcaption><b>06 · Coral Marquee</b> — the old amber-neon sign, redrawn Anthropic-clean: a spaced grotesque wordmark, a serif coral readout, and flat coral bars. No glow, all restraint.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="top"><span class="clawd-i" data-px="3"></span><div class="word">CLAWD<b>62%</b></div></div>
+      <div class="tubes">
+        <div class="tube">5H<div class="rail"><div class="glow" style="width:62%"></div></div></div>
+        <div class="tube">7D<div class="rail"><div class="glow" style="width:41%"></div></div></div>
+        <div class="tube">FB<div class="rail"><div class="glow" style="width:18%"></div></div></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in" style="padding:10px">
+      <div class="top" style="flex-direction:column;gap:3px;text-align:center"><span class="clawd-i" data-px="2.2"></span><div class="word"><b>62%</b></div></div>
+      <div class="tubes" style="margin-top:6px"><div class="tube">↻<div class="rail"><div class="glow" style="width:62%"></div></div>2h47</div></div>
+    </div></div>
+  </div>
+</figure>
+
+</div>
+
+<div class="band"><h2>Claude Code dark</h2><span class="tag">warm charcoal · #262624</span><span class="rule"></span></div>
+<div class="grid">
+
+<!-- ══ D1 · Dark Bento (dark twin of 02) ══ -->
+<style>
+[data-skin="d1"] .tile{background:var(--cc-panel)}
+[data-skin="d1"] .in{padding:8px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:5px}
+[data-skin="d1"] .cell{background:var(--cc-card);border-radius:9px;border:1px solid var(--cc-line);padding:6px 8px}
+[data-skin="d1"] .hero{grid-column:1/3;display:flex;align-items:center;gap:9px;background:var(--cc-bg)}
+[data-skin="d1"] .big{font-family:var(--font-serif);font-weight:600;font-size:29px;line-height:1;color:var(--cc-text)}
+[data-skin="d1"] .big b{font-size:12px;font-weight:600;color:var(--cc-coral)}
+[data-skin="d1"] .k{font:700 8px var(--font-sans);color:var(--cc-muted);letter-spacing:.6px;text-transform:uppercase}
+[data-skin="d1"] .cell .v{font-family:var(--font-serif);font-weight:600;font-size:16px;color:var(--cc-text)}
+[data-skin="d1"] .cell .rail{margin-top:3px;height:5px;border-radius:99px;background:#141413;overflow:hidden}
+[data-skin="d1"] .cell .fl{height:100%;border-radius:99px;background:var(--cc-coral)}
+[data-skin="d1"] .compact .in{grid-template-columns:1fr;grid-template-rows:auto auto;padding:7px;gap:4px}
+[data-skin="d1"] .compact .cell{padding:5px 7px}
+[data-skin="d1"] .compact .big{font-size:18px}
+[data-skin="d1"] .sub{text-transform:none;letter-spacing:.2px;white-space:nowrap;color:var(--cc-text-2)}
+[data-skin="d1"] .tile.full .clawd .eyes{shape-rendering:geometricPrecision}
+[data-skin="d1"] .tile.full .big{position:relative;top:9px}
+</style>
+<figure class="skin dk" data-skin="d1">
+  <figcaption><b>D1 · Dark Bento</b> — the Warm Bento layout recolored into the Claude Code app: charcoal cards on near-black, coral fills, off-white serif number. Same cozy grid, night mode.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="cell hero"><span class="clawd-i" data-px="2.6"></span><div style="text-align:center"><div class="big">62<b>%</b></div><div class="k sub">Current · resets in 2h47m</div></div></div>
+      <div class="cell"><div class="k">Weekly</div><div class="v">41%</div><div class="rail"><div class="fl" style="width:41%"></div></div></div>
+      <div class="cell"><div class="k">Fable</div><div class="v">18%</div><div class="rail"><div class="fl" style="width:18%"></div></div></div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="cell hero" style="flex-direction:column;gap:3px;align-items:center;text-align:center"><span class="clawd-i" data-px="1.8"></span><div class="big">62<b>%</b></div></div>
+      <div class="cell" style="display:flex;flex-direction:column;gap:2px;justify-content:center;text-align:center">
+        <div class="k">↻ 2h47m</div>
+        <div style="display:flex;justify-content:space-around;font:800 11px var(--font-sans);color:var(--cc-text-2)"><span>7D 41%</span><span>FB 18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ D2 · Dark Marquee (dark twin of 06) ══ -->
+<style>
+[data-skin="d2"] .tile{background:var(--cc-panel)}
+[data-skin="d2"] .in{padding:12px 14px}
+[data-skin="d2"] .top{display:flex;align-items:center;gap:11px}
+[data-skin="d2"] .word{font:800 12px var(--font-sans);letter-spacing:3px;color:var(--cc-text);text-transform:uppercase}
+[data-skin="d2"] .word b{display:block;font-family:var(--font-serif);font-weight:600;font-size:26px;letter-spacing:0;color:var(--cc-coral);margin-top:2px}
+[data-skin="d2"] .tubes{margin-top:11px;display:flex;flex-direction:column;gap:8px}
+[data-skin="d2"] .tube{display:flex;align-items:center;gap:8px;font:700 8px var(--font-sans);color:var(--cc-muted);text-transform:uppercase;letter-spacing:.5px}
+[data-skin="d2"] .tube .rail{flex:1;height:5px;border-radius:99px;background:#141413}
+[data-skin="d2"] .tube .glow{height:100%;border-radius:99px;background:var(--cc-coral)}
+[data-skin="d2"] .compact .word b{font-size:20px}
+</style>
+<figure class="skin dk" data-skin="d2">
+  <figcaption><b>D2 · Dark Marquee</b> — Coral Marquee dropped onto Claude Code charcoal: spaced grotesque wordmark, a serif coral readout that glows against the dark, flat coral bars.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="top"><span class="clawd-i" data-px="3"></span><div class="word">CLAWD<b>62%</b></div></div>
+      <div class="tubes">
+        <div class="tube">5H<div class="rail"><div class="glow" style="width:62%"></div></div></div>
+        <div class="tube">7D<div class="rail"><div class="glow" style="width:41%"></div></div></div>
+        <div class="tube">FB<div class="rail"><div class="glow" style="width:18%"></div></div></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in" style="padding:10px">
+      <div class="top" style="flex-direction:column;gap:3px;text-align:center"><span class="clawd-i" data-px="2.2"></span><div class="word"><b>62%</b></div></div>
+      <div class="tubes" style="margin-top:6px"><div class="tube">↻<div class="rail"><div class="glow" style="width:62%"></div></div>2h47</div></div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ D3 · Terminal Session ══ -->
+<style>
+[data-skin="d3"] .tile{background:var(--cc-bg)}
+[data-skin="d3"] .in{padding:11px 13px;font-family:var(--font-mono);color:var(--cc-text-2)}
+[data-skin="d3"] .ln{font-size:9.5px;line-height:1.62;white-space:pre}
+[data-skin="d3"] .pr{color:var(--cc-coral)}
+[data-skin="d3"] .hot{color:var(--cc-text);font-weight:700}
+[data-skin="d3"] .bar{color:var(--cc-coral)}
+[data-skin="d3"] .dim{color:var(--cc-muted)}
+[data-skin="d3"] .clawd{margin:2px 0}
+[data-skin="d3"] .cur{animation:d3_blink 1.1s steps(1) infinite}
+@keyframes d3_blink{50%{opacity:0}}
+</style>
+<figure class="skin dk" data-skin="d3">
+  <figcaption><b>D3 · Terminal Session</b> — reads like a Claude Code run: the coral ✻ header, ● status dots, monospace bars, and a live blinking prompt. Native to the app it lives beside.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="ln"><span class="pr">✻</span> <span class="hot">Clawdometer</span> <span class="dim">· usage</span></div>
+      <div class="clawd"><span class="clawd-i" data-px="2.1"></span></div>
+      <div class="ln"><span class="pr">●</span> 5H <span class="bar">████████░░░░</span> <span class="hot">62%</span></div>
+      <div class="ln dim"><span class="pr" style="opacity:.45">●</span> 7D █████░░░░░░░ 41%</div>
+      <div class="ln dim"><span class="pr" style="opacity:.45">●</span> FB ██░░░░░░░░░░ 18% · ↻2h47m</div>
+      <div class="ln"><span class="pr">&gt;</span> <span class="cur">▋</span></div>
+    </div></div>
+    <div class="tile compact"><div class="in" style="padding:9px 10px">
+      <div class="ln dim"><span class="pr">✻</span> 5H</div>
+      <div class="clawd" style="margin:2px 0"><span class="clawd-i" data-px="1.9"></span></div>
+      <div class="ln hot">62%<span class="cur">▋</span></div>
+      <div class="ln dim">↻2h47m</div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ D4 · Welcome Box ══ -->
+<style>
+[data-skin="d4"] .tile{background:var(--cc-bg)}
+[data-skin="d4"] .in{padding:9px}
+[data-skin="d4"] .box{height:100%;border:1px solid var(--cc-coral);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:5px;background:rgba(217,119,87,.05)}
+[data-skin="d4"] .hd{display:flex;align-items:center;gap:8px}
+[data-skin="d4"] .ttl{font:700 11px var(--font-sans);color:var(--cc-text);letter-spacing:.3px;line-height:1.1}
+[data-skin="d4"] .ttl span{display:block;font:500 8px var(--font-mono);color:var(--cc-muted);letter-spacing:0;margin-top:2px}
+[data-skin="d4"] .rows{display:flex;flex-direction:column;gap:3px;margin-top:1px}
+[data-skin="d4"] .rw{display:flex;align-items:center;gap:6px;font:600 8.5px var(--font-mono);color:var(--cc-text-2)}
+[data-skin="d4"] .rw .rail{width:52px;height:4px;border-radius:99px;background:#141413;overflow:hidden}
+[data-skin="d4"] .rw .fl{height:100%;background:var(--cc-coral)}
+[data-skin="d4"] .rw .n{margin-left:auto;color:var(--cc-text);font-weight:700}
+[data-skin="d4"] .rst{font:600 7.5px var(--font-mono);color:var(--cc-muted);margin-top:1px}
+</style>
+<figure class="skin dk" data-skin="d4">
+  <figcaption><b>D4 · Welcome Box</b> — the rounded coral-bordered banner Claude Code opens with, repurposed as the HUD: clawd + title in the header, three mini gauges, a reset footer.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="box">
+        <div class="hd"><span class="clawd-i" data-px="1.7"></span><div class="ttl">Clawdometer<span>~/clawd · sonnet</span></div></div>
+        <div class="rows">
+          <div class="rw">5H<span class="rail"><span class="fl" style="width:62%"></span></span><span class="n">62%</span></div>
+          <div class="rw">7D<span class="rail"><span class="fl" style="width:41%"></span></span><span class="n">41%</span></div>
+          <div class="rw">FB<span class="rail"><span class="fl" style="width:18%"></span></span><span class="n">18%</span></div>
+        </div>
+        <div class="rst">↻ resets in 2h47m</div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="box" style="padding:8px;align-items:center;justify-content:center;text-align:center;gap:4px">
+        <span class="clawd-i" data-px="1.7"></span>
+        <div style="font:600 18px/1 var(--font-serif);color:var(--cc-text)">62<b style="font-size:10px;color:var(--cc-coral)">%</b></div>
+        <div class="rst" style="margin-top:0">↻2h47m</div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ D5 · Todo Checklist ══ -->
+<style>
+[data-skin="d5"] .tile{background:var(--cc-bg)}
+[data-skin="d5"] .in{padding:11px 13px}
+[data-skin="d5"] .hd{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+[data-skin="d5"] .hd .t{font:700 9px var(--font-sans);color:var(--cc-text-2);letter-spacing:1px;text-transform:uppercase}
+[data-skin="d5"] .task{display:flex;align-items:center;gap:7px;font:600 10px var(--font-mono);color:var(--cc-text-2);line-height:1.95}
+[data-skin="d5"] .task .bx{color:var(--cc-muted);width:11px;display:inline-block}
+[data-skin="d5"] .task .n{margin-left:auto;font-weight:700;color:var(--cc-text-2)}
+[data-skin="d5"] .task.act{color:var(--cc-text)}
+[data-skin="d5"] .task.act .bx{color:var(--cc-coral)}
+[data-skin="d5"] .task.act .n{color:var(--cc-text)}
+</style>
+<figure class="skin dk" data-skin="d5">
+  <figcaption><b>D5 · Todo Checklist</b> — Claude Code's task list, but the tasks are your limits: the active 5-hour window carries the coral marker, the rest wait as checkboxes.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hd"><span class="clawd-i" data-px="1.7"></span><span class="t">Usage · 2h47m left</span></div>
+      <div class="task act"><span class="bx">▶</span> 5-hour window<span class="n">62%</span></div>
+      <div class="task"><span class="bx">☐</span> Weekly limit<span class="n">41%</span></div>
+      <div class="task"><span class="bx">☐</span> Fable model<span class="n">18%</span></div>
+    </div></div>
+    <div class="tile compact"><div class="in" style="padding:10px">
+      <div class="hd" style="margin-bottom:5px;flex-direction:column;gap:4px;text-align:center;align-items:center"><span class="clawd-i" data-px="1.7"></span></div>
+      <div class="task act" style="justify-content:center;gap:5px"><span class="bx" style="width:auto">▶</span><span class="n" style="margin-left:0">62%</span></div>
+      <div class="task" style="justify-content:center;font-size:8.5px;color:var(--cc-muted)">↻ 2h47m</div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ D6 · Status Line ══ -->
+<style>
+[data-skin="d6"] .tile{background:var(--cc-panel)}
+[data-skin="d6"] .in{padding:0;display:flex;flex-direction:column}
+[data-skin="d6"] .body{flex:1;display:flex;align-items:center;gap:11px;padding:12px 14px}
+[data-skin="d6"] .big{font:600 34px/1 var(--font-serif);color:var(--cc-text)}
+[data-skin="d6"] .big b{font-size:14px;color:var(--cc-coral)}
+[data-skin="d6"] .meta{font:600 8px var(--font-mono);color:var(--cc-muted);text-transform:uppercase;letter-spacing:.6px;margin-top:5px}
+[data-skin="d6"] .status{border-top:1px solid var(--cc-line);background:var(--cc-bg);padding:6px 11px;display:flex;gap:6px;align-items:center;
+        font:600 8px var(--font-mono);color:var(--cc-text-2);white-space:nowrap;letter-spacing:-.1px}
+[data-skin="d6"] .status .dot{width:6px;height:6px;border-radius:50%;background:var(--cc-coral);flex:none}
+[data-skin="d6"] .status .sep{color:var(--cc-line)}
+[data-skin="d6"] .status .co{color:var(--cc-coral)}
+</style>
+<figure class="skin dk" data-skin="d6">
+  <figcaption><b>D6 · Status Line</b> — modeled on the Claude Code bottom statusline: a big serif current-usage number up top, then a coral-dotted mono strip with the other segments split by dividers.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="body"><span class="clawd-i" data-px="2.4"></span><div><div class="big">62<b>%</b></div><div class="meta">5-hour window</div></div></div>
+      <div class="status"><span class="dot"></span>clawd<span class="sep">│</span>7D&nbsp;<span class="co">41%</span><span class="sep">│</span>FB&nbsp;<span class="co">18%</span><span class="sep">│</span>↻2h47m</div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="body" style="flex-direction:column;gap:2px;padding:9px;text-align:center;justify-content:center"><span class="clawd-i" data-px="1.9"></span><div class="big" style="font-size:22px">62<b style="font-size:11px">%</b></div></div>
+      <div class="status" style="justify-content:center;padding:5px"><span class="dot"></span>↻2h47m</div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ D7 · Usage Panel ══ -->
+<style>
+[data-skin="d7"] .tile{background:#000}
+[data-skin="d7"] .tile.full{width:250px;height:284px}
+[data-skin="d7"] .in{padding:13px;display:flex;flex-direction:column;gap:8px}
+[data-skin="d7"] .hdr{display:flex;align-items:center;gap:8px}
+[data-skin="d7"] .ttl{flex:1;text-align:center;font-family:var(--font-serif);font-weight:500;font-size:25px;color:#f2f0e8;line-height:1}
+[data-skin="d7"] .bat{flex:none;display:inline-flex;line-height:0}
+[data-skin="d7"] .card{background:#161615;border:1px solid rgba(255,255,255,.05);border-radius:15px;padding:10px 13px}
+[data-skin="d7"] .row{display:flex;align-items:center}
+[data-skin="d7"] .pct{font:800 25px var(--font-sans);color:#f4f2ea;letter-spacing:-.5px}
+[data-skin="d7"] .pill{margin-left:auto;background:rgba(255,255,255,.09);color:#c9c6bd;font:600 11px var(--font-sans);padding:4px 12px;border-radius:99px}
+[data-skin="d7"] .bar{margin-top:8px;height:12px;border-radius:99px;background:#2b2a28;overflow:hidden}
+[data-skin="d7"] .fill{height:100%;border-radius:99px;background:#8fa76b}
+[data-skin="d7"] .rst{margin-top:8px;font:500 12.5px var(--font-sans);color:#8a877d}
+[data-skin="d7"] .bake{text-align:center;font-family:var(--font-serif);font-size:18px;color:var(--cc-coral);line-height:1;margin-top:1px}
+[data-skin="d7"] .bake .star{font-family:var(--font-sans);font-size:15px}
+[data-skin="d7"] .compact .in{padding:9px;gap:5px}
+[data-skin="d7"] .compact .ttl{font-size:13px}
+[data-skin="d7"] .compact .card{padding:7px 9px}
+[data-skin="d7"] .compact .pct{font-size:17px}
+[data-skin="d7"] .compact .bar{height:8px;margin-top:5px}
+[data-skin="d7"] .compact .bake{font-size:11px}
+</style>
+<figure class="skin dk" data-skin="d7">
+  <figcaption><b>D7 · Usage Panel</b> — a faithful clone of the app's Usage view: serif title, coral battery, two charcoal cards with white numbers, gray state pills, sage-green bars, and the coral ✳ Baking… working line.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="2"></span><div class="ttl">Usage</div><span class="bat"><svg width="30" height="15" viewBox="0 0 30 15" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="24" height="11" rx="3" fill="none" stroke="#cbc8bf" stroke-width="1.4"/><rect x="26.5" y="5" width="2.5" height="5" rx="1" fill="#cbc8bf"/><rect x="3" y="4" width="16" height="7" rx="1.5" fill="#d97757"/></svg></span></div>
+      <div class="card">
+        <div class="row"><div class="pct">29%</div><div class="pill">Current</div></div>
+        <div class="bar"><div class="fill" style="width:29%"></div></div>
+        <div class="rst">Resets in 2h 22m</div>
+      </div>
+      <div class="card">
+        <div class="row"><div class="pct">4%</div><div class="pill">Weekly</div></div>
+        <div class="bar"><div class="fill" style="width:4%"></div></div>
+        <div class="rst">Resets in 6d 19h</div>
+      </div>
+      <div class="bake"><span class="star">✳</span> Baking…</div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.3"></span><div class="ttl">Usage</div></div>
+      <div class="card">
+        <div class="pct">29%</div>
+        <div class="bar"><div class="fill" style="width:29%"></div></div>
+      </div>
+      <div class="bake"><span class="star">✳</span> Baking…</div>
+    </div></div>
+  </div>
+</figure>
+
+</div>
+
+<div class="band"><h2>Usage Panel · desktop-sized</h2><span class="tag">Current · Weekly · Fable · full + compact</span><span class="rule"></span></div>
+<!-- shared "Usage" template look (serif title, sans numbers, threshold-colored bars) -->
+<style>
+figure.usg .tile{background:var(--cc-panel)}
+figure.usg .hdr,figure.usg .hd2{position:relative;min-height:14px}
+figure.usg .compact .hdr,figure.usg .compact .hd2{min-height:12px}
+figure.usg .hdr{display:flex;align-items:center;gap:6px}
+/* Usage sits dead-centre of the panel — absolute so clawd (left) and resets (right) don't shove it off the midline. Clawd keeps header height. */
+figure.usg .ttl{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-family:var(--font-serif);font-weight:500;color:#f2f0e8;line-height:1}
+figure.usg .rst-top{position:absolute;right:0;top:50%;transform:translateY(-50%);font-family:var(--font-sans);font-weight:500;color:#9a958b;line-height:1;white-space:nowrap;font-size:9px;letter-spacing:.2px}
+figure.usg .compact .rst-top{font-size:8px}
+figure.usg .pct{font-family:var(--font-sans);font-weight:800;color:#f4f2ea;letter-spacing:-.3px;line-height:1}
+figure.usg .lbl{font-family:var(--font-sans);font-weight:600;color:#a9a59a}
+figure.usg .bar{border-radius:99px;background:#141413;overflow:hidden}
+figure.usg .fill{height:100%;border-radius:99px;background:var(--u,#3f7fbf)}
+figure.usg .rst{font-family:var(--font-sans);font-weight:500;color:#7d7a70;line-height:1}
+figure.usg .card{background:var(--cc-card);border:1px solid var(--cc-line);border-radius:11px}
+/* render the LOCKED sprite anti-aliased so mirrored eyes/arms stay symmetric at this small scale — crispEdges+pixelated snap them to uneven device pixels (geometry itself is unchanged) */
+figure.usg .clawd svg{image-rendering:auto;shape-rendering:geometricPrecision}
+</style>
+<div class="grid">
+
+<!-- ══ U1 · Rowline ══ -->
+<style>
+[data-skin="u1"] .tile.full{width:206px;height:100px}
+[data-skin="u1"] .tile.compact{width:120px;height:100px}
+[data-skin="u1"] .in{padding:10px 12px;display:flex;flex-direction:column}
+[data-skin="u1"] .hdr{margin-bottom:8px}
+[data-skin="u1"] .ttl{flex:1;text-align:center;font-size:14px}
+[data-skin="u1"] .rows{display:flex;flex-direction:column;gap:8px}
+[data-skin="u1"] .r{display:flex;align-items:center;gap:8px}
+[data-skin="u1"] .r .lbl{width:46px;font-size:9px}
+[data-skin="u1"] .r .bar{flex:1;height:7px}
+[data-skin="u1"] .r .pct{width:30px;text-align:right;font-size:11px}
+[data-skin="u1"] .compact .in{padding:8px 9px}
+[data-skin="u1"] .compact .hdr{margin-bottom:6px}
+[data-skin="u1"] .compact .ttl{font-size:11px}
+[data-skin="u1"] .compact .rows{gap:7px}
+[data-skin="u1"] .compact .r{gap:6px}
+[data-skin="u1"] .compact .r .lbl{width:12px;font-size:8px}
+[data-skin="u1"] .compact .r .bar{height:5px}
+[data-skin="u1"] .compact .r .pct{width:26px;font-size:9px}
+</style>
+<figure class="skin dk usg" data-skin="u1">
+  <figcaption><b>U1 · Rowline</b> — three tidy label · bar · % rows under a centered serif title. The clean baseline read; compact abbreviates to C/W/F.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">Current</span><div class="bar"><div class="fill" style="width:29%"></div></div><span class="pct">29%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="bar"><div class="fill" style="width:4%"></div></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="bar"><div class="fill" style="width:18%"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">C</span><div class="bar"><div class="fill" style="width:29%"></div></div><span class="pct">29%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="bar"><div class="fill" style="width:4%"></div></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="bar"><div class="fill" style="width:18%"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U2 · Ring Trio ══ -->
+<style>
+[data-skin="u2"] .tile.full{width:210px;height:128px}
+[data-skin="u2"] .tile.compact{width:120px;height:100px}
+[data-skin="u2"] .in{padding:9px 11px;display:flex;flex-direction:column}
+[data-skin="u2"] .hdr{margin-bottom:6px}
+[data-skin="u2"] .ttl{flex:1;text-align:center;font-size:14px}
+[data-skin="u2"] .trio{display:flex;justify-content:space-around;align-items:flex-start;flex:1}
+[data-skin="u2"] .col{display:flex;flex-direction:column;align-items:center;gap:4px}
+[data-skin="u2"] .rwrap{position:relative;width:46px;height:46px}
+[data-skin="u2"] .ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--u,#3f7fbf) calc(var(--p)*1%),#141413 0);-webkit-mask:radial-gradient(farthest-side,#0000 62%,#000 63%);mask:radial-gradient(farthest-side,#0000 62%,#000 63%)}
+[data-skin="u2"] .rv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 12px var(--font-sans);color:#f4f2ea}
+[data-skin="u2"] .col .lbl{font-size:8.5px}
+[data-skin="u2"] .compact .in{padding:8px 9px}
+[data-skin="u2"] .compact .ttl{font-size:11px}
+[data-skin="u2"] .compact .rwrap{width:30px;height:30px}
+[data-skin="u2"] .compact .rv{font-size:8px}
+[data-skin="u2"] .compact .col .lbl{font-size:7px}
+</style>
+<figure class="skin dk usg" data-skin="u2">
+  <figcaption><b>U2 · Ring Trio</b> — three sage-green progress donuts with the % dead-center, labels beneath. Premium and glanceable; scales cleanly to tiny rings in compact.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="trio">
+        <div class="col"><div class="rwrap"><div class="ring" style="--p:29"></div><span class="rv">29%</span></div><span class="lbl">Current</span></div>
+        <div class="col"><div class="rwrap"><div class="ring" style="--p:4"></div><span class="rv">4%</span></div><span class="lbl">Weekly</span></div>
+        <div class="col"><div class="rwrap"><div class="ring" style="--p:18"></div><span class="rv">18%</span></div><span class="lbl">Fable</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="trio">
+        <div class="col"><div class="rwrap"><div class="ring" style="--p:29"></div><span class="rv">29%</span></div><span class="lbl">C</span></div>
+        <div class="col"><div class="rwrap"><div class="ring" style="--p:4"></div><span class="rv">4%</span></div><span class="lbl">W</span></div>
+        <div class="col"><div class="rwrap"><div class="ring" style="--p:18"></div><span class="rv">18%</span></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U3 · Segmented Meter ══ -->
+<style>
+[data-skin="u3"] .tile.full{width:206px;height:100px}
+[data-skin="u3"] .tile.compact{width:120px;height:100px}
+[data-skin="u3"] .in{padding:10px 12px;display:flex;flex-direction:column}
+[data-skin="u3"] .hdr{margin-bottom:8px}
+[data-skin="u3"] .ttl{flex:1;text-align:center;font-size:14px}
+[data-skin="u3"] .rows{display:flex;flex-direction:column;gap:8px}
+[data-skin="u3"] .r{display:flex;align-items:center;gap:8px}
+[data-skin="u3"] .r .lbl{width:46px;font-size:9px}
+[data-skin="u3"] .seg{flex:1;display:flex;gap:2px}
+[data-skin="u3"] .seg i{flex:1;height:8px;border-radius:2px;background:#141413}
+[data-skin="u3"] .seg i.on{background:var(--u,#3f7fbf)}
+[data-skin="u3"] .r .pct{width:30px;text-align:right;font-size:11px}
+[data-skin="u3"] .compact .in{padding:8px 9px}
+[data-skin="u3"] .compact .ttl{font-size:11px}
+[data-skin="u3"] .compact .rows{gap:7px}
+[data-skin="u3"] .compact .r{gap:6px}
+[data-skin="u3"] .compact .r .lbl{width:12px;font-size:8px}
+[data-skin="u3"] .compact .seg i{height:6px}
+[data-skin="u3"] .compact .r .pct{width:26px;font-size:9px}
+</style>
+<figure class="skin dk usg" data-skin="u3">
+  <figcaption><b>U3 · Segmented Meter</b> — each limit is a ten-notch gauge, lit segments in green. A hardware/instrument feel that suits the ESP32 origin.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">Current</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">29%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="seg"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="seg"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">C</span><div class="seg"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">29%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="seg"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="seg"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U4 · Hero + Rails ══ -->
+<style>
+[data-skin="u4"] .tile.full{width:206px;height:126px}
+[data-skin="u4"] .tile.compact{width:120px;height:102px}
+[data-skin="u4"] .in{padding:11px 12px;display:flex;flex-direction:column}
+[data-skin="u4"] .hdr{margin-bottom:7px}
+[data-skin="u4"] .ttl{flex:1;text-align:center;font-size:13px}
+[data-skin="u4"] .hero{display:flex;align-items:flex-end;gap:6px}
+[data-skin="u4"] .hero .pct{font-size:30px}
+[data-skin="u4"] .hero .lbl{font-size:9px;margin-bottom:3px}
+[data-skin="u4"] .heroBar{margin-top:6px;height:8px}
+[data-skin="u4"] .mini{margin-top:9px;display:flex;flex-direction:column;gap:7px}
+[data-skin="u4"] .r{display:flex;align-items:center;gap:8px}
+[data-skin="u4"] .r .lbl{width:44px;font-size:8.5px}
+[data-skin="u4"] .r .bar{flex:1;height:6px}
+[data-skin="u4"] .r .pct{width:28px;text-align:right;font-size:10px}
+[data-skin="u4"] .compact .in{padding:9px}
+[data-skin="u4"] .compact .hero .pct{font-size:22px}
+[data-skin="u4"] .compact .hero .lbl{font-size:8px;margin-bottom:2px}
+[data-skin="u4"] .compact .heroBar{height:6px;margin-top:5px}
+[data-skin="u4"] .compact .mini{margin-top:7px;gap:6px}
+[data-skin="u4"] .compact .r .lbl{width:30px;font-size:8px}
+[data-skin="u4"] .compact .r .pct{width:26px;font-size:9px}
+</style>
+<figure class="skin dk usg" data-skin="u4">
+  <figcaption><b>U4 · Hero + Rails</b> — the current window owns a big headline number and full-width bar; Weekly and Fable ride below as slim rails. Keeps focus on now.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="hero"><span class="pct">29%</span><span class="lbl">Current</span></div>
+      <div class="bar heroBar"><div class="fill" style="width:29%"></div></div>
+      <div class="mini">
+        <div class="r"><span class="lbl">Weekly</span><div class="bar"><div class="fill" style="width:4%"></div></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="bar"><div class="fill" style="width:18%"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="hero"><span class="pct">29%</span><span class="lbl">Current</span></div>
+      <div class="bar heroBar"><div class="fill" style="width:29%"></div></div>
+      <div class="mini">
+        <div class="r"><span class="lbl">Weekly</span><div class="bar"><div class="fill" style="width:4%"></div></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="bar"><div class="fill" style="width:18%"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U5 · Dot Matrix ══ -->
+<style>
+[data-skin="u5"] .tile.full{width:206px;height:101px}
+[data-skin="u5"] .tile.compact{width:120px;height:100px}
+[data-skin="u5"] .in{padding:10px 12px;display:flex;flex-direction:column}
+[data-skin="u5"] .hdr{margin-bottom:8px}
+[data-skin="u5"] .ttl{flex:1;text-align:center;font-size:14px}
+[data-skin="u5"] .rows{display:flex;flex-direction:column;gap:9px}
+[data-skin="u5"] .r{display:flex;align-items:center;gap:8px}
+[data-skin="u5"] .r .lbl{width:46px;font-size:9px}
+[data-skin="u5"] .dots{flex:1;display:flex;justify-content:space-between}
+[data-skin="u5"] .dots i{width:7px;height:7px;border-radius:50%;background:#141413}
+[data-skin="u5"] .dots i.on{background:var(--u,#3f7fbf)}
+[data-skin="u5"] .r .pct{width:30px;text-align:right;font-size:11px}
+[data-skin="u5"] .compact .in{padding:8px 9px}
+[data-skin="u5"] .compact .ttl{font-size:11px}
+[data-skin="u5"] .compact .rows{gap:7px}
+[data-skin="u5"] .compact .r{gap:6px}
+[data-skin="u5"] .compact .r .lbl{width:12px;font-size:8px}
+[data-skin="u5"] .compact .dots i{width:5px;height:5px}
+[data-skin="u5"] .compact .r .pct{width:26px;font-size:9px}
+</style>
+<figure class="skin dk usg" data-skin="u5">
+  <figcaption><b>U5 · Dot Matrix</b> — a row of ten dots per limit, filled green for usage. Playful and pixel-native to the little screen it came from.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">Current</span><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">29%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">C</span><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">29%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">4%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U6 · Inline Cards ══ -->
+<style>
+[data-skin="u6"] .tile.full{width:212px;height:108px}
+[data-skin="u6"] .tile.compact{width:120px;height:98px}
+[data-skin="u6"] .in{padding:10px;display:flex;flex-direction:column}
+[data-skin="u6"] .hdr{margin-bottom:8px}
+[data-skin="u6"] .ttl{flex:1;text-align:center;font-size:13px}
+[data-skin="u6"] .cards{display:flex;gap:7px}
+[data-skin="u6"] .c{flex:1;padding:8px 8px 9px}
+[data-skin="u6"] .c .lbl{font-size:8px}
+[data-skin="u6"] .c .pct{font-size:18px;margin-top:5px}
+[data-skin="u6"] .c .bar{height:5px;margin-top:7px}
+[data-skin="u6"] .compact .in{padding:7px}
+[data-skin="u6"] .compact .ttl{font-size:11px}
+[data-skin="u6"] .compact .cards{gap:4px}
+[data-skin="u6"] .compact .c{padding:5px 3px}
+[data-skin="u6"] .compact .c .lbl{font-size:7.5px}
+[data-skin="u6"] .compact .c .pct{font-size:12px;margin-top:3px}
+[data-skin="u6"] .compact .c .bar{height:4px;margin-top:5px}
+</style>
+<figure class="skin dk usg" data-skin="u6">
+  <figcaption><b>U6 · Inline Cards</b> — three equal mini stat-cards side by side, each with label, number, and a short bar. Structured bento in a small footprint.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="cards">
+        <div class="c card"><div class="lbl">Current</div><div class="pct">29%</div><div class="bar"><div class="fill" style="width:29%"></div></div></div>
+        <div class="c card"><div class="lbl">Weekly</div><div class="pct">4%</div><div class="bar"><div class="fill" style="width:4%"></div></div></div>
+        <div class="c card"><div class="lbl">Fable</div><div class="pct">18%</div><div class="bar"><div class="fill" style="width:18%"></div></div></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="cards">
+        <div class="c card"><div class="lbl">C</div><div class="pct">29%</div><div class="bar"><div class="fill" style="width:29%"></div></div></div>
+        <div class="c card"><div class="lbl">W</div><div class="pct">4%</div><div class="bar"><div class="fill" style="width:4%"></div></div></div>
+        <div class="c card"><div class="lbl">F</div><div class="pct">18%</div><div class="bar"><div class="fill" style="width:18%"></div></div></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U7 · Equalizer ══ -->
+<style>
+[data-skin="u7"] .tile.full{width:200px;height:132px}
+[data-skin="u7"] .tile.compact{width:120px;height:104px}
+[data-skin="u7"] .in{padding:10px 12px;display:flex;flex-direction:column}
+[data-skin="u7"] .hdr{margin-bottom:6px}
+[data-skin="u7"] .ttl{flex:1;text-align:center;font-size:13px}
+[data-skin="u7"] .eq{flex:1;display:flex;justify-content:space-around;align-items:stretch}
+[data-skin="u7"] .vb{display:flex;flex-direction:column;align-items:center;gap:4px}
+[data-skin="u7"] .vb .pct{font-size:10px}
+[data-skin="u7"] .track{width:18px;flex:1;background:#141413;border-radius:5px;overflow:hidden;display:flex;align-items:flex-end}
+[data-skin="u7"] .vf{width:100%;background:var(--u,#3f7fbf)}
+[data-skin="u7"] .vb .lbl{font-size:8px}
+[data-skin="u7"] .compact .in{padding:8px 9px}
+[data-skin="u7"] .compact .ttl{font-size:11px}
+[data-skin="u7"] .compact .track{width:14px}
+[data-skin="u7"] .compact .vb .pct{font-size:9px}
+[data-skin="u7"] .compact .vb .lbl{font-size:7.5px}
+</style>
+<figure class="skin dk usg" data-skin="u7">
+  <figcaption><b>U7 · Equalizer</b> — three vertical columns fill from the floor like a level meter; % above, label below. Distinct silhouette, still tiny.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="eq">
+        <div class="vb"><span class="pct">29%</span><div class="track"><div class="vf" style="height:29%"></div></div><span class="lbl">Current</span></div>
+        <div class="vb"><span class="pct">4%</span><div class="track"><div class="vf" style="height:4%"></div></div><span class="lbl">Weekly</span></div>
+        <div class="vb"><span class="pct">18%</span><div class="track"><div class="vf" style="height:18%"></div></div><span class="lbl">Fable</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="eq">
+        <div class="vb"><span class="pct">29%</span><div class="track"><div class="vf" style="height:29%"></div></div><span class="lbl">C</span></div>
+        <div class="vb"><span class="pct">4%</span><div class="track"><div class="vf" style="height:4%"></div></div><span class="lbl">W</span></div>
+        <div class="vb"><span class="pct">18%</span><div class="track"><div class="vf" style="height:18%"></div></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U8 · Underline ══ -->
+<style>
+[data-skin="u8"] .tile.full{width:200px;height:132px}
+[data-skin="u8"] .tile.compact{width:120px;height:116px}
+[data-skin="u8"] .in{padding:9px 13px;display:flex;flex-direction:column}
+[data-skin="u8"] .hdr{margin-bottom:6px}
+[data-skin="u8"] .ttl{flex:1;font-size:13px}
+[data-skin="u8"] .u{padding:3px 0}
+[data-skin="u8"] .urow{display:flex;align-items:baseline}
+[data-skin="u8"] .urow .lbl{font-size:10px}
+[data-skin="u8"] .urow .pct{margin-left:auto;font-size:14px}
+[data-skin="u8"] .uline{margin-top:5px;height:3px;border-radius:99px;background:#141413;overflow:hidden}
+[data-skin="u8"] .uline i{display:block;height:100%;background:var(--u,#3f7fbf);border-radius:99px}
+[data-skin="u8"] .compact .in{padding:8px 10px}
+[data-skin="u8"] .compact .ttl{font-size:12px}
+[data-skin="u8"] .compact .u{padding:3px 0}
+[data-skin="u8"] .compact .urow .lbl{font-size:9px}
+[data-skin="u8"] .compact .urow .pct{font-size:12px}
+</style>
+<figure class="skin dk usg" data-skin="u8">
+  <figcaption><b>U8 · Underline</b> — editorial and airy: label left, number right, a hairline progress underline beneath each. The most restrained of the set.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="u"><div class="urow"><span class="lbl">Current</span><span class="pct">29%</span></div><div class="uline"><i style="width:29%"></i></div></div>
+      <div class="u"><div class="urow"><span class="lbl">Weekly</span><span class="pct">4%</span></div><div class="uline"><i style="width:4%"></i></div></div>
+      <div class="u"><div class="urow"><span class="lbl">Fable</span><span class="pct">18%</span></div><div class="uline"><i style="width:18%"></i></div></div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="u"><div class="urow"><span class="lbl">Current</span><span class="pct">29%</span></div><div class="uline"><i style="width:29%"></i></div></div>
+      <div class="u"><div class="urow"><span class="lbl">Weekly</span><span class="pct">4%</span></div><div class="uline"><i style="width:4%"></i></div></div>
+      <div class="u"><div class="urow"><span class="lbl">Fable</span><span class="pct">18%</span></div><div class="uline"><i style="width:18%"></i></div></div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U9 · Capsule Trio ══ -->
+<style>
+[data-skin="u9"] .tile.full{width:206px;height:124px}
+[data-skin="u9"] .tile.compact{width:120px;height:100px}
+[data-skin="u9"] .in{padding:11px 12px;display:flex;flex-direction:column;gap:7px}
+[data-skin="u9"] .hdr{margin-bottom:1px}
+[data-skin="u9"] .ttl{flex:1;text-align:center;font-size:13px}
+[data-skin="u9"] .cap{position:relative;height:22px;border-radius:99px;background:#141413;overflow:hidden;display:flex;align-items:center}
+[data-skin="u9"] .cap .cf{position:absolute;left:0;top:0;bottom:0;background:var(--u,#3f7fbf);border-radius:99px}
+[data-skin="u9"] .cap .lbl{position:relative;margin-left:11px;font-size:9px;color:#f0ede4;z-index:1}
+[data-skin="u9"] .cap .pct{position:relative;margin-left:auto;margin-right:11px;font-size:11px;z-index:1}
+[data-skin="u9"] .compact .in{padding:9px;gap:6px}
+[data-skin="u9"] .compact .ttl{font-size:11px}
+[data-skin="u9"] .compact .cap{height:18px}
+[data-skin="u9"] .compact .cap .lbl{margin-left:9px;font-size:8px}
+[data-skin="u9"] .compact .cap .pct{margin-right:9px;font-size:9px}
+</style>
+<figure class="skin dk usg" data-skin="u9">
+  <figcaption><b>U9 · Capsule Trio</b> — three filled capsule gauges; the green level and the text share one pill, label left, % right. Bold and instantly readable.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="cap"><span class="cf" style="width:29%"></span><span class="lbl">Current</span><span class="pct">29%</span></div>
+      <div class="cap"><span class="cf" style="width:4%"></span><span class="lbl">Weekly</span><span class="pct">4%</span></div>
+      <div class="cap"><span class="cf" style="width:18%"></span><span class="lbl">Fable</span><span class="pct">18%</span></div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hdr"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="cap"><span class="cf" style="width:29%"></span><span class="lbl">Current</span><span class="pct">29%</span></div>
+      <div class="cap"><span class="cf" style="width:4%"></span><span class="lbl">Weekly</span><span class="pct">4%</span></div>
+      <div class="cap"><span class="cf" style="width:18%"></span><span class="lbl">Fable</span><span class="pct">18%</span></div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ U10 · Mini Bento ══ -->
+<style>
+[data-skin="u10"] .tile.full{width:206px;height:130px}
+[data-skin="u10"] .tile.compact{width:120px;height:112px}
+[data-skin="u10"] .in{padding:10px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr;gap:7px}
+[data-skin="u10"] .hd2{grid-column:1/3;display:flex;align-items:center;gap:6px}
+[data-skin="u10"] .ttl{flex:1;text-align:center;font-size:13px}
+[data-skin="u10"] .top{grid-column:1/3;padding:8px 11px;display:flex;align-items:center}
+[data-skin="u10"] .top .pct{font-size:23px}
+[data-skin="u10"] .top .lbl{margin-left:8px;font-size:9px}
+[data-skin="u10"] .cel{padding:7px 9px;display:flex;flex-direction:column;justify-content:center;gap:5px}
+[data-skin="u10"] .celtop{display:flex;align-items:baseline;justify-content:space-between}
+[data-skin="u10"] .cel .lbl{font-size:8px}
+[data-skin="u10"] .cel .pct{font-size:15px}
+[data-skin="u10"] .cel .bar{height:5px}
+[data-skin="u10"] .compact .in{padding:8px;gap:5px}
+[data-skin="u10"] .compact .ttl{font-size:11px}
+[data-skin="u10"] .compact .top{padding:6px 9px}
+[data-skin="u10"] .compact .top .pct{font-size:18px}
+[data-skin="u10"] .compact .cel{padding:5px 7px}
+[data-skin="u10"] .compact .cel .pct{font-size:12px}
+[data-skin="u10"] .compact .cel .bar{height:4px}
+</style>
+<figure class="skin dk usg" data-skin="u10">
+  <figcaption><b>U10 · Mini Bento</b> — a compact grid: the current window spans the top row, Weekly and Fable share the bottom two cells. The most "app-panel" of the set.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="hd2"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 14m</span></div>
+      <div class="top card"><span class="pct">29%</span><span class="lbl">Current</span></div>
+      <div class="cel card"><div class="celtop"><span class="lbl">Weekly</span><span class="pct">4%</span></div><div class="bar"><div class="fill" style="width:4%"></div></div></div>
+      <div class="cel card"><div class="celtop"><span class="lbl">Fable</span><span class="pct">18%</span></div><div class="bar"><div class="fill" style="width:18%"></div></div></div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="hd2"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 14m</span></div>
+      <div class="top card"><span class="pct">29%</span><span class="lbl">Current</span></div>
+      <div class="cel card"><div class="lbl">Weekly</div><div class="pct">4%</div></div>
+      <div class="cel card"><div class="lbl">Fable</div><div class="pct">18%</div></div>
+    </div></div>
+  </div>
+</figure>
+
+</div>
+
+
+<script>
+// LOCKED clawd sprite — geometry from clawd-mascot-spec (never redraw by eye). Body=currentColor, eyes=#111 (blink).
+// Locked outer silhouette. Inner edges overlap ~1u UNDER the body so the per-part
+// groups (needed for the isWorking bob/scan) don't reveal anti-alias seams.
+const BODY=[15.8,0,84.2,47.6];
+const ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,46.6,25.5,64.8],[33.4,46.6,43.1,64.8],[56.9,46.6,66.6,64.8],[74.5,46.6,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+function sprite(px){
+  const w=(17*px).toFixed(1),h=(11.9*px).toFixed(1);
+  const r=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g><g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+}
+document.querySelectorAll('.clawd-i').forEach((el,i)=>{
+  el.classList.add('clawd');
+  el.style.setProperty('--bi',i%7);
+  el.innerHTML=sprite(parseFloat(el.dataset.px||'2'));
+});
+
+// isWorking demo flag — drives the mascot's "Coder" working animation (bob + eye-scan) on every skin.
+// HUD sets this from live turn-state.
+const isWorking = true;
+document.body.classList.toggle('working', isWorking);
+
+// Threshold colors — mirrors app/ui/usage-color.js: blue <75, yellow 75–90, red ≥90.
+// Demo spreads the three metrics across bands so all three colors show at once:
+// Current 94 (red), Weekly 82 (yellow), Fable 18 (blue). Each row is painted from
+// its own label, so width / height / segment count / ring angle / hue all agree.
+(() => {
+  const barCol = p => p >= 90 ? "#e5484d" : p >= 75 ? "#f59e0b" : "#3f7fbf";
+  const MAP = { current:94, cur:94, c:94, weekly:82, wk:82, w:82, fable:18, fb:18, f:18 };
+  const keyOf = el => el ? el.textContent.trim().toLowerCase() : "";
+  const UNIT = ".r,.col,.c,.vb,.u,.cap,.cel,.top,.hero";
+  document.querySelectorAll("figure.usg .tile").forEach(tile => {
+    tile.querySelectorAll(UNIT).forEach(unit => {
+      const p = MAP[keyOf(unit.querySelector(".lbl"))];
+      if (p == null) return;
+      unit.style.setProperty("--u", barCol(p));
+      const pctEl = unit.querySelector(".pct,.rv"); if (pctEl) pctEl.textContent = p + "%";
+      unit.querySelectorAll(".fill,.cf,.uline i").forEach(f => f.style.width = p + "%");
+      const vf = unit.querySelector(".vf"); if (vf) vf.style.height = p + "%";
+      const ring = unit.querySelector(".ring"); if (ring) ring.style.setProperty("--p", p);
+      const cells = unit.querySelectorAll(".seg i,.dots i");
+      if (cells.length) {
+        const lit = Math.min(cells.length, Math.max(p > 0 ? 1 : 0, Math.round(p / 100 * cells.length)));
+        cells.forEach((c, i) => c.classList.toggle("on", i < lit));
+      }
+    });
+    // u4: the Current bar (.heroBar) sits outside .hero — paint it from Current.
+    const hb = tile.querySelector(".heroBar");
+    if (hb) { const p = MAP.current; hb.style.setProperty("--u", barCol(p)); const f = hb.querySelector(".fill"); if (f) f.style.width = p + "%"; }
+  });
+})();
+</script>
+</body>
+</html>

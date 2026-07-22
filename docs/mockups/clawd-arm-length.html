@@ -69,10 +69,11 @@
 <div class="sub">
   Body, legs, eyes and arm thickness are all frozen at the locked geometry. Only horizontal
   <b>reach</b> changes: how far each arm sticks out past the body edge, in viewBox units.
-  Range shown: <b>14.5 to 18.0</b>, step 0.5. Shipped today is <b>14.5</b>
-  (raised from 10.6 in commit <code>52aaa8d</code>).
-  Past 14.5 the arms leave the 100-unit viewBox, so the box widens with them —
-  the body stays exactly the same size on screen, the sprite just gets wider.
+  Range shown: <b>14.5 to 18.0</b>, step 0.5. Shipped today is <b>17</b>
+  (chain: 10.6, 14.5, 16, 16.5, 17).
+  Past 14.5 the arms leave the 100-unit viewBox. This scan widens the box to suit;
+  the app instead keeps <code>viewBox="0 0 100 70"</code> and lets the arms overflow,
+  because the working animations pivot on view-box-relative origins.
 </div>
 
 <div class="grid" id="grid"></div>
@@ -100,7 +101,8 @@ const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
 const ARM_Y0 = 16.9, ARM_Y1 = 35.8;
 // Inner edges stay buried 3.2u under the body (the anti-alias seam fix).
 const ARM_L_INNER = 19.0, ARM_R_INNER = 81.0;
-const BASE_REACH = 14.5;
+const BASE_REACH = 14.5;   // reach at which the arms exactly fill the viewBox
+const SHIPPED = 17;        // reach in app/ui/clawd.js
 
 const r = (a) =>
   `<rect x="${a[0]}" y="${a[1]}" width="${(a[2] - a[0]).toFixed(2)}" height="${(a[3] - a[1]).toFixed(2)}"/>`;
@@ -127,7 +129,7 @@ const grid = document.getElementById("grid");
 const strip = document.getElementById("strip");
 
 REACHES.forEach((reach) => {
-  const cur = reach === BASE_REACH;
+  const cur = reach === SHIPPED;
   const pad = Math.max(0, reach - BASE_REACH);
   const w = (0.17 * (100 + 2 * pad) * PX).toFixed(1);
   const label = cur ? " · shipped" : "";

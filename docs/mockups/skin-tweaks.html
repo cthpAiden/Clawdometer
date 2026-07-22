@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Skin tweaks — Classic width + Bento hero bar</title>
+  <!-- Reuse the SHIPPED app stylesheet so these mockups render byte-identical to
+       the real HUD; @font-face urls resolve against app/ui/fonts, so the exact
+       bundled fonts load. Only the deltas below are new. -->
+  <link rel="stylesheet" href="../../app/ui/style.css" />
+  <style>
+    /* ── gallery chrome (mockup-only) ─────────────────────────────────────── */
+    html, body { background: #0d0d0c !important; overflow: auto !important; }
+    body { font-family: var(--font-sans); color: #c8c5ba; padding: 28px 32px 70px; }
+    h1 { font: 600 18px var(--font-sans); color: #e7e4d9; margin-bottom: 5px; }
+    .sub { font-size: 12px; color: #8b877c; max-width: 660px; line-height: 1.55; }
+    h2 { font: 600 13px var(--font-sans); color: #d97757; margin: 34px 0 4px; letter-spacing: .3px; }
+    .note { font-size: 11.5px; color: #8b877c; margin-bottom: 16px; max-width: 660px; line-height: 1.5; }
+    .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+    .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .frame { background: #161615; padding: 16px; border-radius: 12px; display: inline-flex; }
+    .cap { font-size: 11px; color: #a9a59a; text-align: center; line-height: 1.4; }
+    .cap b { color: #e7e4d9; font-weight: 600; }
+    .rec .frame { box-shadow: 0 0 0 2px #7dd37d55; }
+    .rec .cap b { color: #7dd37d; }
+    .now .frame { box-shadow: 0 0 0 1px #ffffff1a; }
+
+    /* This page isn't the app (no data-rice toggle), so force both skins on. */
+    #card  { display: flex !important; }
+    #bento { display: grid !important; }
+
+    /* ── DELTA: Bento hero (Current / 5h) gets a limit bar ─────────────────── */
+    #bento .top.hasbar { flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
+    #bento .top.hasbar .toprow { display: flex; align-items: baseline; gap: 8px; }
+    #bento .top.hasbar .bar { height: 6px; }
+    /* arms reach past the 100-unit viewBox — same rule app/ui/style.css carries */
+    .clawd svg { overflow: visible; }
+  </style>
+</head>
+<body>
+  <h1>Skin tweaks</h1>
+  <p class="sub">Rendered with the live <code>app/ui/style.css</code> — what you see is what the HUD draws. Demo values match your screenshots (Current&nbsp;37/39%, Weekly&nbsp;32%, Fable&nbsp;11%). Pick a Classic width and confirm the Bento hero bar, then I wire it in.</p>
+
+  <!-- ══ CLASSIC ══════════════════════════════════════════════════════════ -->
+  <h2>Classic — shorten the box (narrow the bar)</h2>
+  <p class="note">Everything kept: 3 rows, full labels, %s, mascot, reset. Only the middle bar shrinks, so the card narrows. Height unchanged (100px).</p>
+  <div class="row">
+
+    <!-- 206 — current -->
+    <div class="tile now">
+      <div class="frame"><div id="card" style="width:206px">
+        <div id="header">
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="ttl">Usage</span>
+          <span class="rst-top">Resets 32m</span>
+        </div>
+        <div class="rows">
+          <div class="r"><span class="lbl"><span class="lf">Current</span></span><div class="bar"><div class="fill" style="width:37%"></div></div><span class="pct">37%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Weekly</span></span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="pct">32%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Fable</span></span><div class="bar"><div class="fill" style="width:11%"></div></div><span class="pct">11%</span></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Now</b> · 206 px · bar 90</div>
+    </div>
+
+    <!-- 188 -->
+    <div class="tile">
+      <div class="frame"><div id="card" style="width:188px">
+        <div id="header">
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="ttl">Usage</span>
+          <span class="rst-top">Resets 32m</span>
+        </div>
+        <div class="rows">
+          <div class="r"><span class="lbl"><span class="lf">Current</span></span><div class="bar"><div class="fill" style="width:37%"></div></div><span class="pct">37%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Weekly</span></span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="pct">32%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Fable</span></span><div class="bar"><div class="fill" style="width:11%"></div></div><span class="pct">11%</span></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>A</b> · 188 px · bar 72</div>
+    </div>
+
+    <!-- 172 — recommended -->
+    <div class="tile rec">
+      <div class="frame"><div id="card" style="width:172px">
+        <div id="header">
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="ttl">Usage</span>
+          <span class="rst-top">Resets 32m</span>
+        </div>
+        <div class="rows">
+          <div class="r"><span class="lbl"><span class="lf">Current</span></span><div class="bar"><div class="fill" style="width:37%"></div></div><span class="pct">37%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Weekly</span></span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="pct">32%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Fable</span></span><div class="bar"><div class="fill" style="width:11%"></div></div><span class="pct">11%</span></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>B — recommended</b> · 172 px · bar 56</div>
+    </div>
+
+    <!-- 158 -->
+    <div class="tile">
+      <div class="frame"><div id="card" style="width:158px">
+        <div id="header">
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="ttl">Usage</span>
+          <span class="rst-top">Resets 32m</span>
+        </div>
+        <div class="rows">
+          <div class="r"><span class="lbl"><span class="lf">Current</span></span><div class="bar"><div class="fill" style="width:37%"></div></div><span class="pct">37%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Weekly</span></span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="pct">32%</span></div>
+          <div class="r"><span class="lbl"><span class="lf">Fable</span></span><div class="bar"><div class="fill" style="width:11%"></div></div><span class="pct">11%</span></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>C</b> · 158 px · bar 42</div>
+    </div>
+
+  </div>
+
+  <!-- ══ BENTO ════════════════════════════════════════════════════════════ -->
+  <h2>Bento Box — add a bar to the Current / 5h hero</h2>
+  <p class="note">The hero currently shows a number only. Adding a bar gives the 5h window the same threshold color cue the other two cells have (today it only warns via the near-limit pulse). Needs ~8px more card height (130 → 138) so the cells don't crush.</p>
+  <div class="row">
+
+    <!-- current -->
+    <div class="tile now">
+      <div class="frame"><div id="bento" style="height:130px">
+        <div class="hd2">
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="ttl">Usage</span>
+          <span class="rst-top">Resets 29m</span>
+        </div>
+        <div class="top card">
+          <span class="v">39%</span>
+          <span class="lbl">Current</span>
+        </div>
+        <div class="cel card">
+          <div class="celtop"><span class="lbl">Weekly</span><span class="v">32%</span></div>
+          <div class="bar"><div class="fill" style="width:32%"></div></div>
+        </div>
+        <div class="cel card">
+          <div class="celtop"><span class="lbl">Fable</span><span class="v">11%</span></div>
+          <div class="bar"><div class="fill" style="width:11%"></div></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Now</b> · hero, no bar</div>
+    </div>
+
+    <!-- proposed -->
+    <div class="tile rec">
+      <div class="frame"><div id="bento" style="height:138px">
+        <div class="hd2">
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="ttl">Usage</span>
+          <span class="rst-top">Resets 29m</span>
+        </div>
+        <div class="top card hasbar">
+          <div class="toprow"><span class="v">39%</span><span class="lbl">Current</span></div>
+          <div class="bar"><div class="fill" style="width:39%"></div></div>
+        </div>
+        <div class="cel card">
+          <div class="celtop"><span class="lbl">Weekly</span><span class="v">32%</span></div>
+          <div class="bar"><div class="fill" style="width:32%"></div></div>
+        </div>
+        <div class="cel card">
+          <div class="celtop"><span class="lbl">Fable</span><span class="v">11%</span></div>
+          <div class="bar"><div class="fill" style="width:11%"></div></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Proposed</b> · hero bar added</div>
+    </div>
+
+  </div>
+
+  <!-- Clawd mascot injector — copied verbatim from app/ui/clawd.js (LOCKED
+       geometry) so the mascot is identical to the HUD's. -->
+  <script>
+  (function () {
+    const BODY = [15.8, 0, 84.2, 47.6];
+    const ARM_L = [-1.2, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 101.2, 35.8];
+    const LEGS = [
+      [15.8, 46.6, 25.5, 64.8], [33.4, 46.6, 43.1, 64.8],
+      [56.9, 46.6, 66.6, 64.8], [74.5, 46.6, 84.2, 64.8],
+    ];
+    const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
+    const r = (a) =>
+      `<rect x="${a[0]}" y="${a[1]}" width="${(a[2] - a[0]).toFixed(2)}" height="${(a[3] - a[1]).toFixed(2)}"/>`;
+    function sprite(px) {
+      const w = (17 * px).toFixed(1), h = (11.9 * px).toFixed(1);
+      return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">` +
+        `<g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g>` +
+        `<g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+    }
+    document.querySelectorAll(".clawd-i").forEach((el) => {
+      el.classList.add("clawd");
+      el.innerHTML = sprite(parseFloat(el.dataset.px || "1.15"));
+    });
+  })();
+  </script>
+</body>
+</html>

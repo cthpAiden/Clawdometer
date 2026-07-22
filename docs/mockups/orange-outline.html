@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Orange outline + compact 5H/7D/FBL</title>
+  <!-- Links the SHIPPED app stylesheet, so cards render identical to the HUD
+       (already at the new 172 Classic / 206x138 Bento sizes). Only the outline
+       styles + compact-label scope below are new. -->
+  <link rel="stylesheet" href="../../app/ui/style.css" />
+  <style>
+    /* ── gallery chrome ───────────────────────────────────────────────────── */
+    html, body { background: #0d0d0c !important; overflow: auto !important; }
+    body { font-family: var(--font-sans); color: #c8c5ba; padding: 28px 32px 70px; }
+    h1 { font: 600 18px var(--font-sans); color: #e7e4d9; margin-bottom: 5px; }
+    .sub { font-size: 12px; color: #8b877c; max-width: 680px; line-height: 1.55; }
+    h2 { font: 600 13px var(--font-sans); color: #d97757; margin: 34px 0 4px; letter-spacing: .3px; }
+    .note { font-size: 11.5px; color: #8b877c; margin-bottom: 16px; max-width: 680px; line-height: 1.5; }
+    .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+    .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .frame { background: #161615; padding: 16px; border-radius: 12px; display: inline-flex; }
+    .cap { font-size: 11px; color: #a9a59a; text-align: center; line-height: 1.4; max-width: 150px; }
+    .cap b { color: #e7e4d9; font-weight: 600; }
+    .rec .frame { box-shadow: 0 0 0 2px #7dd37d55; }
+    .rec .cap b { color: #7dd37d; }
+    .now .frame { box-shadow: 0 0 0 1px #ffffff1a; }
+
+    #card  { display: flex !important; }
+    #bento { display: grid !important; }
+
+    /* ── DELTA 1: orange outline styles (apply as a class on #card / #bento) ──
+       box-sizing:border-box is global, so borders draw INSIDE the card bounds —
+       never clipped by the exact-fit transparent window. Inset shadows likewise
+       stay inside. */
+    .o-hair   { border: 1px solid #d97757; }
+    .o-bold   { border: 1.5px solid #e0805f; }
+    .o-inset  { box-shadow: inset 0 0 0 1.5px #d97757; }
+    .o-glow   { border: 1px solid #d97757; box-shadow: inset 0 0 9px -1px rgba(217,119,87,.55); }
+    .o-mascot { border: 1px solid #e17956; }
+
+    /* ── DELTA 2: compact Classic label scope (isolated, since body.compact is
+       global). Mirrors the app's body.compact #card rules; only the label width
+       is widened (12 → 22) to hold 5H / 7D / FBL. */
+    .cbox #card { width: 120px; height: 100px; padding: 8px 9px; }
+    .cbox #card #header { margin-bottom: 6px; }
+    .cbox #card .ttl { font-size: 11px; }
+    .cbox #card .rows { gap: 7px; }
+    .cbox #card .r { gap: 6px; }
+    .cbox #card .r .bar { height: 5px; }
+    .cbox #card .r .pct { width: 26px; font-size: 9px; }
+    .cbox #card .lf { display: none; }
+    .cbox #card .lc { display: inline; font-size: 8px; }
+    .cbox-now #card .r .lbl { width: 12px; font-size: 8px; }  /* current: single letter */
+    .cbox-new #card .r .lbl { width: 22px; font-size: 8px; }  /* proposed: 5H/7D/FBL */
+    /* arms reach past the 100-unit viewBox — same rule app/ui/style.css carries */
+    .clawd svg { overflow: visible; }
+  </style>
+</head>
+<body>
+  <h1>Orange outline &amp; compact 5H / 7D / FBL</h1>
+  <p class="sub">Rendered with the live <code>app/ui/style.css</code>. Outlines sit at/inside the card edge (the transparent, exact-fit HUD window clips anything outside). Demo values echo your reference (62 / 41 / 18%). Pick an outline style + hue + the Fable label, then I build it into both skins.</p>
+
+  <!-- ══ COMPACT LABELS ══════════════════════════════════════════════════ -->
+  <h2>1 · Compact Classic labels — C/W/F → 5H / 7D / FBL</h2>
+  <p class="note">Only the compact (120px) size changes; regular still spells Current / Weekly / Fable. Uppercase FBL matches 5H/7D. Your reference used FB (2 chars) — also shown.</p>
+  <div class="row">
+
+    <!-- current C/W/F -->
+    <div class="tile now cbox cbox-now">
+      <div class="frame"><div id="card" data-lbl="cwf"></div></div>
+      <div class="cap"><b>Now</b> · C / W / F</div>
+    </div>
+
+    <!-- proposed 5H/7D/FBL + hairline outline -->
+    <div class="tile rec cbox cbox-new">
+      <div class="frame"><div id="card" class="o-hair" data-lbl="fbl"></div></div>
+      <div class="cap"><b>Proposed</b> · 5H / 7D / FBL<br>(+ hairline outline)</div>
+    </div>
+
+    <!-- proposed FB variant -->
+    <div class="tile cbox cbox-new">
+      <div class="frame"><div id="card" data-lbl="fb"></div></div>
+      <div class="cap"><b>Alt</b> · 5H / 7D / FB</div>
+    </div>
+
+  </div>
+
+  <!-- ══ CLASSIC OUTLINE ═════════════════════════════════════════════════ -->
+  <h2>2 · Orange outline — Classic (172px)</h2>
+  <p class="note">Same card, four edge treatments. Hairline is closest to your reference.</p>
+  <div class="row">
+    <div class="tile now"><div class="frame"><div id="card" data-lbl="full"></div></div><div class="cap"><b>None</b> · current</div></div>
+    <div class="tile rec"><div class="frame"><div id="card" class="o-hair" data-lbl="full"></div></div><div class="cap"><b>A · Hairline</b><br>1px #d97757</div></div>
+    <div class="tile"><div class="frame"><div id="card" class="o-inset" data-lbl="full"></div></div><div class="cap"><b>B · Inset ring</b><br>1.5px, softer corner</div></div>
+    <div class="tile"><div class="frame"><div id="card" class="o-glow" data-lbl="full"></div></div><div class="cap"><b>C · Glow</b><br>edge + inner bloom</div></div>
+  </div>
+
+  <!-- ══ BENTO OUTLINE ═══════════════════════════════════════════════════ -->
+  <h2>3 · Orange outline — Bento Box (206×138)</h2>
+  <p class="note">The outline wraps the whole panel; the inner Weekly/Fable cells keep their own hairline.</p>
+  <div class="row">
+    <div class="tile now"><div class="frame"><div id="bento" data-lbl="bento"></div></div><div class="cap"><b>None</b> · current</div></div>
+    <div class="tile rec"><div class="frame"><div id="bento" class="o-hair" data-lbl="bento"></div></div><div class="cap"><b>A · Hairline</b><br>1px #d97757</div></div>
+    <div class="tile"><div class="frame"><div id="bento" class="o-inset" data-lbl="bento"></div></div><div class="cap"><b>B · Inset ring</b></div></div>
+    <div class="tile"><div class="frame"><div id="bento" class="o-glow" data-lbl="bento"></div></div><div class="cap"><b>C · Glow</b></div></div>
+  </div>
+
+  <!-- ══ HUE ═════════════════════════════════════════════════════════════ -->
+  <h2>4 · Which orange? (hairline on Classic)</h2>
+  <p class="note">Coral is the Claude-Code brand orange; mascot orange makes the outline echo clawd exactly.</p>
+  <div class="row">
+    <div class="tile rec"><div class="frame"><div id="card" class="o-hair" data-lbl="full"></div></div><div class="cap"><b>Coral</b> · #d97757</div></div>
+    <div class="tile"><div class="frame"><div id="card" class="o-mascot" data-lbl="full"></div></div><div class="cap"><b>Mascot</b> · #e17956</div></div>
+  </div>
+
+  <script>
+  // Clawd sprite injector — verbatim from app/ui/clawd.js (LOCKED geometry).
+  (function () {
+    const BODY = [15.8, 0, 84.2, 47.6];
+    const ARM_L = [-1.2, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 101.2, 35.8];
+    const LEGS = [[15.8, 46.6, 25.5, 64.8], [33.4, 46.6, 43.1, 64.8], [56.9, 46.6, 66.6, 64.8], [74.5, 46.6, 84.2, 64.8]];
+    const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
+    const r = (a) => `<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+    function sprite(px) {
+      const w = (17*px).toFixed(1), h = (11.9*px).toFixed(1);
+      return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg"><g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g><g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+    }
+    // Build the card / bento inner markup from a compact descriptor so every tile
+    // is identical without repeating 20 lines of HTML each.
+    const V = { c: 62, w: 41, f: 18, r: "2h47m" };
+    const clawd = '<span class="clawd-i" data-px="1.15"></span>';
+    function classicRows(lc) {
+      const L = lc === "fbl" ? ["5H","7D","FBL"] : lc === "fb" ? ["5H","7D","FB"] : lc === "cwf" ? ["C","W","F"] : ["","",""];
+      const rows = [["Current",V.c,L[0]],["Weekly",V.w,L[1]],["Fable",V.f,L[2]]];
+      return `<div id="header">${clawd}<span class="ttl">Usage</span><span class="rst-top">${lc==="full"?"Resets "+V.r:V.r}</span></div>` +
+        `<div class="rows">` + rows.map(([full,pct,lc2]) =>
+          `<div class="r"><span class="lbl"><span class="lf">${full}</span><span class="lc">${lc2}</span></span><div class="bar"><div class="fill" style="width:${pct}%"></div></div><span class="pct">${pct}%</span></div>`
+        ).join("") + `</div>`;
+    }
+    function bentoInner() {
+      return `<div class="hd2">${clawd}<span class="ttl">Usage</span><span class="rst-top">Resets ${V.r}</span></div>` +
+        `<div class="top card"><div class="toprow"><span class="v">${V.c}%</span><span class="lbl">Current</span></div><div class="bar"><div class="fill" style="width:${V.c}%"></div></div></div>` +
+        `<div class="cel card"><div class="celtop"><span class="lbl">Weekly</span><span class="v">${V.w}%</span></div><div class="bar"><div class="fill" style="width:${V.w}%"></div></div></div>` +
+        `<div class="cel card"><div class="celtop"><span class="lbl">Fable</span><span class="v">${V.f}%</span></div><div class="bar"><div class="fill" style="width:${V.f}%"></div></div></div>`;
+    }
+    document.querySelectorAll("#card").forEach((el) => { el.innerHTML = classicRows(el.dataset.lbl || "full"); });
+    document.querySelectorAll("#bento").forEach((el) => { el.innerHTML = bentoInner(); });
+    // now inject sprites
+    document.querySelectorAll(".clawd-i").forEach((el) => { el.classList.add("clawd"); el.innerHTML = sprite(parseFloat(el.dataset.px || "1.15")); });
+  })();
+  </script>
+</body>
+</html>

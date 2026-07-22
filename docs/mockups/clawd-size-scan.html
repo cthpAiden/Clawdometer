@@ -68,7 +68,7 @@
 
 <h1>Clawd size scan — widget mascot</h1>
 <div class="sub">
-  Classic skin (U8, 200×122) at true 1:1 scale. Current shipped value is <b>1.35</b>.
+  Classic skin (U8, 200×122) at true 1:1 scale. Current shipped value is <b>1.45</b>.
   Step 0.05 (0.5 would give only two samples).
   Sprite is <b>17 × 11.9 px</b> multiplied by <b>data-px</b>.
 </div>
@@ -84,7 +84,7 @@
 <script>
 // LOCKED sprite geometry — copied verbatim from app/ui/clawd.js, never redrawn.
 const BODY = [15.8, 0, 84.2, 47.6];
-const ARM_L = [1.3, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 98.7, 35.8];
+const ARM_L = [-1.2, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 101.2, 35.8];
 const LEGS = [
   [15.8, 42.0, 25.5, 64.8], [33.4, 42.0, 43.1, 64.8],
   [56.9, 42.0, 66.6, 64.8], [74.5, 42.0, 84.2, 64.8],
@@ -112,7 +112,7 @@ const strip = document.getElementById("strip");
 
 SIZES.forEach((px) => {
   const w = (17 * px).toFixed(1), h = (11.9 * px).toFixed(1);
-  const cur = px === 1.35;
+  const cur = px === 1.45;
 
   const cell = document.createElement("div");
   cell.className = "cell mark";
