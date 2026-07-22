@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Clawdometer — final app icon (source)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; }
+  /* ?size=N renders ONLY the icon at N×N with a transparent page, which is how
+     the .ico layers are rasterized (headless Chrome, one shot per size). With
+     no query string the page shows a labelled preview strip instead. */
+  body.bare { width: 100vw; height: 100vh; overflow: hidden; }
+  body.bare svg { display: block; }
+
+  body.preview {
+    background: #141413; color: #e7e4d9; padding: 28px 32px;
+    font: 12px/1.45 "Hanken Grotesk", "Segoe UI", sans-serif;
+  }
+  h1 { font: 500 19px/1 Newsreader, Georgia, serif; color: #f2f0e8; margin-bottom: 4px; }
+  .sub { color: #9a958b; font-size: 11px; margin-bottom: 24px; max-width: 720px; }
+  .sub b { color: #e17956; font-weight: 600; }
+  .row { display: flex; align-items: flex-end; gap: 20px; }
+  .sz { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .sz .lab { font-size: 9px; color: #6f6b63; }
+  .well {
+    background:
+      linear-gradient(45deg, #262624 25%, transparent 25%, transparent 75%, #262624 75%),
+      linear-gradient(45deg, #262624 25%, transparent 25%, transparent 75%, #262624 75%),
+      #2c2c2a;
+    background-size: 12px 12px; background-position: 0 0, 6px 6px;
+    border-radius: 8px; padding: 8px; line-height: 0;
+  }
+  .well svg { display: block; }
+</style>
+</head>
+<body>
+<script>
+/* ── Clawdometer app icon — concept 09 "Bars + Clawd" ─────────────────────────
+   Ink tile, LOCKED Clawd mascot, three usage bars descending longest-to-shortest
+   in the app's own threshold colors (usage-color.js): red crit, gold warn, blue
+   ok. This file is the SOURCE the .ico layers are rasterized from — edit here,
+   never hand-edit the binaries.
+
+   Mascot rects are the seam-fix variant from app/ui/clawd.js: arm inner edges
+   buried at 19.0 / 81.0 and legs starting at y 42.0, so the parts overlap the
+   body instead of abutting it. Abutting edges antialias into a hairline outline;
+   overlapping ones cannot. The visible silhouette is identical. */
+const RECTS = [
+  [15.8, 0,   84.2, 47.6], // body
+  [-1.2, 16.9,19.0, 35.8], // left arm  (inner edge buried under body)
+  [81.0, 16.9,101.2,35.8], // right arm (inner edge buried under body)
+  [15.8, 42.0,25.5, 64.8], // leg 1 (top buried under body)
+  [33.4, 42.0,43.1, 64.8], // leg 2
+  [56.9, 42.0,66.6, 64.8], // leg 3
+  [74.5, 42.0,84.2, 64.8], // leg 4
+];
+const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
+
+const TILE = "#1e1e1c", CLAY = "#e17956";
+const RED = "#e5484d", GOLD = "#d9a441", BLUE = "#3f7fbf"; // usage-color.js
+
+const r = (a, f) =>
+  `<rect x="${a[0]}" y="${a[1]}" width="${(a[2] - a[0]).toFixed(2)}" height="${(a[3] - a[1]).toFixed(2)}" fill="${f}"/>`;
+
+/* mascot centered on (cx, cy) at width w; sprite box is 102.4 × 70 */
+function mascot(w, cx, cy) {
+  const s = w / 102.4, h = 70 * s;
+  const inner = RECTS.map((a) => r(a, CLAY)).join("") + EYES.map((a) => r(a, TILE)).join("");
+  return `<g transform="translate(${(cx - w / 2 + 1.2 * s).toFixed(2)} ${(cy - h / 2).toFixed(2)}) scale(${s.toFixed(4)})">${inner}</g>`;
+}
+
+/* Everything below lives in a 0 0 100 100 viewBox. */
+function icon(px) {
+  return `<svg width="${px}" height="${px}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`
+    + `<rect x="0" y="0" width="100" height="100" rx="22" fill="${TILE}"/>`
+    + mascot(56, 50, 34)
+    + `<rect x="22" y="62" width="56" height="6" rx="3" fill="${RED}"/>`
+    + `<rect x="22" y="72" width="42" height="6" rx="3" fill="${GOLD}"/>`
+    + `<rect x="22" y="82" width="26" height="6" rx="3" fill="${BLUE}"/>`
+    + `</svg>`;
+}
+
+const size = new URLSearchParams(location.search).get("size");
+if (size) {
+  document.body.className = "bare";
+  document.body.innerHTML = icon(parseInt(size, 10));
+} else {
+  document.body.className = "preview";
+  const SIZES = [256, 128, 64, 48, 32, 24, 16];
+  document.body.innerHTML =
+    `<h1>Clawdometer app icon — source</h1>
+     <div class="sub">Concept <b>09 · Bars + Clawd</b>. Rasterized per size by headless Chrome
+       (<code>?size=N</code> renders bare on a transparent page), then packed into
+       <b>app/src-tauri/icons/icon.ico</b>. Each layer below is rendered natively at its own
+       size — not downscaled — so the bars stay crisp.</div>
+     <div class="row">` +
+    SIZES.map((px) => `<div class="sz"><div class="well">${icon(px)}</div><div class="lab">${px}</div></div>`).join("") +
+    `</div>`;
+}
+</script>
+</body>
+</html>

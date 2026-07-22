@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Clawdometer — app icon concepts</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #141413; color: #e7e4d9; padding: 30px 34px 60px;
+    font: 12px/1.4 "Hanken Grotesk", "Segoe UI", sans-serif;
+  }
+  h1 { font: 500 20px/1 Newsreader, Georgia, serif; color: #f2f0e8; margin-bottom: 4px; }
+  .sub { color: #9a958b; font-size: 11px; margin-bottom: 26px; }
+  .sub b { color: #e17956; font-weight: 600; }
+
+  .grid { display: flex; flex-wrap: wrap; gap: 30px 26px; }
+  .card {
+    background: #1e1e1c; border-radius: 16px; padding: 18px 20px 16px;
+    display: flex; flex-direction: column; gap: 12px; width: 372px;
+  }
+  .card h2 { font: 600 13px/1.2 "Hanken Grotesk", "Segoe UI", sans-serif; color: #f2f0e8; }
+  .card h2 .n { color: #e17956; margin-right: 6px; font-weight: 800; }
+  .card .note { color: #9a958b; font-size: 10.5px; line-height: 1.45; min-height: 28px; }
+
+  .sizes { display: flex; align-items: flex-end; gap: 16px; }
+  .sz { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .sz .lab { font-size: 9px; color: #6f6b63; }
+  /* checkerboard behind so transparency reads */
+  .well {
+    background:
+      linear-gradient(45deg, #262624 25%, transparent 25%, transparent 75%, #262624 75%),
+      linear-gradient(45deg, #262624 25%, transparent 25%, transparent 75%, #262624 75%),
+      #2c2c2a;
+    background-size: 12px 12px; background-position: 0 0, 6px 6px;
+    border-radius: 8px; padding: 8px; line-height: 0;
+  }
+  .well svg { display: block; }
+  /* taskbar strip — the 16/24px reality check */
+  .bar {
+    display: flex; align-items: center; gap: 10px;
+    background: #202020; border: 1px solid #333; border-radius: 8px;
+    padding: 6px 12px; width: fit-content;
+  }
+  .bar .lab { font-size: 9px; color: #6f6b63; }
+  .bar svg { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Clawdometer — Windows app icon</h1>
+<div class="sub">
+  Replaces the placeholder (orange square + white dot). Every concept uses the <b>LOCKED</b> Clawd
+  geometry verbatim — never redrawn, only scaled/cropped. Each shown at 256, 48, 32, 16, plus a fake
+  taskbar strip. Palette: clay <b>#e17956</b>, ink <b>#141413</b>, cream <b>#f4f1ea</b>, gold <b>#d9a441</b>.
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+/* ── LOCKED Clawd geometry (reach 17) — copied verbatim, never redrawn ──────
+   Seam-fix variant from app/ui/clawd.js: arm inner edges are buried 3.2u under
+   the body (19.0 / 81.0) and legs start at y 42.0 instead of 47.6, so the parts
+   OVERLAP the body rather than abutting it. Abutting edges antialias into a
+   hairline outline when scaled; overlapping ones cannot. Visible silhouette is
+   identical. */
+const RECTS = [
+  [15.8, 0,   84.2, 47.6], // body
+  [-1.2, 16.9,19.0, 35.8], // left arm  (inner edge buried under body)
+  [81.0, 16.9,101.2,35.8], // right arm (inner edge buried under body)
+  [15.8, 42.0,25.5, 64.8], // leg 1  (top buried under body)
+  [33.4, 42.0,43.1, 64.8], // leg 2
+  [56.9, 42.0,66.6, 64.8], // leg 3
+  [74.5, 42.0,84.2, 64.8], // leg 4
+];
+const EYES = [
+  [24.9, 7.8, 32.7, 16.3],
+  [67.3, 7.8, 75.1, 16.3],
+];
+const r = (a, f) => `<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}" fill="${f}"/>`;
+/* full mascot group; body color + eye color params. Sprite box: x −1.2..101.2 (w 102.4), y 0..70 */
+const clawd = (body, eye) => RECTS.map(a=>r(a,body)).join("") + EYES.map(a=>r(a,eye)).join("");
+/* face crop: body + eyes only (rows y 0..47.6) */
+const face = (body, eye) => r(RECTS[0], body) + EYES.map(a=>r(a,eye)).join("");
+
+const CLAY = "#e17956", INK = "#141413", CREAM = "#f4f1ea", GOLD = "#d9a441", EYE = "#111";
+/* threshold colors, same values as app/ui/usage-color.js */
+const RED = "#e5484d", BLUE = "#3f7fbf";
+
+/* every concept returns full inner SVG for a 100×100 viewBox */
+const SQ = 100, RAD = 22; /* Win11-ish rounded square */
+const tile = (fill) => `<rect x="0" y="0" width="100" height="100" rx="${RAD}" fill="${fill}"/>`;
+
+/* helper: place mascot centered, scaled to width w (aspect 102.4:70) */
+function place(inner, w, cx = 50, cy = 50) {
+  const s = w / 102.4, h = 70 * s;
+  const tx = cx - w / 2 + 1.2 * s, ty = cy - h / 2;
+  return `<g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${s.toFixed(4)})">${inner}</g>`;
+}
+/* face crop is 68.4×47.6 (body box) */
+function placeFace(inner, w, cx = 50, cy = 50) {
+  const s = w / 68.4, h = 47.6 * s;
+  const tx = cx - w / 2 - 15.8 * s, ty = cy - h / 2;
+  return `<g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${s.toFixed(4)})">${inner}</g>`;
+}
+
+const CONCEPTS = [
+  {
+    name: "Clay tile",
+    note: "Straight swap of today's icon: clay tile, full cream Clawd. Zero cleverness, maximum brand.",
+    svg: tile(CLAY) + place(clawd(CREAM, EYE), 74),
+  },
+  {
+    name: "Ink tile",
+    note: "Dark tile, clay Clawd — matches the HUD's #1e1e1c world. Eyes stay near-black on clay.",
+    svg: tile("#1e1e1c") + place(clawd(CLAY, "#1e1e1c"), 74),
+  },
+  {
+    name: "Cream tile",
+    note: "Light tile like the mockup pages. Clay mascot pops; reads warm at every size.",
+    svg: tile(CREAM) + place(clawd(CLAY, EYE), 74),
+  },
+  {
+    name: "Face crop",
+    note: "Body + eyes only, blown up. Biggest possible shapes — the 16 px champion.",
+    svg: tile(CLAY) + placeFace(face(CREAM, CLAY), 78, 50, 50),
+  },
+  {
+    name: "Face crop, ink",
+    note: "Same crop on ink. Clay face, dark eyes punch through even at taskbar size.",
+    svg: tile("#1e1e1c") + placeFace(face(CLAY, "#1e1e1c"), 78, 50, 50),
+  },
+  {
+    name: "Meter arc",
+    note: "It's a *meter* — gauge arc over Clawd. Gold arc = usage, clay mascot beneath.",
+    svg: tile("#1e1e1c")
+      + `<path d="M 22 58 A 28 28 0 1 1 78 58" fill="none" stroke="#3a3a37" stroke-width="7" stroke-linecap="round"/>`
+      + `<path d="M 22 58 A 28 28 0 0 1 50 30" fill="none" stroke="${GOLD}" stroke-width="7" stroke-linecap="round"/>`
+      + place(clawd(CLAY, "#1e1e1c"), 46, 50, 62),
+  },
+  {
+    name: "Meter arc, clay",
+    note: "Gauge on clay tile; cream track, ink needle-fill. Mascot small but whole.",
+    svg: tile(CLAY)
+      + `<path d="M 22 58 A 28 28 0 1 1 78 58" fill="none" stroke="rgba(244,241,234,.35)" stroke-width="7" stroke-linecap="round"/>`
+      + `<path d="M 22 58 A 28 28 0 0 1 50 30" fill="none" stroke="${CREAM}" stroke-width="7" stroke-linecap="round"/>`
+      + place(clawd(CREAM, CLAY), 46, 50, 62),
+  },
+  {
+    name: "Peek-over",
+    note: "Clawd peeks over the bottom edge — face + arms rise into frame. Playful, still simple.",
+    svg: tile("#1e1e1c") + `<clipPath id="pk"><rect x="0" y="0" width="100" height="100" rx="${RAD}"/></clipPath>`
+      + `<g clip-path="url(#pk)">${place(clawd(CLAY, "#1e1e1c"), 92, 50, 78)}</g>`,
+  },
+  {
+    name: "Bars + Clawd",
+    note: "Three usage bars (the HUD's whole point) with Clawd sitting on top. Bars descend longest-to-shortest in the app's own threshold colors: red (crit) · gold (warn) · blue (ok).",
+    svg: tile("#1e1e1c")
+      + place(clawd(CLAY, "#1e1e1c"), 56, 50, 34)
+      + `<rect x="22" y="62" width="56" height="6" rx="3" fill="${RED}"/>`
+      + `<rect x="22" y="72" width="42" height="6" rx="3" fill="${GOLD}"/>`
+      + `<rect x="22" y="82" width="26" height="6" rx="3" fill="${BLUE}"/>`,
+  },
+  {
+    name: "No tile",
+    note: "Mascot only, no background plate — transparent icon like many modern tray apps. Checkerboard shows through.",
+    svg: place(clawd(CLAY, EYE), 96),
+  },
+  {
+    name: "Sunset duotone",
+    note: "Clay-to-gold vertical gradient tile, cream Clawd. Warmest of the set.",
+    svg: `<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${CLAY}"/><stop offset="1" stop-color="${GOLD}"/></linearGradient></defs>`
+      + tile("url(#sg)") + place(clawd(CREAM, "#5b2f1f"), 74),
+  },
+  {
+    name: "Outline ring",
+    note: "Clay ring on ink — nods to the Audiowave Orb skin — Clawd centered inside.",
+    svg: tile("#1e1e1c")
+      + `<circle cx="50" cy="50" r="38" fill="none" stroke="${CLAY}" stroke-width="4"/>`
+      + place(clawd(CLAY, "#1e1e1c"), 58),
+  },
+];
+
+const grid = document.getElementById("grid");
+const SIZES = [128, 48, 32, 16]; /* 128 stands in for 256 to keep the page sane */
+
+CONCEPTS.forEach((c, i) => {
+  const icon = (px) =>
+    `<svg width="${px}" height="${px}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${c.svg}</svg>`;
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <h2><span class="n">${String(i + 1).padStart(2, "0")}</span>${c.name}</h2>
+    <div class="note">${c.note}</div>
+    <div class="sizes">${SIZES.map(px => `
+      <div class="sz"><div class="well">${icon(px)}</div><div class="lab">${px === 128 ? "256 (½)" : px}</div></div>`).join("")}
+    </div>
+    <div class="bar"><span class="lab">taskbar</span>${icon(24)}${icon(16)}</div>`;
+  grid.appendChild(card);
+});
+</script>
+
+</body>
+</html>
