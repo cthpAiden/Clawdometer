@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Clawd arm-length scan — at px 1.45</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #141413; color: #e7e4d9; padding: 28px 32px;
+    font: 12px/1.4 "Hanken Grotesk", "Segoe UI", sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  h1 { font: 500 18px/1 Newsreader, Georgia, serif; color: #f2f0e8; margin-bottom: 4px; }
+  h2 { font: 500 14px/1 Newsreader, Georgia, serif; color: #f2f0e8; margin: 34px 0 3px; }
+  .sub { color: #9a958b; font-size: 11px; margin-bottom: 20px; max-width: 780px; }
+  .sub b { color: #e17956; font-weight: 600; }
+
+  .grid { display: flex; flex-wrap: wrap; gap: 26px 22px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .tag { font-size: 10px; color: #9a958b; letter-spacing: .3px; }
+  .tag b { color: #f2f0e8; font-weight: 800; font-size: 11px; }
+  .tag .cur { color: #e17956; }
+  .dim { font-size: 9px; color: #6f6b63; }
+
+  /* real Classic (U8) skin, copied 1:1 from app/ui/style.css */
+  .underline {
+    width: 200px; height: 122px; padding: 9px 13px;
+    color: #e7e4d9; background: #1e1e1c; border-radius: 14px; overflow: hidden;
+  }
+  .underline .uhead { position: relative; min-height: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .underline .ttl {
+    position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+    text-align: center; font: 500 14px/1 Newsreader, Georgia, serif; color: #f2f0e8;
+  }
+  .underline .rst-top {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    font-weight: 500; color: #9a958b; line-height: 1; font-size: 9px; letter-spacing: .2px;
+  }
+  .underline .u { padding: 3px 0; }
+  .underline .urow { display: flex; align-items: baseline; line-height: 1; }
+  .underline .urow .lbl { font-weight: 600; color: #a9a59a; font-size: 10px; }
+  .underline .urow .pct { margin-left: auto; font-weight: 800; color: #f4f2ea; letter-spacing: -.3px; font-size: 14px; }
+  .underline .uline { margin-top: 5px; height: 3px; border-radius: 99px; background: #141413; overflow: hidden; }
+  .underline .uline i { display: block; height: 100%; border-radius: 99px; }
+
+  .clawd { display: inline-block; line-height: 0; color: #e17956; }
+  .clawd svg { display: block; shape-rendering: geometricPrecision; overflow: visible; }
+  .clawd .eyes { transform-box: fill-box; transform-origin: center; animation: gv-blink 4.6s infinite; }
+  @keyframes gv-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.08); } }
+
+  /* clearance marker: how close the mascot's right arm gets to the centred title */
+  .cell .uhead::after {
+    content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px;
+    border-left: 1px dashed rgba(225,121,86,.25); pointer-events: none;
+  }
+
+  .strip { display: flex; align-items: center; gap: 26px; background: #1e1e1c; border-radius: 14px; padding: 20px 24px 14px; flex-wrap: wrap; }
+  .strip .s { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .strip .s .n { font-size: 10px; color: #9a958b; }
+  .strip .s .n b { color: #f2f0e8; font-weight: 800; }
+
+  .note { margin-top: 26px; font-size: 11px; color: #9a958b; max-width: 780px; }
+  .note code { color: #e7e4d9; background: #1e1e1c; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; }
+</style>
+</head>
+<body>
+
+<h1>Clawd arm length — scan at px 1.45</h1>
+<div class="sub">
+  Body, legs, eyes and arm thickness are all frozen at the locked geometry. Only horizontal
+  <b>reach</b> changes: how far each arm sticks out past the body edge, in viewBox units.
+  Range shown: <b>14.5 to 18.0</b>, step 0.5. Shipped today is <b>14.5</b>
+  (raised from 10.6 in commit <code>52aaa8d</code>).
+  Past 14.5 the arms leave the 100-unit viewBox, so the box widens with them —
+  the body stays exactly the same size on screen, the sprite just gets wider.
+</div>
+
+<div class="grid" id="grid"></div>
+
+<h2>Side by side, 3× magnified</h2>
+<div class="sub">Same body every time. Only the arms move.</div>
+<div class="strip" id="strip"></div>
+
+<div class="note">
+  <b style="color:#e7e4d9">Layout cost.</b> The title is absolutely centred, so longer arms never
+  shove it — but they do eat the gap toward it. Dashed line marks the header midline.
+  The <code>cv-knead</code> / <code>cv-clap</code> / <code>cv-cheer</code> working animations rotate or
+  translate around fixed origins (<code>15.8px 26.3px</code> and <code>84.2px 26.3px</code>), which sit at
+  the shoulder — so arm length does not distort them, longer arms just sweep a wider arc.
+</div>
+
+<script>
+// LOCKED geometry — copied verbatim from app/ui/clawd.js. Arms are the only variable.
+const BODY = [15.8, 0, 84.2, 47.6];
+const LEGS = [
+  [15.8, 42.0, 25.5, 64.8], [33.4, 42.0, 43.1, 64.8],
+  [56.9, 42.0, 66.6, 64.8], [74.5, 42.0, 84.2, 64.8],
+];
+const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
+const ARM_Y0 = 16.9, ARM_Y1 = 35.8;
+// Inner edges stay buried 3.2u under the body (the anti-alias seam fix).
+const ARM_L_INNER = 19.0, ARM_R_INNER = 81.0;
+const BASE_REACH = 14.5;
+
+const r = (a) =>
+  `<rect x="${a[0]}" y="${a[1]}" width="${(a[2] - a[0]).toFixed(2)}" height="${(a[3] - a[1]).toFixed(2)}"/>`;
+
+function sprite(px, reach) {
+  const armL = [15.8 - reach, ARM_Y0, ARM_L_INNER, ARM_Y1];
+  const armR = [ARM_R_INNER, ARM_Y0, 84.2 + reach, ARM_Y1];
+  // Grow the viewBox outward so nothing clips; body keeps its on-screen size.
+  const pad = Math.max(0, reach - BASE_REACH);
+  const vbW = 100 + 2 * pad;
+  const w = (0.17 * vbW * px).toFixed(1), h = (11.9 * px).toFixed(1);
+  return `<svg width="${w}" height="${h}" viewBox="${-pad} 0 ${vbW} 70" xmlns="http://www.w3.org/2000/svg">` +
+    `<g class="g-all"><g fill="currentColor">${r(BODY)}` +
+    `<g class="g-armL">${r(armL)}</g><g class="g-armR">${r(armR)}</g>` +
+    `<g class="g-leg1">${r(LEGS[0])}</g><g class="g-leg2">${r(LEGS[1])}</g>` +
+    `<g class="g-leg3">${r(LEGS[2])}</g><g class="g-leg4">${r(LEGS[3])}</g></g>` +
+    `<g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+}
+
+const PX = 1.45;
+const REACHES = [];
+for (let v = 14.5; v <= 18.01; v += 0.5) REACHES.push(Math.round(v * 10) / 10);
+const grid = document.getElementById("grid");
+const strip = document.getElementById("strip");
+
+REACHES.forEach((reach) => {
+  const cur = reach === BASE_REACH;
+  const pad = Math.max(0, reach - BASE_REACH);
+  const w = (0.17 * (100 + 2 * pad) * PX).toFixed(1);
+  const label = cur ? " · shipped" : "";
+
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  cell.innerHTML = `
+    <div class="underline">
+      <div class="uhead">
+        <span class="clawd">${sprite(PX, reach)}</span>
+        <span class="ttl">Usage</span>
+        <span class="rst-top">2h 14m</span>
+      </div>
+      <div class="u"><div class="urow"><span class="lbl">Current</span><span class="pct">62%</span></div>
+        <div class="uline"><i style="width:62%;background:#3f7fbf"></i></div></div>
+      <div class="u"><div class="urow"><span class="lbl">Weekly</span><span class="pct">81%</span></div>
+        <div class="uline"><i style="width:81%;background:#d9a441"></i></div></div>
+      <div class="u"><div class="urow"><span class="lbl">Fable</span><span class="pct">37%</span></div>
+        <div class="uline"><i style="width:37%;background:#3f7fbf"></i></div></div>
+    </div>
+    <div class="tag"><b class="${cur ? "cur" : ""}">reach ${reach}</b>${label}</div>
+    <div class="dim">sprite ${w} px wide · body unchanged</div>`;
+  grid.appendChild(cell);
+
+  const s = document.createElement("div");
+  s.className = "s";
+  s.innerHTML = `<span class="clawd">${sprite(PX * 3, reach)}</span>` +
+    `<span class="n"><b>${reach}</b>${label}</span>`;
+  strip.appendChild(s);
+});
+</script>
+
+</body>
+</html>
