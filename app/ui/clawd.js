@@ -11,12 +11,12 @@
 (function () {
   // [x0, y0, x1, y1] in the 100×70 viewBox. Inner edges overlap ~1u UNDER the
   // body so the per-part groups (needed for the bob/scan) don't reveal
-  // anti-alias seams; the outer silhouette stays pixel-exact. Arm reach is 16u
-  // past each body edge, which spills 0.2u outside the viewBox — the svg is
+  // anti-alias seams; the outer silhouette stays pixel-exact. Arm reach is
+  // 16.5u past each body edge, spilling 0.7u outside the viewBox — the svg is
   // overflow:visible, so it renders; widening the viewBox instead would shift
   // the animation transform-origins (they're view-box relative).
   const BODY = [15.8, 0, 84.2, 47.6];
-  const ARM_L = [-0.2, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 100.2, 35.8];
+  const ARM_L = [-0.7, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 100.7, 35.8];
   const LEGS = [
     [15.8, 42.0, 25.5, 64.8], [33.4, 42.0, 43.1, 64.8],
     [56.9, 42.0, 66.6, 64.8], [74.5, 42.0, 84.2, 64.8],
