@@ -66,11 +66,15 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
 fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
     if let Some(win) = app.get_webview_window("hud") {
         // The Audiowave Orb skin is a square ring stage; Classic (Underline),
-        // Rowline, and Bento Box are card layouts with their own footprints.
-        // Must match #underline / #card / #bento in style.css exactly — the
-        // window is sized to the card, so a stale number here clips the bottom.
+        // Rowline, Bento Box, and the ClawdBoy handhelds are card layouts with
+        // their own footprints. Must match #underline / #card / #bento /
+        // #clawdboy in style.css exactly — the window is sized to the card, so a
+        // stale number here clips the bottom.
         let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
             (160.0, 160.0)
+        } else if prefs.rice.starts_with("clawdboy") {
+            // All three handhelds share one shell, so one footprint covers them.
+            if prefs.compact { (120.0, 106.0) } else { (200.0, 136.0) }
         } else if prefs.rice == "bento" {
             if prefs.compact { (120.0, 112.0) } else { (206.0, 138.0) }
         } else if prefs.rice == "rowline" {
@@ -218,13 +222,15 @@ fn main() {
                 &opacity_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>).collect::<Vec<_>>(),
             )?;
             // RICE skin profiles. Classic (U8 Underline), Rowline (U1), and
-            // Bento Box sit at the top level; the three Audiowave Orb variants —
-            // "Bars" (rings only), "Peak hold" (bars + falling peak caps), and
-            // "LED Bloom" (usage-zone colored LED rungs + band-specific bloom) —
-            // nest under their own arrow submenu. All six are one radio group:
-            // the handler keeps exactly one checked across the whole set. All
-            // three orb ids share the "audiowave_orb" prefix so window sizing /
-            // audio capture treat them alike; the card skins need neither.
+            // Bento Box sit at the top level; the three ClawdBoy handhelds and
+            // the three Audiowave Orb variants — "Bars" (rings only), "Peak
+            // hold" (bars + falling peak caps), and "LED Bloom" (usage-zone
+            // colored LED rungs + band-specific bloom) — nest under their own
+            // arrow submenus. All nine are one radio group: the handler keeps
+            // exactly one checked across the whole set. The three orb ids share
+            // the "audiowave_orb" prefix so window sizing / audio capture treat
+            // them alike, and the three handhelds share "clawdboy" so window
+            // sizing does; neither matters to the plain card skins.
             let rice_classic = CheckMenuItem::with_id(
                 app, "rice-classic", "Classic", true, prefs.rice == "classic", None::<&str>,
             )?;
@@ -245,6 +251,20 @@ fn main() {
                 app, "rice-audiowave_orb_led", "LED Bloom", true,
                 prefs.rice == "audiowave_orb_led", None::<&str>,
             )?;
+            let cb_table = CheckMenuItem::with_id(
+                app, "rice-clawdboy_table", "Table", true,
+                prefs.rice == "clawdboy_table", None::<&str>,
+            )?;
+            let cb_menu_item = CheckMenuItem::with_id(
+                app, "rice-clawdboy_menu", "Menu", true,
+                prefs.rice == "clawdboy_menu", None::<&str>,
+            )?;
+            let cb_quad = CheckMenuItem::with_id(
+                app, "rice-clawdboy_quad", "Quad", true,
+                prefs.rice == "clawdboy_quad", None::<&str>,
+            )?;
+            let clawdboy_menu =
+                Submenu::with_items(app, "ClawdBoy", true, &[&cb_table, &cb_menu_item, &cb_quad])?;
             let orb_menu =
                 Submenu::with_items(app, "Audiowave Orb", true, &[&orb_led, &orb_bars, &orb_peak])?;
             let rice_menu = Submenu::with_items(
@@ -255,11 +275,16 @@ fn main() {
                     &rice_classic as &dyn tauri::menu::IsMenuItem<_>,
                     &rice_rowline,
                     &rice_bento,
+                    &clawdboy_menu,
                     &orb_menu,
                 ],
             )?;
             // The radio set the menu handler syncs when any rice id is picked.
-            let rice_items = vec![rice_classic, rice_rowline, rice_bento, orb_bars, orb_peak, orb_led];
+            let rice_items = vec![
+                rice_classic, rice_rowline, rice_bento,
+                cb_table, cb_menu_item, cb_quad,
+                orb_bars, orb_peak, orb_led,
+            ];
             // Seed the checkmark from the actual Run-key state so the menu
             // shows whether autostart is on instead of flipping blind.
             let autostart_enabled = {

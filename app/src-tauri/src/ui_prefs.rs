@@ -12,11 +12,12 @@ pub struct UiPrefs {
     pub opacity: f64,
     #[serde(default)]
     pub compact: bool,
-    // Selected "rice" skin profile: "classic" (the default card), "bento"
-    // (2×2 cell grid, card-sized), "audiowave_orb" (ring, bars only),
-    // "audiowave_orb_peak" (ring with peak-hold caps), or "audiowave_orb_led"
-    // (ring, LED rungs colored by usage zone + band-specific bloom). serde
-    // default keeps pre-rice ui.json files loading.
+    // Selected "rice" skin profile: "classic" (the default card), "rowline"
+    // (labelled bars), "bento" (2×2 cell grid, card-sized), "clawdboy_table" /
+    // "clawdboy_menu" / "clawdboy_quad" (handheld with a 2-bit panel),
+    // "audiowave_orb" (ring, bars only), "audiowave_orb_peak" (ring with
+    // peak-hold caps), or "audiowave_orb_led" (ring, LED rungs colored by usage
+    // zone + band-specific bloom). serde default keeps pre-rice ui.json loading.
     #[serde(default = "default_rice")]
     pub rice: String,
 }

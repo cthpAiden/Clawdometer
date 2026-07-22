@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clawdometer · Handheld (T4) — variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+  /* Same tokens, tile footprints and mascot rules as clawd-skins-orange.html —
+     copied so this page stands alone and the tiles measure true. */
+  :root{
+    --font-sans:"Hanken Grotesk","Styrene A","Styrene",-apple-system,"Segoe UI",sans-serif;
+    --font-serif:"Newsreader","Copernicus","Tiempos",Georgia,serif;
+    --font-mono:"JetBrains Mono","Fira Code",ui-monospace,"Courier New",monospace;
+    --paper:#F0EEE6; --paper-2:#FAF9F5; --paper-3:#E7E1D3;
+    --ink:#141413; --ink-soft:#3D3B36; --muted:#6E6A60; --line:#E0DACB;
+    --clay:#CC785C; --clay-deep:#B8543A; --clawd:#e17956;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font:14px/1.5 var(--font-sans)}
+  body{padding:40px 26px 96px}
+  header{max-width:1360px;margin:0 auto 30px}
+  h1{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.2px}
+  h1 span{color:var(--muted);font-size:17px;font-weight:400}
+  .sub{color:var(--ink-soft);font-size:13.5px;margin-top:9px;max-width:920px;line-height:1.6}
+  .sub code,.legend code{background:var(--paper-3);padding:1px 6px;border-radius:5px;color:var(--ink-soft);font-family:var(--font-mono);font-size:11px}
+  .legend{color:var(--muted);font-size:12px;margin-top:11px}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--clawd);vertical-align:-1px;margin-right:5px}
+  .band{max-width:1360px;margin:34px auto 16px;display:flex;align-items:center;gap:12px}
+  .band h2{font-family:var(--font-serif);font-weight:500;font-size:19px;white-space:nowrap}
+  .band .rule{flex:1;height:1px;background:var(--line)}
+  .band .tag{font:700 10px var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+
+  .grid{max-width:1360px;margin:0 auto;display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  figure.skin{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;
+        padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+  figure.skin figcaption{order:2;color:var(--ink-soft);font-size:12px;line-height:1.5}
+  figure.skin figcaption b{color:var(--ink);font-weight:700;font-size:13px}
+  .tiles{order:1;display:flex;align-items:flex-end;gap:16px;justify-content:center;
+        background:var(--paper-3);border-radius:12px;padding:18px 12px;min-height:176px;
+        background-image:radial-gradient(circle at 1px 1px,rgba(60,50,35,.07) 1px,transparent 0);
+        background-size:14px 14px}
+  /* true HUD footprints */
+  .tile{position:relative;overflow:hidden;border-radius:14px;flex:none;font-family:var(--font-sans);
+        font-variant-numeric:tabular-nums;background:#fff;
+        box-shadow:0 6px 18px rgba(40,33,20,.16);border:1px solid rgba(20,20,19,.06)}
+  .tile.full{width:200px;height:136px}
+  .tile.compact{width:120px;height:106px}
+
+  /* mascot — LOCKED orange, never recolored */
+  .clawd{display:inline-block;line-height:0;color:#e17956 !important}
+  .clawd svg{display:block;image-rendering:pixelated;overflow:visible}
+  .clawd .eyes{transform-box:fill-box;transform-origin:center;
+        animation:gv-blink 4.6s infinite;animation-delay:calc(var(--bi,0)*0.31s)}
+  @keyframes gv-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+  .clawd .g-all,.clawd .g-eyes{transform-box:view-box}
+  body.working .clawd .g-all{transform-origin:50px 64.8px;animation:cv-bob .7s ease-in-out infinite;
+        animation-delay:calc(var(--bi,0)*0.09s)}
+  body.working .clawd .g-eyes{animation:cv-scan 3.2s ease-in-out infinite;
+        animation-delay:calc(var(--bi,0)*0.13s)}
+  @keyframes cv-bob{0%,100%{transform:translateY(0) scaleY(1)}35%{transform:translateY(-2.6px) scaleY(1.015)}70%{transform:translateY(.4px) scaleY(.975)}}
+  @keyframes cv-scan{0%,18%,100%{transform:translateX(0)}28%,46%{transform:translateX(-3.2px)}58%,80%{transform:translateX(3.2px)}}
+
+  /* ── build status ──────────────────────────────────────────────────────────
+     Whole page is superseded: the ClawdBoy skins were redrawn monochrome in
+     handheld-mono.html, and the three picked for the tray live there. */
+  figure.skin{position:relative}
+  .st{position:absolute;top:12px;right:12px;z-index:2;
+      font:800 8px var(--font-sans);letter-spacing:1.1px;text-transform:uppercase;
+      padding:3px 8px;border-radius:99px;
+      background:var(--paper-3);color:var(--muted);border:1px solid var(--line)}
+  .note{max-width:1360px;margin:0 auto;background:#f6efe6;border:1px solid #e3d3bd;
+        border-radius:12px;padding:12px 16px;color:var(--ink-soft);font-size:12.5px;line-height:1.55}
+  .note b{color:var(--ink)}
+  .note code{background:#eee3d4;padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:11px}
+
+  /* ── shared handheld shell (from T4, unchanged) ───────────────────────────
+     Only what lives INSIDE .scr and the control-row middle slot changes per
+     variant. The plastic body, D-pad and jelly buttons are identical to the
+     shipped T4 so the variants are comparable. */
+  [data-skin^="h"] .tile{background:var(--paper-3)}
+  [data-skin^="h"] .body4{position:absolute;inset:8px 30px;background:#d5cfc2;border-radius:8px 8px 18px 8px;
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);padding:7px 9px}
+  [data-skin^="h"] .scr{background:#9bbc0f;border:3px solid #3f4436;border-radius:4px;height:58px;position:relative;overflow:hidden}
+  [data-skin^="h"] .ctl{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 4px}
+  [data-skin^="h"] .dpad{position:relative;width:22px;height:22px;flex:none}
+  [data-skin^="h"] .dpad::before,[data-skin^="h"] .dpad::after{content:"";position:absolute;background:#5a564d;border-radius:2px}
+  [data-skin^="h"] .dpad::before{left:7px;top:0;width:8px;height:22px}
+  [data-skin^="h"] .dpad::after{left:0;top:7px;width:22px;height:8px}
+  [data-skin^="h"] .dpad.sm{width:16px;height:16px}
+  [data-skin^="h"] .dpad.sm::before{left:5px;top:0;width:6px;height:16px}
+  [data-skin^="h"] .dpad.sm::after{left:0;top:5px;width:16px;height:6px}
+  [data-skin^="h"] .btns{flex:none}
+  [data-skin^="h"] .btns i{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--clay-deep);margin-left:5px}
+  [data-skin^="h"] .compact .btns i{width:9px;height:9px}
+  [data-skin^="h"] .tag4{position:absolute;bottom:3px;left:0;right:0;text-align:center;
+    font:800 5.5px var(--font-sans);letter-spacing:1.5px;color:#8d887c;text-transform:uppercase}
+
+  /* LCD ink — one dark green, two weights. Screen stays monochrome on purpose:
+     a pea-green LCD that suddenly renders red/blue reads as a bug, not a skin.
+     Severity is carried by fill length, not hue (see H4). */
+  [data-skin^="h"] .lcd{color:#2e3a1f;font-family:var(--font-mono)}
+  [data-skin^="h"] .lcd-2{color:#55632f}
+
+  /* ── ClawdBoy wordmark, the control-row middle slot ────────────────────── */
+  .wm{flex:1;text-align:center;min-width:0}
+  .wm-sans{font:800 7.5px var(--font-sans);letter-spacing:.2px;color:#6f6a5e}
+  .wm-sans i{font-style:normal;color:var(--clay-deep)}
+  .wm-mono{font:700 6.5px var(--font-mono);letter-spacing:1.6px;color:#7c776b;text-transform:uppercase}
+  .wm-serif{font:600 9.5px var(--font-serif);font-style:italic;color:#5f5a4e;letter-spacing:-.2px}
+  .wm-serif i{font-style:italic;color:var(--clay-deep)}
+  .wm-pill{display:inline-block;background:#5a564d;color:#e7e2d5;border-radius:99px;
+    padding:2px 7px;font:800 6px var(--font-sans);letter-spacing:.9px;text-transform:uppercase}
+  .wm-emb{font:800 7.5px var(--font-sans);letter-spacing:.3px;color:#b2ab9c;
+    text-shadow:0 1px 0 rgba(255,255,255,.75)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Handheld <span>— T4 variants: stats on the LCD, ClawdBoy on the shell</span></h1>
+  <p class="sub">Six takes on the same two changes. <b>1)</b> the 7-day and Fable numbers move off the plastic and onto the
+    pea-green screen, where the rest of the readout already lives. <b>2)</b> the control-row slot between the D-pad and the
+    jelly buttons stops printing <code>7D41 FB18</code> and becomes the <b>ClawdBoy</b> wordmark.</p>
+  <p class="sub"><b>Note —</b> the shipped T4 already prints <code>Clawd Boy</code> as a tiny tag along the bottom edge of the shell.
+    Putting the wordmark in the control row makes that a duplicate, so <b>H1–H5 drop the bottom tag</b>. <b>H6</b> keeps it and
+    repurposes it as a spec line instead, the way a real console prints its feature blurb under the logo.</p>
+  <p class="sub"><b>Compact tiles carry no wordmark.</b> At 120px the shell has about 74px of control row; the D-pad and the two
+    buttons eat 44 of it, and "ClawdBoy" at a legible size does not fit in what's left — it pushed the buttons off the plastic.
+    The compact tile keeps the shipped T4 control row and shows the wordmark only at full size.</p>
+  <p class="legend"><span class="dot"></span>clawd keeps <code>#e17956</code> · payload <code>5H 62%</code> ·
+    <code>7D 41%</code> · <code>Fable 18%</code> · <code>reset 2h47m</code> · each shown full 200×136 + compact 120×106.</p>
+</header>
+
+<div class="note"><b>Superseded — nothing on this page is being built.</b> The pea-green screen was replaced by a true
+  two-tone panel and every layout was redrawn in <code>handheld-mono.html</code>, which also carries all four metrics.
+  Kept for the wordmark study at the bottom, which still stands: the control-row treatment picked there is the one the
+  monochrome set uses.</div>
+
+<div class="band"><h2>Variants</h2><span class="tag">screen layout × wordmark</span><span class="rule"></span></div>
+<div class="grid">
+
+<!-- ══ H1 · Stat line ══ -->
+<style>
+[data-skin="h1"] .scr{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+[data-skin="h1"] .n4{font:800 11px var(--font-mono);line-height:1}
+[data-skin="h1"] .ln{font:700 7px var(--font-mono);letter-spacing:.3px}
+[data-skin="h1"] .compact .n4{font-size:10px}
+</style>
+<figure class="skin" data-skin="h1">
+  <span class="st">Superseded</span>
+  <figcaption><b>H1 · Stat line</b> — smallest change from the shipped T4. The two numbers become one mono line under the
+    hero percentage, exactly where the cassette skin puts them. Wordmark is sans, with <i>Boy</i> in clay.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr lcd">
+          <span class="clawd-i" data-px="1.25"></span>
+          <span class="n4">62% ·↻2H47</span>
+          <span class="ln lcd-2">7D 41 · FB 18</span>
+        </div>
+        <div class="ctl">
+          <div class="dpad"></div>
+          <span class="wm wm-sans">Clawd<i>Boy</i></span>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr lcd" style="height:50px">
+          <span class="clawd-i" data-px="1.05"></span>
+          <span class="n4">62%</span>
+          <span class="ln lcd-2">41 · 18</span>
+        </div>
+        <div class="ctl" style="margin-top:4px">
+          <div class="dpad sm"></div>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ H2 · Corner HUD ══ -->
+<style>
+[data-skin="h2"] .scr{display:flex;align-items:center;justify-content:center}
+[data-skin="h2"] .cn{position:absolute;font:700 7px var(--font-mono);letter-spacing:.2px}
+[data-skin="h2"] .tl{top:3px;left:5px} [data-skin="h2"] .tr{top:3px;right:5px}
+[data-skin="h2"] .bl{bottom:3px;left:5px;font-weight:800;font-size:9.5px}
+[data-skin="h2"] .br{bottom:3px;right:5px}
+[data-skin="h2"] .cn b{font-weight:800}
+</style>
+<figure class="skin" data-skin="h2">
+  <span class="st">Superseded</span>
+  <figcaption><b>H2 · Corner HUD</b> — the four readouts sit in the four corners the way a game pins score, lives and timer,
+    leaving clawd alone in the middle of the play field. Wordmark is tracked mono caps.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr lcd">
+          <span class="cn tl lcd-2">7D <b>41</b></span>
+          <span class="cn tr lcd-2">FB <b>18</b></span>
+          <span class="clawd-i" data-px="1.45"></span>
+          <span class="cn bl">62%</span>
+          <span class="cn br lcd-2">↻2H47</span>
+        </div>
+        <div class="ctl">
+          <div class="dpad"></div>
+          <span class="wm wm-mono">ClawdBoy</span>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr lcd" style="height:50px">
+          <span class="cn tl lcd-2" style="font-size:6px">7D41</span>
+          <span class="cn tr lcd-2" style="font-size:6px">FB18</span>
+          <span class="clawd-i" data-px="1.2"></span>
+          <span class="cn bl" style="font-size:8.5px">62%</span>
+        </div>
+        <div class="ctl" style="margin-top:4px">
+          <div class="dpad sm"></div>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ H3 · Split screen ══ -->
+<style>
+[data-skin="h3"] .scr{display:flex;align-items:center;gap:6px;padding:0 7px}
+[data-skin="h3"] .col{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+[data-skin="h3"] .rw{display:flex;justify-content:space-between;font:700 7px var(--font-mono);line-height:1.1}
+[data-skin="h3"] .rw.hero{font-weight:800;font-size:10px}
+[data-skin="h3"] .rw span:first-child{letter-spacing:.4px}
+</style>
+<figure class="skin" data-skin="h3">
+  <span class="st">Superseded</span>
+  <figcaption><b>H3 · Split screen</b> — clawd stands on the left, a three-row key/value table fills the right. All three
+    metrics get equal billing and the labels are spelled out, so nothing has to be decoded. Wordmark is serif italic,
+    the closest thing to a console logotype.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr lcd">
+          <span class="clawd-i" data-px="1.35"></span>
+          <span class="col">
+            <span class="rw hero"><span>5H</span><span>62%</span></span>
+            <span class="rw lcd-2"><span>7D</span><span>41%</span></span>
+            <span class="rw lcd-2"><span>FB</span><span>18%</span></span>
+            <span class="rw lcd-2" style="font-size:6px"><span>↻</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl">
+          <div class="dpad"></div>
+          <span class="wm wm-serif">Clawd<i>Boy</i></span>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr lcd" style="height:50px;gap:4px;padding:0 5px">
+          <span class="clawd-i" data-px="1.05"></span>
+          <span class="col">
+            <span class="rw hero" style="font-size:9px"><span>5H</span><span>62</span></span>
+            <span class="rw lcd-2" style="font-size:6.5px"><span>7D</span><span>41</span></span>
+            <span class="rw lcd-2" style="font-size:6.5px"><span>FB</span><span>18</span></span>
+          </span>
+        </div>
+        <div class="ctl" style="margin-top:4px">
+          <div class="dpad sm"></div>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ H4 · LCD bars ══ -->
+<style>
+[data-skin="h4"] .scr{display:flex;align-items:center;gap:7px;padding:0 7px}
+[data-skin="h4"] .col{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+[data-skin="h4"] .mr{display:flex;align-items:center;gap:4px;font:700 6px var(--font-mono);letter-spacing:.4px}
+[data-skin="h4"] .seg{flex:1;display:flex;gap:1.5px}
+[data-skin="h4"] .seg i{flex:1;height:5px;background:rgba(46,58,31,.2)}
+[data-skin="h4"] .seg i.on{background:#2e3a1f}
+[data-skin="h4"] .compact .seg i{height:4px}
+</style>
+<figure class="skin" data-skin="h4">
+  <span class="st">Superseded</span>
+  <figcaption><b>H4 · LCD bars</b> — the numbers become three segmented gauges, the one thing a dot-matrix screen draws
+    natively. Length carries severity, so the screen stays monochrome and still shows at a glance that Fable is barely
+    touched. Wordmark is an embossed-plastic sans, like text moulded into the case.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr lcd">
+          <span class="clawd-i" data-px="1.3"></span>
+          <span class="col">
+            <span class="mr"><span>5H</span><span class="seg" data-p="62"></span></span>
+            <span class="mr"><span>7D</span><span class="seg" data-p="41"></span></span>
+            <span class="mr"><span>FB</span><span class="seg" data-p="18"></span></span>
+            <span class="mr lcd-2" style="justify-content:flex-end">↻2H47</span>
+          </span>
+        </div>
+        <div class="ctl">
+          <div class="dpad"></div>
+          <span class="wm wm-emb">ClawdBoy</span>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr lcd" style="height:50px;gap:5px;padding:0 5px">
+          <span class="clawd-i" data-px="1.05"></span>
+          <span class="col" style="gap:2.5px">
+            <span class="mr" style="font-size:5.5px"><span>5H</span><span class="seg" data-p="62"></span></span>
+            <span class="mr" style="font-size:5.5px"><span>7D</span><span class="seg" data-p="41"></span></span>
+            <span class="mr" style="font-size:5.5px"><span>FB</span><span class="seg" data-p="18"></span></span>
+          </span>
+        </div>
+        <div class="ctl" style="margin-top:4px">
+          <div class="dpad sm"></div>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ H5 · Scoreboard ══ -->
+<style>
+[data-skin="h5"] .top5{position:absolute;top:3px;left:5px;right:5px;display:flex;justify-content:space-between;
+  font:700 6.5px var(--font-mono);letter-spacing:.4px}
+[data-skin="h5"] .top5 b{font-weight:800}
+[data-skin="h5"] .big5{position:absolute;top:11px;left:0;right:0;text-align:center;
+  font:800 15px/1 var(--font-mono);letter-spacing:-.5px}
+[data-skin="h5"] .grd{position:absolute;left:0;right:0;bottom:8px;height:2px;background:rgba(46,58,31,.45)}
+[data-skin="h5"] .stand{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center}
+/* Compact can't stack status bar + score + play field in 44px — the score moves
+   BELOW the ground line and reads as a scoreboard strip instead. */
+[data-skin="h5"] .compact .big5{top:auto;bottom:0;font-size:9px}
+[data-skin="h5"] .compact .grd{bottom:11px}
+[data-skin="h5"] .compact .stand{bottom:13px}
+</style>
+<figure class="skin" data-skin="h5">
+  <span class="st">Superseded</span>
+  <figcaption><b>H5 · Scoreboard</b> — 7D and FB run along the top as a status bar, the 5-hour window is the big score,
+    and clawd stands on a ground line at the bottom of the play field. The most "game" of the six. Wordmark is a dark
+    pill, reading as a printed badge on the plastic.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr lcd">
+          <span class="top5"><span class="lcd-2">7D <b>41</b></span><span class="lcd-2">FB <b>18</b></span><span class="lcd-2">↻2H47</span></span>
+          <span class="big5">62%</span>
+          <span class="grd"></span>
+          <span class="stand"><span class="clawd-i" data-px="1"></span></span>
+        </div>
+        <div class="ctl">
+          <div class="dpad"></div>
+          <span class="wm"><span class="wm-pill">ClawdBoy</span></span>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr lcd" style="height:50px">
+          <span class="top5" style="font-size:5.5px"><span class="lcd-2">7D <b>41</b></span><span class="lcd-2">FB <b>18</b></span></span>
+          <span class="big5">62%</span>
+          <span class="grd"></span>
+          <span class="stand"><span class="clawd-i" data-px="0.85"></span></span>
+        </div>
+        <div class="ctl" style="margin-top:4px">
+          <div class="dpad sm"></div>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ H6 · Inverse ticker (keeps a bottom tag) ══ -->
+<style>
+[data-skin="h6"] .scr{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+[data-skin="h6"] .hero6{display:flex;align-items:center;gap:6px}
+[data-skin="h6"] .n6{font:800 15px/1 var(--font-mono)}
+[data-skin="h6"] .inv{background:#2e3a1f;color:#9bbc0f;border-radius:2px;padding:1.5px 6px;
+  font:700 6.5px var(--font-mono);letter-spacing:.7px}
+[data-skin="h6"] .body4{padding-bottom:11px}
+[data-skin="h6"] .compact .n6{font-size:13px}
+</style>
+<figure class="skin" data-skin="h6">
+  <span class="st">Superseded</span>
+  <figcaption><b>H6 · Inverse ticker</b> — clawd and the big number share a line, and the two extra metrics live in an
+    inverted LCD strip, which is how a mono screen highlights a row without color. This is the one variant that
+    <b>keeps</b> the bottom tag, demoted to a spec blurb so it no longer competes with the wordmark.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr lcd">
+          <span class="hero6"><span class="clawd-i" data-px="1.15"></span><span class="n6">62%</span></span>
+          <span class="inv">7D 41 · FB 18 · ↻2H47</span>
+        </div>
+        <div class="ctl">
+          <div class="dpad"></div>
+          <span class="wm wm-sans">Clawd<i>Boy</i></span>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+        <div class="tag4">Dot matrix · no batteries</div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px;padding-bottom:10px">
+        <div class="scr lcd" style="height:50px">
+          <span class="hero6"><span class="clawd-i" data-px="1"></span><span class="n6">62%</span></span>
+          <span class="inv" style="font-size:5.5px;letter-spacing:.4px">41 · 18</span>
+        </div>
+        <div class="ctl" style="margin-top:4px">
+          <div class="dpad sm"></div>
+          <div class="btns"><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+</div>
+
+<div class="band"><h2>Wordmark only</h2><span class="tag">the control-row slot, enlarged</span><span class="rule"></span></div>
+<div class="grid">
+  <figure class="skin" data-skin="hw">
+    <figcaption><b>Five treatments</b> for the slot that used to read <code>7D41 FB18</code>. Shown at 3× so the shapes are
+      legible; in the tile each is 6–9px tall. Pick one independently of the screen layout — any wordmark works with any of H1–H6.</figcaption>
+    <div class="tiles" style="align-items:center;flex-direction:column;gap:12px;padding:20px 14px">
+      <div style="transform:scale(3);transform-origin:center"><span class="wm-sans">Clawd<i>Boy</i></span></div>
+      <div style="transform:scale(3);transform-origin:center;margin-top:8px"><span class="wm-mono">ClawdBoy</span></div>
+      <div style="transform:scale(3);transform-origin:center;margin-top:10px"><span class="wm-serif">Clawd<i>Boy</i></span></div>
+      <div style="transform:scale(3);transform-origin:center;margin-top:12px"><span class="wm-pill">ClawdBoy</span></div>
+      <div style="transform:scale(3);transform-origin:center;margin-top:12px"><span class="wm-emb">ClawdBoy</span></div>
+    </div>
+  </figure>
+</div>
+
+<script>
+// LOCKED clawd sprite — geometry from clawd-mascot-spec (never redraw by eye).
+const BODY=[15.8,0,84.2,47.6];
+const ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,46.6,25.5,64.8],[33.4,46.6,43.1,64.8],[56.9,46.6,66.6,64.8],[74.5,46.6,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+function sprite(px){
+  const w=(17*px).toFixed(1),h=(11.9*px).toFixed(1);
+  const r=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g><g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+}
+document.querySelectorAll('.clawd-i').forEach((el,i)=>{
+  el.classList.add('clawd');
+  el.style.setProperty('--bi',i%7);
+  el.innerHTML=sprite(parseFloat(el.dataset.px||'2'));
+});
+
+// H4's gauges: 10 cells each, lit from the data-p percentage. Same rounding rule
+// as the skins page so a non-zero metric always lights at least one cell.
+document.querySelectorAll('[data-skin="h4"] .seg').forEach(seg=>{
+  const p=parseFloat(seg.dataset.p), n=10;
+  const lit=Math.min(n,Math.max(p>0?1:0,Math.round(p/100*n)));
+  seg.innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<lit?'on':''}"></i>`).join('');
+});
+
+// isWorking demo flag — drives the "Coder" bob + eye-scan, as on the skins page.
+document.body.classList.toggle('working', true);
+</script>
+</body>
+</html>

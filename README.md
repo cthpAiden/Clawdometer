@@ -8,13 +8,18 @@ Unofficial Windows desktop HUD for Claude Code usage limits.
 
 ## Skins
 
-Six looks, switchable any time from the tray menu (right-click the tray icon
+Nine looks, switchable any time from the tray menu (right-click the tray icon
 → *RICE*). All of them show the same numbers — only the presentation differs.
 
 | Classic | Rowline | Bento Box |
 |:---:|:---:|:---:|
 | <img src="docs/images/hud-classic.png" width="210" alt="Classic HUD skin: a charcoal card titled Usage with the clawd mascot top-left, showing Current, Weekly, and Fable each as a label, a percentage, and a threshold underline"> | <img src="docs/images/hud-rowline.png" width="210" alt="Rowline HUD skin: a compact charcoal card with Current, Weekly, and Fable as labelled bars under a centered title"> | <img src="docs/images/hud-bento.png" width="210" alt="Bento Box HUD skin: a charcoal panel titled Usage with the clawd mascot, a large Current percentage and bar across the top and Weekly and Fable cells below"> |
 | Current, Weekly, and Fable each as a label, percentage, and threshold underline under a centered title — the default. | The same three as labelled bars; the most compact card, its labels becoming 5H / 7D / FBL when shrunk. | Current as a hero percentage with its own bar, and Weekly and Fable in their own cells. |
+
+| ClawdBoy — Table | ClawdBoy — Menu | ClawdBoy — Quad |
+|:---:|:---:|:---:|
+| <img src="docs/images/hud-clawdboy-table.png" width="210" alt="ClawdBoy Table skin: a handheld console whose screen shows clawd on the left and a four-row key/value table on the right, with the reset time below a rule"> | <img src="docs/images/hud-clawdboy-menu.png" width="210" alt="ClawdBoy Menu skin: the same console, its screen a four-row pause-menu list with the active row inverted and clawd centered beneath"> | <img src="docs/images/hud-clawdboy-quad.png" width="210" alt="ClawdBoy Quad skin: the same console, its screen divided into four hairline cells holding Current, Weekly, Fable, and clawd above the reset time"> |
+| A handheld console whose screen is a true two-color panel — one glass tone, one ink tone, nothing else. Clawd sits left of a Current / Weekly / Fable table, reset time below a rule. | The same four values as a pause-menu list; the active window is inverted, which is the only highlight a two-color panel has. | Four hairline cells, one value each, with clawd taking the label slot in the cell it shares with the reset countdown. |
 
 | Audiowave Orb — LED Bloom | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
 |:---:|:---:|:---:|
@@ -174,7 +179,8 @@ the standard HKCU Run registry key, only when you click it.
 - **Tray icon, right-click:** menu with *Show/Hide*, *Refresh usage* (runs a
   headless `claude /usage` now), *RICE*, *Compact size*, *Opacity*, *Start with
   Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
-- **RICE:** picks the skin — *Classic*, *Rowline*, *Bento Box*, or *Audiowave
+- **RICE:** picks the skin — *Classic*, *Rowline*, *Bento Box*, *ClawdBoy* →
+  *Table* / *Menu* / *Quad*, or *Audiowave
   Orb* → *Bars* / *Peak hold* / *LED Bloom* (see [Skins](#skins)). One radio group, so exactly
   one is ever checked. Switching resizes the HUD (the orb is a 160×160 square;
   each card skin has its own size) and is remembered across restarts. Selecting
@@ -273,13 +279,18 @@ HUD không chính thức cho Windows, hiển thị giới hạn sử dụng củ
 
 ## Giao diện (Skins)
 
-Sáu kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
-tượng khay → *RICE*). Cả sáu đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
+Chín kiểu hiển thị, đổi lúc nào cũng được từ menu khay (chuột phải vào biểu
+tượng khay → *RICE*). Cả chín đều hiện cùng một dữ liệu — chỉ khác cách trình bày.
 
 | Classic | Rowline | Bento Box |
 |:---:|:---:|:---:|
 | <img src="docs/images/hud-classic.png" width="210" alt="Giao diện Classic: thẻ than chì tiêu đề Usage với linh vật clawd góc trên trái, mỗi mục Current, Weekly, Fable là một nhãn, phần trăm, và gạch chân đổi màu theo ngưỡng"> | <img src="docs/images/hud-rowline.png" width="210" alt="Giao diện Rowline: thẻ than chì gọn với Current, Weekly, Fable dưới dạng thanh có nhãn dưới tiêu đề căn giữa"> | <img src="docs/images/hud-bento.png" width="210" alt="Giao diện Bento Box: bảng than chì tiêu đề Usage với linh vật clawd, phần trăm Current lớn kèm thanh trên cùng và ô Weekly, Fable bên dưới"> |
 | Mỗi mục Current, Weekly, Fable là một nhãn, phần trăm, và gạch chân theo ngưỡng dưới tiêu đề căn giữa — giao diện mặc định. | Cùng ba mục đó dưới dạng thanh có nhãn; thẻ gọn nhất, nhãn thành 5H / 7D / FBL khi thu nhỏ. | Current là phần trăm chính kèm thanh riêng, Weekly và Fable trong ô riêng. |
+
+| ClawdBoy — Table | ClawdBoy — Menu | ClawdBoy — Quad |
+|:---:|:---:|:---:|
+| <img src="docs/images/hud-clawdboy-table.png" width="210" alt="Giao diện ClawdBoy Table: máy chơi game cầm tay, màn hình có clawd bên trái và bảng khóa/giá trị bốn dòng bên phải, thời gian reset nằm dưới một đường kẻ"> | <img src="docs/images/hud-clawdboy-menu.png" width="210" alt="Giao diện ClawdBoy Menu: cùng máy đó, màn hình là danh sách menu tạm dừng bốn dòng với dòng đang chọn đảo màu và clawd ở giữa bên dưới"> | <img src="docs/images/hud-clawdboy-quad.png" width="210" alt="Giao diện ClawdBoy Quad: cùng máy đó, màn hình chia bốn ô bằng nét mảnh chứa Current, Weekly, Fable, và clawd phía trên thời gian reset"> |
+| Máy chơi game cầm tay với màn hình đúng nghĩa hai màu — một tông kính, một tông mực, không có màu thứ ba. Clawd nằm bên trái bảng Current / Weekly / Fable, thời gian reset dưới một đường kẻ. | Vẫn bốn giá trị đó nhưng dưới dạng danh sách menu tạm dừng; dòng đang chạy được đảo màu — cách làm nổi bật duy nhất mà màn hai màu có. | Bốn ô chia bằng nét mảnh, mỗi ô một giá trị, clawd thế chỗ nhãn trong ô dùng chung với đồng hồ đếm ngược reset. |
 
 | Audiowave Orb — LED Bloom | Audiowave Orb — Bars | Audiowave Orb — Peak hold |
 |:---:|:---:|:---:|
@@ -445,8 +456,9 @@ registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
   (chạy `claude /usage` headless ngay lập tức), *RICE*, *Compact size*,
   *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa
   HKCU Run hiện tại), và *Quit*.
-- **RICE:** chọn giao diện — *Classic*, *Rowline*, *Bento Box*, hoặc *Audiowave
-  Orb* → *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả sáu là một
+- **RICE:** chọn giao diện — *Classic*, *Rowline*, *Bento Box*, *ClawdBoy* →
+  *Table* / *Menu* / *Quad*, hoặc *Audiowave
+  Orb* → *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả chín là một
   nhóm radio, nên luôn chỉ đúng một cái được tích. Đổi giao diện sẽ đổi kích
   thước HUD (orb là ô vuông 160×160; mỗi giao diện thẻ có kích thước riêng) và
   được nhớ qua các lần khởi động. Chọn giao diện orb sẽ bật luồng thu loopback âm

@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clawdometer · Handheld — monochrome LCD variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+  /* Tokens, tile footprints and mascot rules copied from clawd-skins-orange.html
+     so this page stands alone and the tiles measure true. */
+  :root{
+    --font-sans:"Hanken Grotesk","Styrene A","Styrene",-apple-system,"Segoe UI",sans-serif;
+    --font-serif:"Newsreader","Copernicus","Tiempos",Georgia,serif;
+    --font-mono:"JetBrains Mono","Fira Code",ui-monospace,"Courier New",monospace;
+    --paper:#F0EEE6; --paper-2:#FAF9F5; --paper-3:#E7E1D3;
+    --ink:#141413; --ink-soft:#3D3B36; --muted:#6E6A60; --line:#E0DACB;
+    --clay:#CC785C; --clay-deep:#B8543A; --clawd:#e17956;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font:14px/1.5 var(--font-sans)}
+  body{padding:40px 26px 96px}
+  header{max-width:1360px;margin:0 auto 30px}
+  h1{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.2px}
+  h1 span{color:var(--muted);font-size:17px;font-weight:400}
+  .sub{color:var(--ink-soft);font-size:13.5px;margin-top:9px;max-width:940px;line-height:1.6}
+  .sub code,.legend code{background:var(--paper-3);padding:1px 6px;border-radius:5px;color:var(--ink-soft);font-family:var(--font-mono);font-size:11px}
+  .legend{color:var(--muted);font-size:12px;margin-top:11px}
+  .legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:5px;border:1px solid rgba(0,0,0,.15)}
+  .band{max-width:1360px;margin:34px auto 16px;display:flex;align-items:center;gap:12px}
+  .band h2{font-family:var(--font-serif);font-weight:500;font-size:19px;white-space:nowrap}
+  .band .rule{flex:1;height:1px;background:var(--line)}
+  .band .tag{font:700 10px var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+
+  /* ── build status ──────────────────────────────────────────────────────────
+     QUEUED = picked for the ClawdBoy tray submenu, not built yet.
+     CONCEPT = drawn only; nothing in the app references it. */
+  figure.skin{position:relative}
+  .st{position:absolute;top:12px;right:12px;z-index:2;
+      font:800 8px var(--font-sans);letter-spacing:1.1px;text-transform:uppercase;
+      padding:3px 8px;border-radius:99px}
+  .st.queued{background:#2f6f4e;color:#eaf5ee}
+  .st.concept{background:var(--paper-3);color:var(--muted);border:1px solid var(--line)}
+  .key{max-width:1360px;margin:0 auto;display:flex;gap:16px;align-items:center;
+       font-size:11.5px;color:var(--muted)}
+  .key .st{position:static}
+
+  .grid{max-width:1360px;margin:0 auto;display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+  figure.skin{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;
+        padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+  figure.skin figcaption{order:2;color:var(--ink-soft);font-size:12px;line-height:1.5}
+  figure.skin figcaption b{color:var(--ink);font-weight:700;font-size:13px}
+  .tiles{order:1;display:flex;align-items:flex-end;gap:16px;justify-content:center;
+        background:var(--paper-3);border-radius:12px;padding:18px 12px;min-height:176px;
+        background-image:radial-gradient(circle at 1px 1px,rgba(60,50,35,.07) 1px,transparent 0);
+        background-size:14px 14px}
+  /* true HUD footprints */
+  .tile{position:relative;overflow:hidden;border-radius:14px;flex:none;font-family:var(--font-sans);
+        font-variant-numeric:tabular-nums;background:#fff;
+        box-shadow:0 6px 18px rgba(40,33,20,.16);border:1px solid rgba(20,20,19,.06)}
+  .tile.full{width:200px;height:136px}
+  .tile.compact{width:120px;height:106px}
+
+  .clawd{display:inline-block;line-height:0}
+  .clawd svg{display:block;image-rendering:pixelated;overflow:visible}
+  .clawd .eyes{transform-box:fill-box;transform-origin:center;
+        animation:gv-blink 4.6s infinite;animation-delay:calc(var(--bi,0)*0.31s)}
+  @keyframes gv-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+  .clawd .g-all,.clawd .g-eyes{transform-box:view-box}
+  body.working .clawd .g-all{transform-origin:50px 64.8px;animation:cv-bob .7s ease-in-out infinite;
+        animation-delay:calc(var(--bi,0)*0.09s)}
+  body.working .clawd .g-eyes{animation:cv-scan 3.2s ease-in-out infinite;
+        animation-delay:calc(var(--bi,0)*0.13s)}
+  @keyframes cv-bob{0%,100%{transform:translateY(0) scaleY(1)}35%{transform:translateY(-2.6px) scaleY(1.015)}70%{transform:translateY(.4px) scaleY(.975)}}
+  @keyframes cv-scan{0%,18%,100%{transform:translateX(0)}28%,46%{transform:translateX(-3.2px)}58%,80%{transform:translateX(3.2px)}}
+
+  /* ══ monochrome LCD ═══════════════════════════════════════════════════════
+     Exactly two values live inside the bezel: --lcd (the glass) and --nk (the
+     ink). Nothing on the screen may use a third. Anything that needs a "half"
+     state (an empty gauge cell, a dimmer label) gets a 50% checker dither —
+     which is what a real 2-bit panel does, and is still only two colors.
+     Polarity flips per variant by swapping the two vars, nothing else. */
+  [data-skin^="m"]{--lcd:#e4e4dc;--nk:#1a1b18}
+  [data-skin^="m"].inv{--lcd:#1a1b18;--nk:#dcdcd2}
+
+  [data-skin^="m"] .tile{background:var(--paper-3)}
+  [data-skin^="m"] .body4{position:absolute;inset:8px 30px;background:#d5cfc2;border-radius:8px 8px 18px 8px;
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);padding:7px 9px}
+  /* fully desaturated shell, for the variants that take the mono idea past the glass */
+  [data-skin^="m"].gry .body4{background:#c9c9c4}
+  [data-skin^="m"].gry .btns i{background:#6b6b66}
+  [data-skin^="m"].gry .dpad::before,[data-skin^="m"].gry .dpad::after{background:#4e4e4a}
+
+  [data-skin^="m"] .scr{background:var(--lcd);border:3px solid #3f4436;border-radius:4px;
+    height:58px;position:relative;overflow:hidden;color:var(--nk);font-family:var(--font-mono)}
+  [data-skin^="m"] .ctl{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 4px}
+  [data-skin^="m"] .dpad{position:relative;width:22px;height:22px;flex:none}
+  [data-skin^="m"] .dpad::before,[data-skin^="m"] .dpad::after{content:"";position:absolute;background:#5a564d;border-radius:2px}
+  [data-skin^="m"] .dpad::before{left:7px;top:0;width:8px;height:22px}
+  [data-skin^="m"] .dpad::after{left:0;top:7px;width:22px;height:8px}
+  [data-skin^="m"] .dpad.sm{width:16px;height:16px}
+  [data-skin^="m"] .dpad.sm::before{left:5px;top:0;width:6px;height:16px}
+  [data-skin^="m"] .dpad.sm::after{left:0;top:5px;width:16px;height:6px}
+  [data-skin^="m"] .btns{flex:none}
+  [data-skin^="m"] .btns i{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--clay-deep);margin-left:5px}
+  [data-skin^="m"] .compact .btns i{width:9px;height:9px}
+
+  /* Mascot on the glass: body becomes the ink, eyes become the glass showing
+     through. Overrides the locked orange, which is `!important` in the shared
+     sheet — this is the one skin allowed to, because a colored sprite on a 2-bit
+     panel would be the only thing on screen that panel could not draw. */
+  [data-skin^="m"] .clawd{color:var(--nk) !important}
+  [data-skin^="m"] .clawd .eyes rect{fill:var(--lcd)}
+
+  /* 50% checker — the LCD's only "half tone" */
+  [data-skin^="m"] .dith{background-image:
+      linear-gradient(45deg,var(--nk) 25%,transparent 25% 75%,var(--nk) 75%),
+      linear-gradient(45deg,var(--nk) 25%,transparent 25% 75%,var(--nk) 75%);
+    background-size:2px 2px;background-position:0 0,1px 1px;opacity:.55}
+  /* dim label: same ink, dithered down by opacity-free means is impossible in
+     2 tones, so dim text is simply smaller and tracked, never a lighter gray */
+  [data-skin^="m"] .dim{letter-spacing:.5px}
+
+  /* gauge: outlined track (1px ink) + solid fill + dithered remainder */
+  [data-skin^="m"] .gg{position:relative;flex:1;height:6px;border:1px solid var(--nk);overflow:hidden}
+  [data-skin^="m"] .gg i{position:absolute;inset:0;right:auto;background:var(--nk)}
+  [data-skin^="m"] .gg u{position:absolute;inset:0;left:auto}
+  [data-skin^="m"] .compact .gg{height:5px}
+
+  /* ClawdBoy wordmark — full tiles only (compact control row has no room) */
+  .wm{flex:1;text-align:center;min-width:0}
+  .wm-sans{font:800 7.5px var(--font-sans);letter-spacing:.2px;color:#6f6a5e}
+  .wm-sans i{font-style:normal;color:var(--clay-deep)}
+  [data-skin^="m"].gry .wm-sans i{color:#4e4e4a}
+</style>
+</head>
+<body>
+<header>
+  <h1>Handheld · monochrome <span>— a real 2-bit panel, all four numbers on it</span></h1>
+  <p class="sub">Every variant below shows the full payload: the <b>5-hour window</b>, the <b>weekly</b>, <b>Fable</b>, and the
+    <b>reset countdown</b>. Nothing is dropped at full size.</p>
+  <p class="sub"><b>Two tones, strictly.</b> Inside the bezel there is one glass color and one ink color and no third value.
+    Where something needs a half state — an empty gauge, a de-emphasised row — it gets a <b>50% checker dither</b>, which is
+    what an actual 2-bit panel does and is still only the same two colors. Polarity flips by swapping the two variables:
+    M1–M5 are ink-on-glass, <b>M6 and M9 are inverted</b> (backlit).</p>
+  <p class="sub"><b>Clawd is recolored here, on purpose.</b> Everywhere else the mascot is locked to <code>#e17956</code> and the
+    shared stylesheet enforces it with <code>!important</code>. On this screen the body becomes the ink and the eyes become the
+    glass showing through, because an orange sprite would be the one thing on the panel that the panel could not render.
+    <b>This override is scoped to this skin only</b> — no other skin can reach it.</p>
+  <p class="legend">
+    <span class="sw" style="background:#e4e4dc"></span>glass <code>#e4e4dc</code>
+    <span class="sw" style="background:#1a1b18;margin-left:14px"></span>ink <code>#1a1b18</code>
+    · payload <code>5H 62%</code> · <code>7D 41%</code> · <code>Fable 18%</code> · <code>reset 2h47m</code>
+    · full 200×136 + compact 120×106.</p>
+</header>
+
+<div class="key">
+  <span class="st queued">Queued</span><span>picked for the <b>ClawdBoy</b> tray submenu — not built yet</span>
+  <span class="st concept" style="margin-left:10px">Concept</span><span>drawn only; nothing in the app references it</span>
+</div>
+
+<div class="band"><h2>Ink on glass</h2><span class="tag">panel off — the classic look</span><span class="rule"></span></div>
+<div class="grid">
+
+<!-- ══ M1 · Table ══ -->
+<style>
+/* Type went up one step across the board (7→8 body, 10→11.5 hero) and the row
+   line-height came down to pay for it, so the four rows still clear the glass. */
+[data-skin="m1"] .scr{display:flex;align-items:center;gap:6px;padding:0 7px}
+[data-skin="m1"] .col{flex:1;display:flex;flex-direction:column;gap:0;min-width:0}
+[data-skin="m1"] .rw{display:flex;justify-content:space-between;font:700 8px var(--font-mono);line-height:1.3}
+[data-skin="m1"] .rw.hero{font-weight:800;font-size:11.5px;line-height:1.2}
+[data-skin="m1"] .rw.rst{border-top:1px solid var(--nk);margin-top:2px;padding-top:2px;font-size:7.5px}
+[data-skin="m1"] .compact .rw{font-size:7px;line-height:1.25}
+[data-skin="m1"] .compact .rw.hero{font-size:10px}
+[data-skin="m1"] .compact .rw.rst{font-size:6px}
+</style>
+<figure class="skin" data-skin="m1">
+  <span class="st queued">Queued</span>
+  <figcaption><b>M1 · Table</b> — clawd on the left, a four-row key/value table on the right, the reset split off below a
+    rule because it is a time and not a percentage. The most legible of the set and the least decorated.<br>
+    <b>Revised:</b> clawd 23→25px wide (compact 16→18), body type 7→8px, hero 10→11.5px, reset 6.5→7.5px.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="clawd-i" data-px="1.47"></span>
+          <span class="col">
+            <span class="rw hero"><span>5H</span><span>62%</span></span>
+            <span class="rw"><span>7D</span><span>41%</span></span>
+            <span class="rw"><span>FB</span><span>18%</span></span>
+            <span class="rw rst"><span>RESET</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px;gap:4px;padding:0 5px">
+          <span class="clawd-i" data-px="1.07"></span>
+          <span class="col">
+            <span class="rw hero"><span>5H</span><span>62</span></span>
+            <span class="rw"><span>7D</span><span>41</span></span>
+            <span class="rw"><span>FB</span><span>18</span></span>
+            <span class="rw rst"><span>↻</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M2 · Corner HUD ══ -->
+<style>
+[data-skin="m2"] .scr{display:flex;align-items:center;justify-content:center}
+[data-skin="m2"] .cn{position:absolute;font:700 6.5px var(--font-mono);letter-spacing:.3px}
+[data-skin="m2"] .cn b{font-weight:800}
+[data-skin="m2"] .tl{top:3px;left:5px;font-size:9px;font-weight:800}
+[data-skin="m2"] .tr{top:4px;right:5px}
+[data-skin="m2"] .bl{bottom:4px;left:5px}
+[data-skin="m2"] .br{bottom:4px;right:5px}
+</style>
+<figure class="skin" data-skin="m2">
+  <span class="st concept">Concept</span>
+  <figcaption><b>M2 · Corner HUD</b> — the four readouts pin to the four corners the way a game pins score, timer and
+    lives, and clawd gets the whole middle of the play field to itself. Reads fastest once you know where each corner
+    lives; slowest the first time.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="cn tl">62%</span>
+          <span class="cn tr">↻2H47</span>
+          <span class="clawd-i" data-px="1.5"></span>
+          <span class="cn bl">7D <b>41</b></span>
+          <span class="cn br">FB <b>18</b></span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px">
+          <span class="cn tl" style="font-size:8px">62%</span>
+          <span class="cn tr" style="font-size:5.5px">2H47</span>
+          <span class="clawd-i" data-px="1.15"></span>
+          <span class="cn bl" style="font-size:5.5px">7D<b>41</b></span>
+          <span class="cn br" style="font-size:5.5px">FB<b>18</b></span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M3 · Gauges ══ -->
+<style>
+[data-skin="m3"] .scr{display:flex;align-items:center;gap:7px;padding:0 7px}
+[data-skin="m3"] .col{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+[data-skin="m3"] .mr{display:flex;align-items:center;gap:4px;font:700 6px var(--font-mono);letter-spacing:.4px}
+[data-skin="m3"] .rst{display:flex;justify-content:space-between;font:700 6px var(--font-mono);letter-spacing:.4px;
+  border-top:1px solid var(--nk);padding-top:2px;margin-top:1px}
+</style>
+<figure class="skin" data-skin="m3">
+  <span class="st concept">Concept</span>
+  <figcaption><b>M3 · Gauges</b> — three outlined bars, filled solid to the percentage and dithered for the remainder.
+    A bar is the one thing a 2-bit panel draws perfectly, and length carries severity without needing a second color.
+    Reset sits on its own line under a rule.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="clawd-i" data-px="1.3"></span>
+          <span class="col">
+            <span class="mr"><span>5H</span><span class="gg" data-p="62"></span></span>
+            <span class="mr"><span>7D</span><span class="gg" data-p="41"></span></span>
+            <span class="mr"><span>FB</span><span class="gg" data-p="18"></span></span>
+            <span class="rst"><span>RESET</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px;gap:5px;padding:0 5px">
+          <span class="clawd-i" data-px="1"></span>
+          <span class="col" style="gap:2px">
+            <span class="mr" style="font-size:5.5px"><span>5H</span><span class="gg" data-p="62"></span></span>
+            <span class="mr" style="font-size:5.5px"><span>7D</span><span class="gg" data-p="41"></span></span>
+            <span class="mr" style="font-size:5.5px"><span>FB</span><span class="gg" data-p="18"></span></span>
+            <span class="rst" style="font-size:5px"><span>↻</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M4 · Scoreboard ══ -->
+<style>
+[data-skin="m4"] .top{position:absolute;top:3px;left:5px;right:5px;display:flex;justify-content:space-between;
+  font:700 6.5px var(--font-mono);letter-spacing:.4px}
+[data-skin="m4"] .top b{font-weight:800}
+[data-skin="m4"] .big{position:absolute;top:12px;left:0;right:0;text-align:center;font:800 15px/1 var(--font-mono);letter-spacing:-.5px}
+[data-skin="m4"] .grd{position:absolute;left:0;right:0;bottom:9px;height:1px;background:var(--nk)}
+[data-skin="m4"] .stand{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center}
+[data-skin="m4"] .flr{position:absolute;left:5px;right:5px;bottom:0;height:9px;display:flex;align-items:center;
+  justify-content:space-between;font:700 6px var(--font-mono);letter-spacing:.5px}
+[data-skin="m4"] .compact .big{top:9px;font-size:13px}
+[data-skin="m4"] .compact .grd{bottom:8px}
+[data-skin="m4"] .compact .stand{bottom:9px}
+</style>
+<figure class="skin" data-skin="m4">
+  <span class="st concept">Concept</span>
+  <figcaption><b>M4 · Scoreboard</b> — weekly and Fable run along the top as a status bar, the 5-hour window is the big
+    score, clawd stands on a ground line, and the countdown lives in the floor strip like a stage timer. The most
+    "game" of the set.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="top"><span>7D <b>41</b></span><span>FB <b>18</b></span></span>
+          <span class="big">62%</span>
+          <span class="grd"></span>
+          <span class="stand"><span class="clawd-i" data-px="1"></span></span>
+          <span class="flr"><span>5H WINDOW</span><span>↻2H47</span></span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px">
+          <span class="top" style="font-size:5.5px"><span>7D <b>41</b></span><span>FB <b>18</b></span></span>
+          <span class="big">62%</span>
+          <span class="grd"></span>
+          <span class="stand"><span class="clawd-i" data-px="0.85"></span></span>
+          <span class="flr" style="height:8px;font-size:5px;justify-content:center">↻2H47</span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M5 · Menu ══ -->
+<style>
+/* Type up 6.5→8; line-height drops to 1.2 to buy the room back, because four rows
+   plus the mascot have to clear 52px of glass. */
+[data-skin="m5"] .scr{padding:1px 5px;display:flex;flex-direction:column;gap:0}
+[data-skin="m5"] .li{display:flex;align-items:center;gap:3px;font:700 8px var(--font-mono);
+  line-height:1.2;letter-spacing:.3px}
+[data-skin="m5"] .li .c{width:6px;flex:none}
+[data-skin="m5"] .li .v{margin-left:auto;font-weight:800}
+/* selection = full-width inverted row, the only "highlight" a mono menu has */
+[data-skin="m5"] .li.sel{background:var(--nk);color:var(--lcd);margin:0 -5px;padding:0 5px}
+/* clawd rides a footer row rather than an absolute corner — at this row height an
+   absolutely-placed sprite lands on top of the reset value */
+[data-skin="m5"] .mv{margin-top:auto;display:flex;justify-content:center}
+[data-skin="m5"] .compact .li{font-size:6.5px;line-height:1.2}
+</style>
+<figure class="skin" data-skin="m5">
+  <span class="st queued">Queued</span>
+  <figcaption><b>M5 · Menu</b> — the four values as a pause-menu list, the active window inverted the way a mono menu
+    highlights a row. Row order is fixed so the eye learns positions. Scales down better than any other variant because
+    it is only text.<br>
+    <b>Revised:</b> clawd 13→15px wide (compact 10→12) and moved to the centre of the footer, type 6.5→8px
+    (compact 5.5→6.5px).</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="li sel"><span class="c">▸</span>5H WINDOW<span class="v">62%</span></span>
+          <span class="li"><span class="c"></span>WEEKLY<span class="v">41%</span></span>
+          <span class="li"><span class="c"></span>FABLE<span class="v">18%</span></span>
+          <span class="li"><span class="c"></span>RESET IN<span class="v">2H47</span></span>
+          <span class="mv"><span class="clawd-i" data-px="0.87"></span></span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px;padding:1px 4px">
+          <span class="li sel" style="margin:0 -4px;padding:0 4px"><span class="c">▸</span>5H<span class="v">62%</span></span>
+          <span class="li"><span class="c"></span>7D<span class="v">41%</span></span>
+          <span class="li"><span class="c"></span>FB<span class="v">18%</span></span>
+          <span class="li"><span class="c"></span>↻<span class="v">2H47</span></span>
+          <span class="mv"><span class="clawd-i" data-px="0.72"></span></span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M6 · Quad ══ -->
+<style>
+[data-skin="m6"] .scr{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;padding:0}
+[data-skin="m6"] .q{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  border-right:1px solid var(--nk);border-bottom:1px solid var(--nk)}
+[data-skin="m6"] .q:nth-child(2),[data-skin="m6"] .q:nth-child(4){border-right:0}
+[data-skin="m6"] .q:nth-child(3),[data-skin="m6"] .q:nth-child(4){border-bottom:0}
+/* Labels are spelled out at BOTH sizes — a 37px compact cell still fits CURRENT at
+   5px mono (7 chars × ~3px = 21px), so the abbreviations were never necessary. */
+[data-skin="m6"] .q .k{font:700 5.5px var(--font-mono);letter-spacing:.8px}
+[data-skin="m6"] .q .v{font:800 11px/1.1 var(--font-mono)}
+[data-skin="m6"] .q.mas{gap:1px}
+[data-skin="m6"] .compact .q .v{font-size:9px}
+[data-skin="m6"] .compact .q .k{font-size:5px;letter-spacing:.2px}
+</style>
+<figure class="skin" data-skin="m6">
+  <span class="st queued">Queued</span>
+  <figcaption><b>M6 · Quad</b> — the glass divided into four equal cells by hairlines, one number each, clawd replacing
+    the label in the cell it owns. Every value gets identical weight and the grid survives being shrunk further than
+    any other layout here.<br>
+    <b>Revised:</b> labels spelled out as <code>CURRENT</code> / <code>WEEKLY</code> / <code>FABLE</code> at both sizes
+    (compact no longer abbreviates), clawd 14→15.5px wide (compact 9→11).</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="q"><span class="k">CURRENT</span><span class="v">62%</span></span>
+          <span class="q"><span class="k">WEEKLY</span><span class="v">41%</span></span>
+          <span class="q"><span class="k">FABLE</span><span class="v">18%</span></span>
+          <span class="q mas"><span class="clawd-i" data-px="0.89"></span><span class="v" style="font-size:8px">2H47</span></span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px">
+          <span class="q"><span class="k">CURRENT</span><span class="v">62%</span></span>
+          <span class="q"><span class="k">WEEKLY</span><span class="v">41%</span></span>
+          <span class="q"><span class="k">FABLE</span><span class="v">18%</span></span>
+          <span class="q mas"><span class="clawd-i" data-px="0.64"></span><span class="v" style="font-size:6.5px">2H47</span></span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+</div>
+
+<div class="band"><h2>Inverted</h2><span class="tag">backlit — same two colors, swapped</span><span class="rule"></span></div>
+<div class="grid">
+
+<!-- ══ M7 · Table, inverted ══ -->
+<style>
+[data-skin="m7"] .scr{display:flex;align-items:center;gap:6px;padding:0 7px}
+[data-skin="m7"] .col{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+[data-skin="m7"] .rw{display:flex;justify-content:space-between;font:700 7px var(--font-mono);line-height:1.25}
+[data-skin="m7"] .rw.hero{font-weight:800;font-size:10px;line-height:1.15}
+[data-skin="m7"] .rw.rst{border-top:1px solid var(--nk);margin-top:2px;padding-top:2px;font-size:6.5px}
+</style>
+<figure class="skin inv" data-skin="m7">
+  <span class="st concept">Concept</span>
+  <figcaption><b>M7 · Table, inverted</b> — M1 with the two values swapped: pale ink on dark glass, clawd now a light
+    sprite with dark eyes. Nothing else changed. On a dark desktop this is the version that stops looking like a
+    switched-off appliance.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="clawd-i" data-px="1.35"></span>
+          <span class="col">
+            <span class="rw hero"><span>5H</span><span>62%</span></span>
+            <span class="rw"><span>7D</span><span>41%</span></span>
+            <span class="rw"><span>FB</span><span>18%</span></span>
+            <span class="rw rst"><span>RESET</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px;gap:4px;padding:0 5px">
+          <span class="clawd-i" data-px="0.95"></span>
+          <span class="col">
+            <span class="rw hero" style="font-size:9px"><span>5H</span><span>62</span></span>
+            <span class="rw" style="font-size:6px"><span>7D</span><span>41</span></span>
+            <span class="rw" style="font-size:6px"><span>FB</span><span>18</span></span>
+            <span class="rw rst" style="font-size:5.5px"><span>↻</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M8 · Gauges, inverted + gray shell ══ -->
+<style>
+[data-skin="m8"] .scr{display:flex;align-items:center;gap:7px;padding:0 7px}
+[data-skin="m8"] .col{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+[data-skin="m8"] .mr{display:flex;align-items:center;gap:4px;font:700 6px var(--font-mono);letter-spacing:.4px}
+[data-skin="m8"] .rst{display:flex;justify-content:space-between;font:700 6px var(--font-mono);letter-spacing:.4px;
+  border-top:1px solid var(--nk);padding-top:2px;margin-top:1px}
+</style>
+<figure class="skin inv gry" data-skin="m8">
+  <span class="st concept">Concept</span>
+  <figcaption><b>M8 · Gauges, full mono</b> — the inverted panel plus a desaturated shell: gray plastic, gray D-pad,
+    gray buttons. The only color left anywhere in the tile is none. Take this one if the mono idea should hold past the
+    bezel; take M3 if the clay buttons should stay as the brand's last accent.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="clawd-i" data-px="1.3"></span>
+          <span class="col">
+            <span class="mr"><span>5H</span><span class="gg" data-p="62"></span></span>
+            <span class="mr"><span>7D</span><span class="gg" data-p="41"></span></span>
+            <span class="mr"><span>FB</span><span class="gg" data-p="18"></span></span>
+            <span class="rst"><span>RESET</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px;gap:5px;padding:0 5px">
+          <span class="clawd-i" data-px="1"></span>
+          <span class="col" style="gap:2px">
+            <span class="mr" style="font-size:5.5px"><span>5H</span><span class="gg" data-p="62"></span></span>
+            <span class="mr" style="font-size:5.5px"><span>7D</span><span class="gg" data-p="41"></span></span>
+            <span class="mr" style="font-size:5.5px"><span>FB</span><span class="gg" data-p="18"></span></span>
+            <span class="rst" style="font-size:5px"><span>↻</span><span>2H47</span></span>
+          </span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<!-- ══ M9 · Ticker, inverted ══ -->
+<style>
+[data-skin="m9"] .scr{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+[data-skin="m9"] .hero{display:flex;align-items:center;gap:7px}
+[data-skin="m9"] .n{font:800 16px/1 var(--font-mono);letter-spacing:-.5px}
+[data-skin="m9"] .n small{font-size:6px;font-weight:700;letter-spacing:1px;display:block;margin-bottom:1px}
+/* the strip flips polarity a second time, so it is still only two colors */
+[data-skin="m9"] .strip{background:var(--nk);color:var(--lcd);border-radius:2px;padding:2px 6px;
+  display:flex;gap:7px;font:700 6.5px var(--font-mono);letter-spacing:.5px}
+[data-skin="m9"] .compact .n{font-size:13px}
+</style>
+<figure class="skin inv" data-skin="m9">
+  <span class="st concept">Concept</span>
+  <figcaption><b>M9 · Ticker</b> — clawd and the 5-hour number share the hero line; weekly, Fable and the countdown ride
+    a re-inverted strip beneath, which is how a mono panel emphasises a row without a second color. Biggest headline
+    number of the nine.</figcaption>
+  <div class="tiles">
+    <div class="tile full">
+      <div class="body4">
+        <div class="scr">
+          <span class="hero"><span class="clawd-i" data-px="1.2"></span><span class="n"><small>5H</small>62%</span></span>
+          <span class="strip"><span>7D 41</span><span>FB 18</span><span>↻2H47</span></span>
+        </div>
+        <div class="ctl"><div class="dpad"></div><span class="wm wm-sans">Clawd<i>Boy</i></span><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+    <div class="tile compact">
+      <div class="body4" style="inset:7px 14px">
+        <div class="scr" style="height:50px;gap:3px">
+          <span class="hero" style="gap:5px"><span class="clawd-i" data-px="1"></span><span class="n"><small>5H</small>62%</span></span>
+          <span class="strip" style="font-size:5px;gap:4px;padding:1.5px 4px"><span>41</span><span>18</span><span>2H47</span></span>
+        </div>
+        <div class="ctl" style="margin-top:4px"><div class="dpad sm"></div><div class="btns"><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+</div>
+
+<script>
+// LOCKED clawd sprite — geometry from clawd-mascot-spec (never redraw by eye).
+// Colors come from CSS: body is currentColor, eyes are repainted by the skin.
+const BODY=[15.8,0,84.2,47.6];
+const ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,46.6,25.5,64.8],[33.4,46.6,43.1,64.8],[56.9,46.6,66.6,64.8],[74.5,46.6,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+function sprite(px){
+  const w=(17*px).toFixed(1),h=(11.9*px).toFixed(1);
+  const r=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g><g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+}
+document.querySelectorAll('.clawd-i').forEach((el,i)=>{
+  el.classList.add('clawd');
+  el.style.setProperty('--bi',i%7);
+  el.innerHTML=sprite(parseFloat(el.dataset.px||'2'));
+});
+
+// Gauges: solid ink up to the percentage, 50% checker for the remainder. Two
+// colors total — the dither is the panel's only half tone.
+document.querySelectorAll('[data-skin^="m"] .gg').forEach(g=>{
+  const p=parseFloat(g.dataset.p);
+  g.innerHTML=`<i style="width:${p}%"></i><u class="dith" style="width:${100-p}%"></u>`;
+});
+
+// isWorking demo flag — drives the "Coder" bob + eye-scan, as on the skins page.
+document.body.classList.toggle('working', true);
+</script>
+</body>
+</html>

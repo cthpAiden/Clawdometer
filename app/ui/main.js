@@ -65,6 +65,12 @@ const els = {
   utxtfb: document.getElementById("utxtfb"),
 };
 
+// ClawdBoy's three layouts each carry the same four cells, tagged [data-k]
+// instead of ids so one pass fills whichever is on screen (and the two that
+// aren't, harmlessly). Collected once — the subtree is static.
+const cbCells = document.querySelectorAll("#clawdboy [data-k]");
+const CB_WINDOW = { "5h": "five_hour", "7d": "seven_day", fb: "fable_week" };
+
 let current = null; // last payload
 let compactMode = false; // mirrors the tray's "Compact size" toggle
 
@@ -101,6 +107,33 @@ function renderRow(win, bar, txt) {
   txt.textContent = `${win.used_percentage}%`;
   bar.style.width = pct + "%";
   paint(bar, win.used_percentage);
+}
+
+// ClawdBoy's panel is two colors, so nothing here is threshold-painted — the
+// glass has no third value to carry severity in. Cells are text only.
+function renderLcd(rl, nowMs) {
+  for (const el of cbCells) {
+    const k = el.dataset.k;
+    if (k === "rst") {
+      el.textContent = fmtLcdCountdown(rl && rl.five_hour && rl.five_hour.resets_at, nowMs);
+      continue;
+    }
+    const win = rl && rl[CB_WINDOW[k]];
+    // Same rule as renderRow: an absent window is "—", never 0%.
+    el.textContent = win && typeof win.used_percentage === "number"
+      ? `${win.used_percentage}%`
+      : "—";
+  }
+}
+
+// The panel's own clock face: 2H47, not "Resets 2h 47m". The glass is 116px wide
+// at full size and the layouts put this next to a label, so the words don't fit.
+function fmtLcdCountdown(resetsAtEpochSec, nowMs) {
+  if (!Number.isFinite(resetsAtEpochSec)) return "—";
+  const mins = Math.ceil((resetsAtEpochSec * 1000 - nowMs) / 60000);
+  if (mins <= 0) return "RESET";
+  if (mins < 60) return `${mins}M`;
+  return `${Math.floor(mins / 60)}H${String(mins % 60).padStart(2, "0")}`;
 }
 
 // Clawd's working animation is picked per turn from a no-repeat shuffle bag:
@@ -150,6 +183,7 @@ function render() {
     renderRow(null, els.uln7d, els.utxt7d);
     renderRow(null, els.ulnfb, els.utxtfb);
     return;
+    renderLcd(null, nowMs);
   }
   const rl = state.rate_limits;
   const resetAt = rl.five_hour && rl.five_hour.resets_at;
@@ -166,6 +200,7 @@ function render() {
   renderRow(rl.seven_day, els.uln7d, els.utxt7d);
   renderRow(rl.fable_week, els.ulnfb, els.utxtfb);
 }
+  renderLcd(rl, nowMs);
 
 logRejection(window.__TAURI__.event.listen("state-updated", (event) => {
   current = event.payload;
@@ -178,13 +213,13 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   document.body.classList.toggle("compact", compactMode);
   const opacity = typeof p.opacity === "number" ? p.opacity : 1;
   els.card.style.opacity = opacity;
-  for (const id of ["bento", "orb", "underline"]) {
+  for (const id of ["bento", "orb", "underline", "clawdboy"]) {
     const el = document.getElementById(id);
     if (el) el.style.opacity = opacity;
   }
-  // Switch skins: Classic card, Bento Box, or Audiowave Orb. The orb's
+  // Switch skins: Classic card, Bento Box, ClawdBoy, or Audiowave Orb. The orb's
   // animation loop only runs while it's the active skin (the backend likewise
-  // gates audio capture on it), so the other two cost nothing extra.
+  // gates audio capture on it), so the card skins cost nothing extra.
   const rice = typeof p.rice === "string" ? p.rice : "classic";
   const riceChanged = document.body.dataset.rice !== rice;
   document.body.dataset.rice = rice;
