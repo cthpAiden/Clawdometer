@@ -62,21 +62,35 @@ const RED = "#e5484d", GOLD = "#d9a441", BLUE = "#3f7fbf"; // usage-color.js
 const r = (a, f) =>
   `<rect x="${a[0]}" y="${a[1]}" width="${(a[2] - a[0]).toFixed(2)}" height="${(a[3] - a[1]).toFixed(2)}" fill="${f}"/>`;
 
-/* mascot centered on (cx, cy) at width w; sprite box is 102.4 × 70 */
-function mascot(w, cx, cy) {
-  const s = w / 102.4, h = 70 * s;
+/* Artwork scale, picked from icon-scale.html (variant D). The first cut sized
+   the mascot at 56 of 100 units, which read small in a file list; 80 leaves
+   about the padding a Windows tile normally keeps. */
+const MW = 80;   // mascot width
+const BW = 80;   // longest bar
+const BH = 9;    // bar thickness
+const GAP = 5;   // between bars
+const MGAP = 6;  // mascot to first bar
+
+/* mascot at width w, horizontally centered on cx, top edge at y=top;
+   sprite box is 102.4 × 70 */
+function mascot(w, cx, top) {
+  const s = w / 102.4;
   const inner = RECTS.map((a) => r(a, CLAY)).join("") + EYES.map((a) => r(a, TILE)).join("");
-  return `<g transform="translate(${(cx - w / 2 + 1.2 * s).toFixed(2)} ${(cy - h / 2).toFixed(2)}) scale(${s.toFixed(4)})">${inner}</g>`;
+  return `<g transform="translate(${(cx - w / 2 + 1.2 * s).toFixed(2)} ${top.toFixed(2)}) scale(${s.toFixed(4)})">${inner}</g>`;
 }
 
-/* Everything below lives in a 0 0 100 100 viewBox. */
+/* Everything below lives in a 0 0 100 100 viewBox. The mascot-plus-bars block is
+   measured and centered as a unit, so no size is eyeballed. */
 function icon(px) {
+  const mh = 70 * (MW / 102.4);
+  const top = (100 - (mh + MGAP + 3 * BH + 2 * GAP)) / 2;
+  const barTop = top + mh + MGAP, bx = 50 - BW / 2;
+  const bar = (i, w, fill) =>
+    `<rect x="${bx}" y="${(barTop + i * (BH + GAP)).toFixed(2)}" width="${w.toFixed(2)}" height="${BH}" rx="${(BH / 2).toFixed(2)}" fill="${fill}"/>`;
   return `<svg width="${px}" height="${px}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`
     + `<rect x="0" y="0" width="100" height="100" rx="22" fill="${TILE}"/>`
-    + mascot(56, 50, 34)
-    + `<rect x="22" y="62" width="56" height="6" rx="3" fill="${RED}"/>`
-    + `<rect x="22" y="72" width="42" height="6" rx="3" fill="${GOLD}"/>`
-    + `<rect x="22" y="82" width="26" height="6" rx="3" fill="${BLUE}"/>`
+    + mascot(MW, 50, top)
+    + bar(0, BW, RED) + bar(1, BW * 0.75, GOLD) + bar(2, BW * 0.464, BLUE)
     + `</svg>`;
 }
 

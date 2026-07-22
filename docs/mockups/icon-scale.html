@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Clawdometer icon — artwork scale</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #141413; color: #e7e4d9; padding: 28px 32px 50px;
+    font: 12px/1.45 "Hanken Grotesk", "Segoe UI", sans-serif;
+  }
+  h1 { font: 500 19px/1 Newsreader, Georgia, serif; color: #f2f0e8; margin-bottom: 4px; }
+  .sub { color: #9a958b; font-size: 11px; margin-bottom: 24px; max-width: 760px; }
+  .sub b { color: #e17956; font-weight: 600; }
+  .grid { display: flex; flex-wrap: wrap; gap: 26px 22px; }
+  .card { background: #1e1e1c; border-radius: 16px; padding: 16px 18px 14px;
+          display: flex; flex-direction: column; gap: 10px; width: 300px; }
+  .card h2 { font: 600 13px/1.2 "Hanken Grotesk", sans-serif; color: #f2f0e8; }
+  .card h2 .n { color: #e17956; margin-right: 6px; font-weight: 800; }
+  .card .note { color: #9a958b; font-size: 10.5px; min-height: 26px; }
+  .sizes { display: flex; align-items: flex-end; gap: 14px; }
+  .sz { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .sz .lab { font-size: 9px; color: #6f6b63; }
+  .well { background:
+      linear-gradient(45deg, #262624 25%, transparent 25%, transparent 75%, #262624 75%),
+      linear-gradient(45deg, #262624 25%, transparent 25%, transparent 75%, #262624 75%),
+      #2c2c2a;
+    background-size: 12px 12px; background-position: 0 0, 6px 6px;
+    border-radius: 8px; padding: 6px; line-height: 0; }
+  .well svg { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Icon artwork scale</h1>
+<div class="sub">
+  Same design, artwork scaled up inside the tile. <b>A</b> is what shipped — the mascot is only
+  56 of 100 units wide, so it reads small in a file list. Each step widens the mascot and the bars
+  together, thickens the bars to match, and re-centers the block vertically. <b>D</b> leaves roughly
+  the padding Windows tiles normally keep; <b>E</b> goes near edge-to-edge.
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+/* LOCKED Clawd geometry, seam-fix variant from app/ui/clawd.js */
+const RECTS = [
+  [15.8, 0,   84.2, 47.6],
+  [-1.2, 16.9,19.0, 35.8],
+  [81.0, 16.9,101.2,35.8],
+  [15.8, 42.0,25.5, 64.8],
+  [33.4, 42.0,43.1, 64.8],
+  [56.9, 42.0,66.6, 64.8],
+  [74.5, 42.0,84.2, 64.8],
+];
+const EYES = [[24.9, 7.8, 32.7, 16.3], [67.3, 7.8, 75.1, 16.3]];
+const TILE = "#1e1e1c", CLAY = "#e17956";
+const RED = "#e5484d", GOLD = "#d9a441", BLUE = "#3f7fbf";
+
+const r = (a, f) =>
+  `<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}" fill="${f}"/>`;
+
+/* w = mascot width; returns the group plus its rendered height (sprite is 102.4 × 70) */
+function mascot(w, cx, top) {
+  const s = w / 102.4;
+  const inner = RECTS.map((a) => r(a, CLAY)).join("") + EYES.map((a) => r(a, TILE)).join("");
+  return `<g transform="translate(${(cx - w/2 + 1.2*s).toFixed(2)} ${top.toFixed(2)}) scale(${s.toFixed(4)})">${inner}</g>`;
+}
+
+/* mw mascot width · bw longest-bar width · bh bar thickness · g gap between bars
+   · mg gap mascot-to-bars. Whole block is centered in the 100×100 tile. */
+function icon(px, { mw, bw, bh, g, mg }) {
+  const mh = 70 * (mw / 102.4);
+  const blockH = mh + mg + 3 * bh + 2 * g;
+  const top = (100 - blockH) / 2;
+  const barTop = top + mh + mg;
+  const bx = 50 - bw / 2;
+  const bar = (i, w, fill) =>
+    `<rect x="${bx}" y="${(barTop + i * (bh + g)).toFixed(2)}" width="${w.toFixed(2)}" height="${bh}" rx="${(bh/2).toFixed(2)}" fill="${fill}"/>`;
+  return `<svg width="${px}" height="${px}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`
+    + `<rect x="0" y="0" width="100" height="100" rx="22" fill="${TILE}"/>`
+    + mascot(mw, 50, top)
+    + bar(0, bw, RED) + bar(1, bw * 0.75, GOLD) + bar(2, bw * 0.464, BLUE)
+    + `</svg>`;
+}
+
+const VARIANTS = [
+  { name: "A — shipped", note: "Mascot 56u, bars 56u × 6u thick. Current icon.ico.",
+    cfg: { mw: 56, bw: 56, bh: 6, g: 4, mg: 6 } },
+  { name: "B — +15%", note: "Mascot 64u, bars 64u × 7u. Modest bump, plenty of tile margin left.",
+    cfg: { mw: 64, bw: 64, bh: 7, g: 4, mg: 6 } },
+  { name: "C — +30%", note: "Mascot 72u, bars 72u × 8u. Noticeably heavier in a file list.",
+    cfg: { mw: 72, bw: 72, bh: 8, g: 4.5, mg: 6 } },
+  { name: "D — +43%", note: "Mascot 80u, bars 80u × 9u. About the padding a Windows tile normally keeps.",
+    cfg: { mw: 80, bw: 80, bh: 9, g: 5, mg: 6 } },
+  { name: "E — near edge", note: "Mascot 88u, bars 88u × 10u. Almost edge-to-edge; loudest, least tile.",
+    cfg: { mw: 88, bw: 88, bh: 10, g: 5, mg: 6 } },
+  { name: "F — mascot-led", note: "D's scale but bars pulled in to 68u, so the mascot leads and the bars read as a caption.",
+    cfg: { mw: 84, bw: 68, bh: 8, g: 4.5, mg: 7 } },
+];
+
+const SIZES = [128, 48, 32, 16];
+document.getElementById("grid").innerHTML = VARIANTS.map((v, i) => `
+  <div class="card">
+    <h2><span class="n">${String.fromCharCode(65 + i)}</span>${v.name.replace(/^\w+ — /, "")}</h2>
+    <div class="note">${v.note}</div>
+    <div class="sizes">${SIZES.map((px) => `
+      <div class="sz"><div class="well">${icon(px, v.cfg)}</div><div class="lab">${px === 128 ? "256 (½)" : px}</div></div>`).join("")}
+    </div>
+  </div>`).join("");
+</script>
+</body>
+</html>
