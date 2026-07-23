@@ -1,6 +1,6 @@
 [package]
 name = "clawdometer-app"
-version = "0.5.11"
+version = "0.5.12"
 edition = "2021"
 license = "MIT"
 
