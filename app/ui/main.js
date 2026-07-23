@@ -144,6 +144,7 @@ function fmtLcdCountdown(resetsAtEpochSec, nowMs) {
 const CLAWD_ANIMS = [
   "coder", "a1", "a2", "a10", "hop", "shiver", "sway", "squat", "walk",
   "clap", "cheer", "darteyes", "stomp", "reachup", "jelly", "float", "march", "squint",
+  "sneak", "boogie", "shadowbox", "speedread",
 ];
 let clawdBag = [];
 let clawdCur = null;
