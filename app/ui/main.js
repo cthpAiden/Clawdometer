@@ -131,7 +131,9 @@ function renderLcd(rl, nowMs) {
 function fmtLcdCountdown(resetsAtEpochSec, nowMs) {
   if (!Number.isFinite(resetsAtEpochSec)) return "—";
   const mins = Math.ceil((resetsAtEpochSec * 1000 - nowMs) / 60000);
-  if (mins <= 0) return "RESET";
+  // "0M", not "reset" like the card skins: every ClawdBoy layout already labels
+  // this row RESET / RESET IN, so the word would print twice on one line.
+  if (mins <= 0) return "0M";
   if (mins < 60) return `${mins}M`;
   return `${Math.floor(mins / 60)}H${String(mins % 60).padStart(2, "0")}`;
 }
@@ -182,8 +184,8 @@ function render() {
     renderRow(null, els.uln5h, els.utxt5h);
     renderRow(null, els.uln7d, els.utxt7d);
     renderRow(null, els.ulnfb, els.utxtfb);
-    return;
     renderLcd(null, nowMs);
+    return;
   }
   const rl = state.rate_limits;
   const resetAt = rl.five_hour && rl.five_hour.resets_at;
@@ -199,8 +201,8 @@ function render() {
   renderRow(rl.five_hour, els.uln5h, els.utxt5h);
   renderRow(rl.seven_day, els.uln7d, els.utxt7d);
   renderRow(rl.fable_week, els.ulnfb, els.utxtfb);
-}
   renderLcd(rl, nowMs);
+}
 
 logRejection(window.__TAURI__.event.listen("state-updated", (event) => {
   current = event.payload;

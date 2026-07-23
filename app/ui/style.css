@@ -236,6 +236,7 @@ body[data-rice="classic"] #underline { display: flex; flex-direction: column; }
 body[data-rice="rowline"] #card { display: flex; }
 body[data-rice="bento"] #bento { display: grid; }
 body[data-rice^="audiowave_orb"] #orb { display: block; }
+body[data-rice^="clawdboy"] #clawdboy { display: block; }
 #bento {
   width: 206px; height: 138px; padding: 10px;
   grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 7px;
@@ -265,7 +266,6 @@ body.compact #bento .top .pct { font-size: 18px; }
 /* Compact: reset moves to the header corner, freeing the cell so the "Current"
    label sits beside the number (middle-aligned against it). */
 body.compact #bento .hd-reset { display: block; }
-body[data-rice^="clawdboy"] #clawdboy { display: block; }
 body.compact #bento .top .toprow { align-items: center; }
 body.compact #bento .top .lbl { display: inline; font-size: 11px; }
 body.compact #bento .top .toprow .rst-top { display: none; } /* the in-cell copy */
@@ -346,7 +346,6 @@ body.compact #underline .urow .pct { font-size: 12px; }
   margin-top: 7px; font: 700 7.5px "Segoe UI", sans-serif;
   color: #6b727b; letter-spacing: .4px; text-transform: uppercase;
 }
-
 /* ── ClawdBoy rice skins ───────────────────────────────────────────────────
    A handheld console filling the whole window, and a screen that is a true
    2-bit panel. Exactly two colors live inside the bezel — --cb-glass and
@@ -381,8 +380,9 @@ body.compact #clawdboy .cb-body { padding: 6px 7px; border-radius: 12px 12px 20p
 }
 body.compact #clawdboy .cb-scr { height: 62px; border-width: 2px; border-radius: 4px; }
 
-/* Control row: D-pad, wordmark, jelly buttons. The wordmark is full-size only —
-   at 120px the row is needed for the D-pad and buttons alone. */
+/* Control row: D-pad, wordmark, jelly buttons. Dropping the card widened the
+   compact row from 74px to 106px, so the wordmark now fits at both sizes: the
+   D-pad and buttons take 48 of it and "ClawdBoy" at 7px needs about 31. */
 #clawdboy .cb-ctl { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; padding: 0 5px; }
 body.compact #clawdboy .cb-ctl { margin-top: 5px; padding: 0 3px; }
 #clawdboy .cb-dpad { position: relative; width: 24px; height: 24px; flex: none; }
@@ -397,7 +397,7 @@ body.compact #clawdboy .cb-dpad::after { top: 6px; width: 18px; height: 6px; }
 body.compact #clawdboy .cb-btns i { width: 10px; height: 10px; margin-left: 5px; }
 #clawdboy .cb-wm { flex: 1; text-align: center; min-width: 0; font: 800 9px var(--font-sans); letter-spacing: .2px; color: #6f6a5e; }
 #clawdboy .cb-wm i { font-style: normal; color: #b8543a; }
-body.compact #clawdboy .cb-wm { display: none; }
+body.compact #clawdboy .cb-wm { font-size: 7px; }
 
 /* Mascot on the glass: the body becomes the ink, the eyes become the glass
    showing through. clawd.js paints the eye group with a fill attribute, so the
@@ -437,17 +437,17 @@ body.compact #clawdboy .cb-rw.rst { font-size: 8px; margin-top: 2px; padding-top
    Inverting the whole row is the only highlight a two-color panel has. Row
    order is fixed so the eye learns positions. */
 #clawdboy .cb-menu { flex-direction: column; padding: 1px 7px 2px; height: 100%; }
-#clawdboy .cb-li { display: flex; align-items: center; gap: 4px; font: 700 11.5px/1.15 var(--font-mono); letter-spacing: .2px; }
+#clawdboy .cb-li { display: flex; align-items: center; gap: 4px; font: 700 11.5px/1.1 var(--font-mono); letter-spacing: .2px; }
 #clawdboy .cb-li .c { width: 8px; flex: none; }
 #clawdboy .cb-li .cb-v { margin-left: auto; font-weight: 800; }
 #clawdboy .cb-li.sel { background: var(--cb-ink); color: var(--cb-glass); margin: 0 -7px; padding: 0 7px; }
 #clawdboy .cb-mv { margin-top: auto; display: flex; justify-content: center; }
-#clawdboy .cb-menu .clawd svg { width: 18px; height: auto; }
+#clawdboy .cb-menu .clawd svg { width: 21px; height: auto; }
 body.compact #clawdboy .cb-menu { padding: 1px 5px 2px; }
-body.compact #clawdboy .cb-li { font-size: 9px; line-height: 1.15; gap: 3px; }
+body.compact #clawdboy .cb-li { font-size: 9px; line-height: 1.12; gap: 3px; }
 body.compact #clawdboy .cb-li .c { width: 6px; }
 body.compact #clawdboy .cb-li.sel { margin: 0 -5px; padding: 0 5px; }
-body.compact #clawdboy .cb-menu .clawd svg { width: 14px; height: auto; }
+body.compact #clawdboy .cb-menu .clawd svg { width: 17px; height: auto; }
 
 /* ── Quad — four hairline cells, one value each ───────────────────────────
    Clawd replaces the label in the cell it owns. Labels stay spelled out at both
