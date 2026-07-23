@@ -1,0 +1,353 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Clawdometer — Fable usage bar concepts</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #101014; color: #e8e8ea; font: 13px/1.5 "Segoe UI", sans-serif;
+  padding: 32px 40px 80px;
+}
+h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.sub { color: #8a8a92; font-size: 12px; margin-bottom: 28px; }
+.row { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+.concept { margin-bottom: 36px; border-top: 1px solid #26262c; padding-top: 18px; }
+.ctitle { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.ctitle .dim { color: #6a6a72; font-weight: 400; font-size: 12px; }
+.cnote { color: #8a8a92; font-size: 12px; max-width: 640px; margin-bottom: 16px; }
+.cnote b { color: #cfcfd6; font-weight: 600; }
+.stage { display: flex; gap: 28px; align-items: flex-start; }
+.slot { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.slabel { color: #5a5a62; font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
+/* checkerboard so the transparent-window rounding is visible */
+.pad {
+  padding: 14px; border-radius: 12px;
+  background:
+    linear-gradient(45deg, #1a1a1f 25%, transparent 25%, transparent 75%, #1a1a1f 75%),
+    linear-gradient(45deg, #1a1a1f 25%, #141418 25%, #141418 75%, #1a1a1f 75%);
+  background-size: 12px 12px; background-position: 0 0, 6px 6px;
+}
+.zoom2 { transform: scale(2); transform-origin: top left; }
+.zwrap { overflow: hidden; }
+
+/* ── real HUD styles (mirrored from app/ui/style.css) ─────────────────── */
+.card {
+  width: 200px; height: 112px; padding: 11px 13px;
+  background: rgba(24, 24, 28, 0.92); color: #e8e8ea;
+  border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
+  display: grid; column-gap: 8px; row-gap: 6px; align-items: center;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "header  header"
+    "num     bar"
+    "wlabel  wbar"
+    "footer  footer";
+}
+.header { grid-area: header; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.label { font-weight: 600; font-size: 10px; }
+.countdown { margin-left: auto; margin-right: 3px; white-space: nowrap;
+  color: #b8b8c0; background: #2c2c32; font-size: 10px; padding: 2px 7px; border-radius: 8px; }
+.num { grid-area: num; font-weight: 600; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.num .u { font-size: 0.58em; }
+.bar.main { grid-area: bar; height: 8px; }
+.wlabel { grid-area: wlabel; color: #8a8a92; }
+.wbar { grid-area: wbar; display: flex; align-items: center; gap: 8px; }
+.bar { background: #2c2c32; border-radius: 4px; overflow: hidden; }
+.bar.thin { flex: 1; height: 4px; border-radius: 2px; }
+.fill { height: 100%; background: #4a7c47; border-radius: inherit; }
+.fill.fable { background: #8b6fc4; }
+.pct { min-width: 34px; text-align: right; color: #a8a8b0; font-variant-numeric: tabular-nums; }
+.footer { grid-area: footer; align-self: end; display: flex; justify-content: space-between;
+  gap: 8px; color: #6a6a72; font-size: 10px; white-space: nowrap; }
+.reset { color: #8a8a92; }
+.reset b { color: #63b35f; font-weight: 400; }
+
+/* compact base */
+.card.compact {
+  width: 120px; height: 92px; padding: 10px 11px; column-gap: 8px; row-gap: 6px;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "header header"
+    "num    bar"
+    "wlabel wbar";
+}
+.card.compact .lsfx { display: none; }
+.card.compact .footer { display: none; }
+.card.compact .countdown { font-size: 8px; padding: 2px 5px; }
+.card.compact .num { font-size: 19px; }
+.card.compact .bar.main { height: 7px; }
+.card.compact .wlabel { font-size: 10px; }
+.card.compact .pct { min-width: 24px; font-size: 10px; }
+
+/* ══ A — stacked third row ═════════════════════════════════════════════ */
+.card.a {
+  height: 124px;
+  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-areas:
+    "header  header"
+    "num     bar"
+    "wlabel  wbar"
+    "flabel  fbar"
+    "footer  footer";
+  row-gap: 5px;
+}
+.card.a .flabel { grid-area: flabel; color: #8a8a92; }
+.card.a .fbar { grid-area: fbar; display: flex; align-items: center; gap: 8px; }
+.card.a.compact {
+  width: 120px; height: 104px;
+  grid-template-rows: auto auto auto auto;
+  grid-template-areas:
+    "header header"
+    "num    bar"
+    "wlabel wbar"
+    "flabel fbar";
+}
+.card.a.compact .flabel { font-size: 10px; }
+
+/* ══ B — split weekly row, two half bars ═══════════════════════════════ */
+.card.b .wbar { gap: 6px; }
+.card.b .seg { display: flex; align-items: center; gap: 5px; flex: 1; min-width: 0; }
+.card.b .seg .k { font-size: 9px; color: #6a6a72; font-weight: 600; letter-spacing: .2px; }
+.card.b .seg .pct { min-width: 26px; font-size: 10px; }
+.card.b .wlabel { font-size: 10px; }
+
+/* ══ C — dual-track weekly (two 3px rails in one slot) ═════════════════ */
+.card.c { height: 118px; }
+.card.c .wbar { flex-direction: column; align-items: stretch; gap: 4px; }
+.card.c .trk { display: flex; align-items: center; gap: 7px; }
+.card.c .trk .k { font-size: 9px; color: #6a6a72; font-weight: 600; width: 14px; }
+.card.c .bar.rail { flex: 1; height: 3px; border-radius: 2px; }
+.card.c .pct { min-width: 28px; font-size: 10px; }
+.card.c .wlabel { align-self: center; }
+
+/* ══ D — Fable as inline chip, no bar ══════════════════════════════════ */
+.card.d .fchip {
+  font-size: 9px; font-weight: 600; letter-spacing: .2px;
+  color: #cbb8f0; background: rgba(139, 111, 196, .18);
+  border-radius: 7px; padding: 2px 6px; white-space: nowrap;
+}
+.card.d .wbar { gap: 6px; }
+.card.d .pct { min-width: 30px; }
+</style>
+</head>
+<body>
+
+<h1>Fable usage bar — 4 concepts</h1>
+<div class="sub">Rendered at true HUD pixel size, on a checkerboard. Left = regular, middle = compact, right = 2× zoom of the regular card.</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="concept">
+  <div class="ctitle">A — Stacked third row <span class="dim">· 200×124 regular, 120×104 compact (+12px height)</span></div>
+  <div class="cnote">
+    Adds a fourth grid row that mirrors the Weekly row exactly. <b>Recommended.</b> Nothing gets narrower,
+    every bar keeps its full width, and the label/bar/pct rhythm is unchanged — a reader who already knows
+    the card learns nothing new. The cost is 12px of window height, which for a HUD is nothing.
+    Row-gap drops 6px → 5px so the growth stays under the shadow of the existing card.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card a">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Weekly</span>
+        <div class="wbar"><div class="bar thin"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+        <span class="wlabel flabel">Fable</span>
+        <div class="fbar"><div class="bar thin"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+        <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card a compact">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Weekly</span>
+        <div class="wbar"><div class="bar thin"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+        <span class="wlabel flabel">Fable</span>
+        <div class="fbar"><div class="bar thin"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:304px">
+      <div class="pad zoom2">
+        <div class="card a">
+          <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+          <div class="num">32<span class="u">%</span></div>
+          <div class="bar main"><div class="fill" style="width:32%"></div></div>
+          <span class="wlabel">Weekly</span>
+          <div class="wbar"><div class="bar thin"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+          <span class="wlabel flabel">Fable</span>
+          <div class="fbar"><div class="bar thin"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+          <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="concept">
+  <div class="ctitle">B — Split weekly row <span class="dim">· 200×112, 120×92 (no height growth)</span></div>
+  <div class="cnote">
+    Both weekly limits share the existing row, side by side. Free in height, but each bar drops from
+    ~120px to ~46px of track — at that width a 1% change moves the fill by half a pixel, so the bar stops
+    being readable as a gauge and becomes decoration next to the number. In compact it's ~18px of track,
+    which is unusable. Only worth it if window height is a hard constraint.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card b">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Weekly</span>
+        <div class="wbar">
+          <div class="seg"><span class="k">ALL</span><div class="bar thin"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+          <div class="seg"><span class="k">FBL</span><div class="bar thin"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+        </div>
+        <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card b compact">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Wk</span>
+        <div class="wbar">
+          <div class="seg"><div class="bar thin"><div class="fill" style="width:39%"></div></div><span class="pct">39</span></div>
+          <div class="seg"><div class="bar thin"><div class="fill fable" style="width:54%"></div></div><span class="pct">54</span></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card b">
+          <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+          <div class="num">32<span class="u">%</span></div>
+          <div class="bar main"><div class="fill" style="width:32%"></div></div>
+          <span class="wlabel">Weekly</span>
+          <div class="wbar">
+            <div class="seg"><span class="k">ALL</span><div class="bar thin"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+            <div class="seg"><span class="k">FBL</span><div class="bar thin"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+          </div>
+          <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="concept">
+  <div class="ctitle">C — Dual rail, one "Weekly" label <span class="dim">· 200×118, 120×98 (+6px height)</span></div>
+  <div class="cnote">
+    Two 3px rails stacked inside the weekly slot, sharing one "Weekly" label — which is honest, since both
+    windows reset at the same instant. Half the height cost of A and the bars keep near-full width. The
+    tradeoff is the 3px rails and the 9px ALL/FBL keys: it reads as a denser instrument panel, less calm
+    than the current card. Good if you like the tighter look.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card c">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Weekly</span>
+        <div class="wbar">
+          <div class="trk"><span class="k">ALL</span><div class="bar rail"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+          <div class="trk"><span class="k">FBL</span><div class="bar rail"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+        </div>
+        <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card c compact" style="height:98px">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Wk</span>
+        <div class="wbar">
+          <div class="trk"><div class="bar rail"><div class="fill" style="width:39%"></div></div><span class="pct">39</span></div>
+          <div class="trk"><div class="bar rail"><div class="fill fable" style="width:54%"></div></div><span class="pct">54</span></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:292px">
+      <div class="pad zoom2">
+        <div class="card c">
+          <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+          <div class="num">32<span class="u">%</span></div>
+          <div class="bar main"><div class="fill" style="width:32%"></div></div>
+          <span class="wlabel">Weekly</span>
+          <div class="wbar">
+            <div class="trk"><span class="k">ALL</span><div class="bar rail"><div class="fill" style="width:39%"></div></div><span class="pct">39%</span></div>
+            <div class="trk"><span class="k">FBL</span><div class="bar rail"><div class="fill fable" style="width:54%"></div></div><span class="pct">54%</span></div>
+          </div>
+          <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="concept">
+  <div class="ctitle">D — Fable as a chip, no bar <span class="dim">· 200×112, 120×92 (no height growth)</span></div>
+  <div class="cnote">
+    Weekly keeps its full-width bar; Fable rides beside it as a violet chip showing only the number.
+    Zero layout change, zero height cost, and the weekly gauge stays readable. The catch: Fable has no bar,
+    so you read it instead of glancing at it — fine if Fable is a secondary number you check occasionally,
+    wrong if it's the limit you actually run into first.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card d">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Weekly</span>
+        <div class="wbar">
+          <div class="bar thin"><div class="fill" style="width:39%"></div></div>
+          <span class="pct">39%</span>
+          <span class="fchip">FBL 54%</span>
+        </div>
+        <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card d compact">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+        <div class="num">32<span class="u">%</span></div>
+        <div class="bar main"><div class="fill" style="width:32%"></div></div>
+        <span class="wlabel">Wk</span>
+        <div class="wbar">
+          <div class="bar thin"><div class="fill" style="width:39%"></div></div>
+          <span class="pct">39%</span>
+          <span class="fchip">54</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card d">
+          <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown">2h 14m</span></div>
+          <div class="num">32<span class="u">%</span></div>
+          <div class="bar main"><div class="fill" style="width:32%"></div></div>
+          <span class="wlabel">Weekly</span>
+          <div class="wbar">
+            <div class="bar thin"><div class="fill" style="width:39%"></div></div>
+            <span class="pct">39%</span>
+            <span class="fchip">FBL 54%</span>
+          </div>
+          <div class="footer"><span>12s ago</span><span class="reset">resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clawdometer — Audiowave Orb · 25 skins (ui-ux-pro-max)</title>
+<!--
+  DESIGN MOCKUP — 25 SKINS of the shipped "Audiowave Orb / Bars" widget.
+  Topology + physics are IDENTICAL to app/ui/orb.js (same v3 anti-sticky
+  engine: SPRING=JIT=1.0, RESPONSE=1.82, BOUNCE=1.56, 54-bar radial ring,
+  scaleY-only growth from an inner radius). Only the SKIN differs per tile:
+  color/paint strategy, background, bar shape, center-disc material, and an
+  optional decorative overlay. Driven by one shared fake "128 BPM" spectrum
+  so all 25 rings pulse together (open in a real browser to see motion).
+
+  Sibling of audio-orb-variants.html (varied RING TOPOLOGY) and
+  audio-orb-peakhold.html (varied the PEAK-HOLD overlay) — this batch holds
+  topology fixed and varies SKIN only, grounded in ui-ux-pro-max searches:
+    --design-system "audio visualizer music HUD dark creative tool"
+    --domain style  "vibrant dark neon glassmorphism aurora"
+    --domain color  "music entertainment premium luxury minimal pastel"
+  Categories pulled from those results are named in each tile's caption.
+-->
+<style>
+  :root{ --ink:#e8eef4; --dim:#8593a0; --dimr:#5f6c78; --line:rgba(255,255,255,.07); }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font:13px/1.5 "Segoe UI",-apple-system,Roboto,sans-serif; color:var(--ink);
+    background:radial-gradient(130% 100% at 50% -8%, #1b2230 0%, #12161d 45%, #07090d 100%);
+    min-height:100%; padding:26px 16px 90px; -webkit-font-smoothing:antialiased;
+  }
+  header{ text-align:center; max-width:860px; margin-inline:auto; }
+  header h1{ font-size:20px; font-weight:600; letter-spacing:.2px; }
+  header p{ color:var(--dim); font-size:12.5px; margin-top:8px; }
+  header code{ font-family:"Cascadia Code",Consolas,monospace; color:#a9c8ff; font-size:11.5px; }
+  h2.sec{
+    max-width:1180px; margin:46px auto 4px; font-size:12.5px; font-weight:700; letter-spacing:2px;
+    color:#9fd8ff; text-transform:uppercase; padding-bottom:8px; border-bottom:1px solid var(--line);
+  }
+  .grid{
+    max-width:1180px; margin:20px auto 0;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:18px;
+  }
+  .tile{
+    background:rgba(255,255,255,.022); border:1px solid var(--line); border-radius:14px;
+    padding:12px 12px 10px; display:flex; flex-direction:column; gap:9px; overflow:hidden;
+  }
+  .stage{
+    position:relative; width:100%; height:172px; border-radius:12px; overflow:hidden;
+  }
+  .disc{ position:absolute; width:150px; height:150px; border-radius:50%; left:50%; top:50%; transform:translate(-50%,-50%); }
+  .ring{ position:absolute; inset:0; }
+  .spoke{ position:absolute; left:50%; top:50%; width:0; height:0; }
+  .bar{ position:absolute; bottom:var(--ir); will-change:transform; transform-origin:center bottom; }
+  .meta{ display:flex; flex-direction:column; gap:1px; }
+  .meta .name{ font-size:12px; font-weight:600; }
+  .meta .name i{ color:var(--dimr); font-style:normal; font-weight:400; margin-right:5px; }
+  .meta .fam{ font-size:8.5px; letter-spacing:1.3px; text-transform:uppercase; color:#7fb8e0; margin-top:1px; }
+  .meta .desc{ font-size:10.5px; color:var(--dim); margin-top:3px; line-height:1.4; }
+  .tile.meta-dark .fam{ color:#5b7aa0; }
+  .tile.meta-dark .desc{ color:#6b7280; }
+  .tile.meta-dark .name{ color:#2c2f36; }
+  footer{ margin-top:40px; text-align:center; color:var(--dimr); font-size:11.5px; line-height:1.7; max-width:760px; margin-inline:auto; }
+
+  /* ── center readout ─────────────────────────────────────────────── */
+  .co{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:78px; height:78px; border-radius:50%; z-index:3;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;
+    text-shadow:0 1px 3px rgba(0,0,0,.5);
+  }
+  .co .pct .b{ font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .co .pct .b span{ font-size:.55em; color:#9aa3ad; font-weight:600; }
+  .co .pct .r{ font-size:8px; color:#7c8590; margin-top:3px; letter-spacing:.2px; }
+  .co-plain{ background:radial-gradient(circle at 50% 45%, rgba(18,22,28,.88), rgba(18,22,28,0) 74%); }
+  .co-glass{ background:rgba(255,255,255,.08); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.18); }
+  .co-clay{ background:#e7eaf0; box-shadow:6px 6px 14px #c3c7cf, -6px -6px 14px #ffffff; }
+  .co-clay .pct .b{ color:#3d4450; } .co-clay .pct .b span{ color:#6b7280; } .co-clay .pct .r{ color:#6b7280; text-shadow:none; }
+  .co-mono{ background:rgba(10,10,12,.78); border:1px solid var(--cb,#333); }
+  .co-mono .pct .b{ color:var(--ct,#e8e8ea); }
+  .co-mono.dash{ border-style:dashed; }
+  .co-line{ background:transparent; border:1px solid rgba(255,255,255,.35); }
+  .co-chamfer{ border-radius:8px; width:82px; height:82px; clip-path:polygon(16% 0,100% 0,100% 84%,84% 100%,0 100%,0 16%); background:rgba(10,10,15,.85); border:1px solid rgba(0,255,180,.4); }
+  .co-block{ border-radius:10px; width:82px; height:82px; background:rgba(10,10,12,.85); border:2px solid #39ff14; }
+
+  /* ── decorative overlays ────────────────────────────────────────── */
+  .blob{ position:absolute; border-radius:50%; filter:blur(22px); opacity:.55; animation:blobfloat 9s ease-in-out infinite; }
+  @keyframes blobfloat{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(6px,-8px); } }
+  .scan{ position:absolute; inset:0; background:repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px); mix-blend-mode:overlay; z-index:4; pointer-events:none; }
+  .gridh{ position:absolute; left:0; right:0; bottom:0; height:55%; z-index:1; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.12) 0 1px, transparent 1px 14px), linear-gradient(180deg, transparent, rgba(255,0,150,.08));
+    -webkit-mask:linear-gradient(180deg, transparent, black 70%); mask:linear-gradient(180deg, transparent, black 70%); }
+  .brk{ position:absolute; width:16px; height:16px; border:2px solid #00e5ff; opacity:.8; z-index:4; pointer-events:none; }
+  .brk.tl{ left:2px; top:2px; border-right:none; border-bottom:none; }
+  .brk.tr{ right:2px; top:2px; border-left:none; border-bottom:none; }
+  .brk.bl{ left:2px; bottom:2px; border-right:none; border-top:none; }
+  .brk.br{ right:2px; bottom:2px; border-left:none; border-top:none; }
+  .gloss{ position:absolute; top:-50%; left:-60%; width:40%; height:200%; z-index:4; pointer-events:none;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,.35), transparent); transform:rotate(20deg);
+    animation:sweep 4.5s ease-in-out infinite; }
+  @keyframes sweep{ 0%{ left:-60%; } 100%{ left:130%; } }
+  .ticks{ position:absolute; inset:-10px; border-radius:50%; z-index:1; pointer-events:none;
+    background:repeating-conic-gradient(rgba(255,255,255,.14) 0 2deg, transparent 2deg 9deg);
+    -webkit-mask:radial-gradient(circle, transparent 62%, black 63%, black 66%, transparent 67%);
+    mask:radial-gradient(circle, transparent 62%, black 63%, black 66%, transparent 67%); }
+
+  @media (prefers-reduced-motion:reduce){
+    .blob, .gloss{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Audiowave Orb · 25 skins</h1>
+  <p>Same shipped engine and 54-bar ring as <code>app/ui/orb.js</code> — every tile below only changes color, material, bar shape, and background. Directions pulled from ui-ux-pro-max: <code>--design-system</code>, <code>--domain style</code>, <code>--domain color</code>. Center readout mocks the real stat (<code>63% · resets 2h14m</code>) so scale reads the same everywhere.</p>
+</header>
+
+<h2 class="sec">Dark foundations</h2>
+<div class="grid" id="g0"></div>
+<h2 class="sec">Neon &amp; retro-future</h2>
+<div class="grid" id="g1"></div>
+<h2 class="sec">Glass, soft &amp; spatial</h2>
+<div class="grid" id="g2"></div>
+<h2 class="sec">Brand palettes</h2>
+<div class="grid" id="g3"></div>
+<h2 class="sec">Meters &amp; structure</h2>
+<div class="grid" id="g4"></div>
+
+<footer>54 bars · same v3 anti-sticky physics as the shipped ring (spring 100 / jitter 100, response 1.82×, bounce 1.56×) · fake synthetic 128 BPM spectrum for preview — real builds read <code>audio-spectrum</code> from WASAPI loopback.</footer>
+
+<script>
+const N = 36, BARS = 54, IR = 52;
+const SPRING = 1.0, JIT = 1.0, RESPONSE = 1.82, BOUNCE = 1.56;
+
+const fold = (x) => { x %= 1; if (x < 0) x += 1; return x < 0.5 ? x * 2 : (1 - x) * 2; };
+
+const spec = new Float32Array(N);
+const lerpBin = (fr) => {
+  const x = fr * N, i = Math.floor(x);
+  const a = spec[((i % N) + N) % N], b = spec[(((i + 1) % N) + N) % N];
+  return a + (b - a) * (x - i);
+};
+
+const BEAT = 60 / 128;
+function fakeSpectrumUpdate(t) {
+  for (let i = 0; i < N; i++) spec[i] *= 0.90;
+  const bt = t % BEAT;
+  const kick = Math.max(0, 1 - bt / 0.10);
+  for (let i = 0; i < 6; i++) spec[i] = Math.max(spec[i], kick * (1 - i / 8));
+  const beatIdx = Math.floor(t / BEAT) % 4;
+  if (beatIdx === 1 || beatIdx === 3) {
+    const snare = Math.max(0, 1 - bt / 0.14);
+    for (let i = 8; i < 20; i++) spec[i] = Math.max(spec[i], snare * (0.5 + Math.random() * 0.5));
+  }
+  const ht = t % (BEAT / 2);
+  const hat = Math.max(0, 1 - ht / 0.045);
+  for (let i = 24; i < N; i++) spec[i] = Math.max(spec[i], hat * (0.3 + Math.random() * 0.5));
+  for (let i = 0; i < N; i++) spec[i] = Math.min(1, spec[i] + 0.015 + 0.015 * Math.sin(t * 0.7 + i));
+}
+
+/* ── paint strategies (shared across skins; colors/params differ) ──── */
+const paintSolid = (el, frac, i, t, c) => {
+  el.style.background = c[0];
+  el.style.opacity = (0.32 + frac * 0.62).toFixed(2);
+};
+const paintGlow = (el, frac, i, t, c) => {
+  el.style.background = c[0];
+  el.style.opacity = (0.4 + frac * 0.6).toFixed(2);
+};
+const paintMono = (el, frac, i, t, c) => {
+  el.style.background = c[0];
+  el.style.opacity = (0.25 + frac * 0.65).toFixed(2);
+};
+function hexToRgb(h) {
+  if (h[0] !== "#") return [255, 255, 255];
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function lerpColor(a, b, t) {
+  const pa = hexToRgb(a), pb = hexToRgb(b);
+  const r = Math.round(pa[0] + (pb[0] - pa[0]) * t);
+  const g = Math.round(pa[1] + (pb[1] - pa[1]) * t);
+  const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
+  return `rgb(${r},${g},${bl})`;
+}
+const paintDuo = (el, frac, i, t, c) => {
+  el.style.background = lerpColor(c[0], c[1], Math.min(1, frac));
+  el.style.opacity = (0.45 + frac * 0.5).toFixed(2);
+};
+const paintZone = (el, frac, i, t, c) => {
+  const col = frac > 0.82 ? c[2] : frac > 0.55 ? c[1] : c[0];
+  el.style.background = col;
+  el.style.opacity = (0.5 + frac * 0.5).toFixed(2);
+};
+const paintHolo = (el, frac, i, t, c, cfg) => {
+  const speed = (cfg && cfg.holoSpeed) || 0.06;
+  const idx = Math.floor((i / BARS + t * speed) * c.length);
+  const col = c[((idx % c.length) + c.length) % c.length];
+  el.style.background = col;
+  el.style.opacity = (0.5 + frac * 0.5).toFixed(2);
+};
+const paintGroup = (el, frac, i, t, c) => {
+  const perGroup = Math.ceil(BARS / c.length);
+  const g = Math.floor(i / perGroup) % c.length;
+  el.style.background = c[g];
+  el.style.opacity = (0.45 + frac * 0.55).toFixed(2);
+};
+
+/* ── decorative overlay HTML ─────────────────────────────────────── */
+const BLOBPOS = [{ l: -14, t: -16 }, { l: 96, t: -6 }, { l: 34, t: 108 }];
+const blobsHTML = (colors) => colors.slice(0, 3).map((c, idx) => {
+  const p = BLOBPOS[idx % 3];
+  return `<div class="blob" style="background:${c};width:64px;height:64px;left:${p.l}px;top:${p.t}px;animation-delay:${(idx * 1.2).toFixed(1)}s"></div>`;
+}).join("");
+const scanHTML = () => `<div class="scan"></div>`;
+const gridHTML = () => `<div class="gridh"></div>`;
+const brkHTML = () => `<div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>`;
+const glossHTML = () => `<div class="gloss"></div>`;
+const ticksHTML = () => `<div class="ticks"></div>`;
+
+/* ── 25 skins ─────────────────────────────────────────────────────── */
+const SKINS = [
+  // ── Dark foundations ──
+  { id:"oled", name:"OLED Void", fam:"OLED Dark Mode", desc:"Deep black, single neon-green accent, minimal glow.",
+    stageBg:"#000", discBg:"radial-gradient(circle,#0a0a0a 0%,#000 70%)",
+    paint:paintSolid, colors:["#22C55E"], barW:2, barRadius:"2px",
+    coClass:"co-mono", coVars:{"--cb":"rgba(34,197,94,.35)","--ct":"#eafff0"} },
+  { id:"cinema", name:"Cinema Indigo", fam:"Modern Dark (Cinema)", desc:"Ambient indigo blobs behind soft-glow bars.",
+    stageBg:"linear-gradient(180deg,#0a0a0f,#020203)", discBg:"radial-gradient(circle,#0e0e14,#020203 75%)",
+    paint:paintGlow, colors:["#5E6AD2"], staticGlow:"#5E6AD2", barW:2, barRadius:"2px",
+    bgDecor:blobsHTML(["#5E6AD2","#7a6ad0"]), coClass:"co-glass" },
+  { id:"term", name:"Terminal Mono", fam:"Terminal / CLI", desc:"Blocky bars, scanline overlay, monospace readout.",
+    stageBg:"#0d0f0d", discBg:"#0a0c0a",
+    paint:paintMono, colors:["#00FF66"], barW:2, barRadius:"0px",
+    fgDecor:scanHTML(), coClass:"co-mono", coVars:{"--cb":"rgba(0,255,102,.4)","--ct":"#8effb0"} },
+  { id:"quiet", name:"Minimal Mono Line", fam:"Quiet Luxury", desc:"Hairline bars, no glow, generous negative space.",
+    stageBg:"#0b0b0c", discBg:"#0a0a0b",
+    paint:paintMono, colors:["rgba(255,255,255,.82)"], barW:1, barRadius:"1px",
+    coClass:"co-line" },
+  { id:"fui", name:"Sci-Fi FUI Brackets", fam:"HUD / Sci-Fi FUI", desc:"Thin cyan lines, corner brackets, dashed readout.",
+    stageBg:"#000", discBg:"transparent",
+    paint:paintGlow, colors:["#00FFFF"], staticGlow:"#00FFFF", barW:1.5, barRadius:"1px",
+    fgDecor:brkHTML(), coClass:"co-mono dash", coVars:{"--cb":"rgba(0,255,255,.5)","--ct":"#c9faff"} },
+
+  // ── Neon & retro-future ──
+  { id:"cyberterm", name:"Cyberpunk Terminal", fam:"Cyberpunk UI", desc:"Matrix-green glow bars over a scanline overlay.",
+    stageBg:"#0D0D0D", discBg:"#0a0a0a",
+    paint:paintGlow, colors:["#00FF00"], staticGlow:"#00FF00", barW:2, barRadius:"1px",
+    fgDecor:scanHTML(), coClass:"co-mono", coVars:{"--cb":"rgba(0,255,0,.4)","--ct":"#b6ffb0"} },
+  { id:"synth", name:"Synthwave Grid", fam:"Retro-Futurism", desc:"Perspective grid horizon, blue-to-pink duotone bars.",
+    stageBg:"linear-gradient(180deg,#1a1a2e,#0d0d16)", discBg:"radial-gradient(circle,#170f24,#0d0d16 75%)",
+    paint:paintDuo, colors:["#0080FF","#FF006E"], barW:2, barRadius:"2px",
+    fgDecor:gridHTML(), coClass:"co-glass" },
+  { id:"vapor", name:"Sunset Vapor", fam:"Vaporwave", desc:"Pink / cyan / mint / purple cycling by bar position.",
+    stageBg:"linear-gradient(160deg,#2a1339,#170a24)", discBg:"radial-gradient(circle,#2a1339,#170a24 75%)",
+    paint:paintHolo, colors:["#FF71CE","#01CDFE","#05FFA1","#B967FF"], barW:2, barRadius:"2px",
+    coClass:"co-glass" },
+  { id:"y2k", name:"Y2K Chrome", fam:"Y2K Aesthetic", desc:"Chrome-to-bubblegum duotone with a glossy sweep.",
+    stageBg:"#0a0a0f", discBg:"radial-gradient(circle,#141018,#0a0a0f 75%)",
+    paint:paintDuo, colors:["#C0C0C0","#FF69B4"], barW:2, barRadius:"2px",
+    bgDecor:blobsHTML(["#FF69B4","#00FFFF"]), fgDecor:glossHTML(), coClass:"co-glass" },
+  { id:"cybermobile", name:"Cyberpunk Mobile HUD", fam:"Cyberpunk Mobile HUD", desc:"Chamfered panel, tri-neon accent cycling.",
+    stageBg:"#0A0A0F", discBg:"#12121A",
+    paint:paintHolo, colors:["#00FF88","#FF00FF","#00D4FF"], barW:2, barRadius:"0px",
+    fgDecor:scanHTML(), coClass:"co-chamfer" },
+
+  // ── Glass, soft & spatial ──
+  { id:"glass", name:"Frosted Glass", fam:"Glassmorphism", desc:"Frosted panel over a vibrant gradient field.",
+    stageBg:"linear-gradient(135deg,#2a3a55,#3a2a55)", discBg:"transparent",
+    paint:paintDuo, colors:["#DCEFFF","#FFFFFF"], barW:2, barRadius:"2px",
+    coClass:"co-glass" },
+  { id:"mesh", name:"Gradient Mesh Prism", fam:"Gradient Mesh / Aurora Evolved", desc:"Holographic rainbow bars over flowing mesh blobs.",
+    stageBg:"#0a0b10", discBg:"radial-gradient(circle,#0e0f16,#0a0b10 75%)",
+    paint:paintHolo, colors:["#00FFFF","#FF00FF","#FFFF00","#0066FF","#00FF66"], barW:2, barRadius:"2px",
+    bgDecor:blobsHTML(["#00FFFF","#FF00FF","#FFFF00"]), coClass:"co-glass" },
+  { id:"vision", name:"VisionOS Spatial", fam:"Spatial UI (visionOS)", desc:"Translucent glass panel, soft depth, gaze-hover feel.",
+    stageBg:"#1c1e22", discBg:"transparent",
+    paint:paintSolid, colors:["rgba(255,255,255,.85)"], barW:2, barRadius:"2px",
+    coClass:"co-glass" },
+  { id:"neu", name:"Neumorphic Soft", fam:"Neumorphism", desc:"Light soft-UI, embossed pill bars (only light-mode tile).",
+    stageBg:"#E7EAF0", discBg:"transparent",
+    paint:paintSolid, colors:["#7C8BA6"], barW:3, barRadius:"99px",
+    coClass:"co-clay", metaDark:true },
+  { id:"aurora", name:"Aurora Mesh", fam:"Aurora UI", desc:"Flowing 10s mesh gradient behind electric duotone bars.",
+    stageBg:"linear-gradient(120deg,#0080FF,#FF1493,#7a3cff)", stageBgSize:"220% 220%", stageBgAnim:true,
+    discBg:"radial-gradient(circle,#10131c,#0a0c12 75%)",
+    paint:paintDuo, colors:["#0080FF","#FF1493"], barW:2, barRadius:"2px",
+    coClass:"co-glass" },
+
+  // ── Brand palettes ──
+  { id:"gold", name:"Luxury Gold", fam:"Luxury / Premium Brand", desc:"Black + gold, restrained glow, elegant restraint.",
+    stageBg:"#1C1917", discBg:"radial-gradient(circle,#221f1c,#1C1917 75%)",
+    paint:paintGlow, colors:["#A16207"], staticGlow:"#A16207", barW:1.5, barRadius:"1px",
+    coClass:"co-mono", coVars:{"--cb":"rgba(161,98,7,.5)","--ct":"#f0dfb0"} },
+  { id:"streaming", name:"Music Streaming Indigo", fam:"Music Streaming palette", desc:"Dark indigo card + play-green accent — closest to shipped.",
+    stageBg:"#0F0F23", discBg:"radial-gradient(circle,#1B1B30,#0F0F23 75%)",
+    paint:paintGlow, colors:["#22C55E"], staticGlow:"#22C55E", barW:2, barRadius:"2px",
+    coClass:"co-plain" },
+  { id:"beatmaker", name:"Beat Maker Studio", fam:"Music Creation palette", desc:"Purple-to-green mixer duotone with an outer tick ring.",
+    stageBg:"#0F172A", discBg:"radial-gradient(circle,#192134,#0F172A 75%)",
+    paint:paintDuo, colors:["#7C3AED","#22C55E"], barW:2, barRadius:"2px",
+    fgDecor:ticksHTML(), coClass:"co-glass" },
+  { id:"bloom", name:"Beauty Pastel Bloom", fam:"Beauty / Spa palette", desc:"Pink-to-lavender duotone, soft blooming blobs.",
+    stageBg:"linear-gradient(160deg,#2b1020,#1a0a17)", discBg:"radial-gradient(circle,#341527,#1a0a17 75%)",
+    paint:paintDuo, colors:["#EC4899","#8B5CF6"], barW:2, barRadius:"2px",
+    bgDecor:blobsHTML(["#EC4899","#8B5CF6"]), coClass:"co-glass" },
+  { id:"auto", name:"Automotive Steel", fam:"Automotive palette", desc:"Slate steel + action red, precise thin bars.",
+    stageBg:"#1E293B", discBg:"radial-gradient(circle,#243244,#1E293B 75%)",
+    paint:paintGlow, colors:["#DC2626"], staticGlow:"#DC2626", barW:1.5, barRadius:"1px",
+    coClass:"co-mono", coVars:{"--cb":"rgba(220,38,38,.45)","--ct":"#ffd7d7"} },
+
+  // ── Meters & structure ──
+  { id:"vuwarm", name:"Instrument Warm (VU zones)", fam:"Music Instrument palette", desc:"Classic VU zoning — green/amber/red by level, not position.",
+    stageBg:"#150e0a", discBg:"radial-gradient(circle,#1c130d,#150e0a 75%)",
+    paint:paintZone, colors:["#22C55E","#D97706","#DC2626"], barW:2, barRadius:"1px",
+    coClass:"co-mono", coVars:{"--cb":"rgba(217,119,6,.4)","--ct":"#ffe3b0"} },
+  { id:"vuanalog", name:"Retro VU Analog", fam:"Analog VU meter", desc:"Same zoning, warmer sepia panel, film-grain overlay.",
+    stageBg:"linear-gradient(160deg,#2a1f10,#120d08)", discBg:"radial-gradient(circle,#241a0d,#120d08 75%)",
+    paint:paintZone, colors:["#8fe08a","#e5b24b","#e5484d"], barW:2, barRadius:"1px",
+    fgDecor:scanHTML(), coClass:"co-mono", coVars:{"--cb":"rgba(229,178,75,.4)","--ct":"#f5e2b8"} },
+  { id:"holo", name:"Holographic Foil", fam:"Gradient Mesh (fast cycle)", desc:"Fast rainbow cycling, prism-like shimmer over time.",
+    stageBg:"#050505", discBg:"radial-gradient(circle,#0a0a0a,#050505 75%)",
+    paint:paintHolo, colors:["#00FFFF","#FF00FF","#FFFF00","#39FF14","#0080FF"], holoSpeed:0.15, barW:2, barRadius:"2px",
+    coClass:"co-glass" },
+  { id:"bento", name:"Bento Segmented", fam:"Bento Grids", desc:"Six color-coded arcs with visible gaps between groups.",
+    stageBg:"#111214", discBg:"radial-gradient(circle,#161719,#111214 75%)",
+    paint:paintGroup, colors:["#63b35f","#e5b24b","#6aa9e8","#c67ad0","#e5484d","#5ad0c0"], barW:2, barRadius:"2px",
+    skip:(i)=> (i % 9) >= 7, coClass:"co-plain" },
+  { id:"duotone", name:"Duotone Block", fam:"Vibrant & Block-based", desc:"Thick high-contrast duotone, square panel readout.",
+    stageBg:"#0e0e10", discBg:"radial-gradient(circle,#141416,#0e0e10 75%)",
+    paint:paintDuo, colors:["#39FF14","#BF00FF"], barW:4, barRadius:"1px",
+    coClass:"co-block" },
+];
+
+/* ── build + shared physics loop ─────────────────────────────────── */
+const instances = [];
+function buildTile(gridEl, cfg, num) {
+  const tile = document.createElement("div");
+  tile.className = "tile" + (cfg.metaDark ? " meta-dark" : "");
+
+  const stage = document.createElement("div");
+  stage.className = "stage";
+  stage.style.background = cfg.stageBg;
+  if (cfg.stageBgSize) stage.style.backgroundSize = cfg.stageBgSize;
+  if (cfg.stageBgAnim) stage.style.animation = "auroraflow 10s ease-in-out infinite alternate";
+  tile.appendChild(stage);
+
+  if (cfg.bgDecor) stage.insertAdjacentHTML("beforeend", cfg.bgDecor);
+
+  const disc = document.createElement("div");
+  disc.className = "disc";
+  disc.style.background = cfg.discBg || "transparent";
+  stage.appendChild(disc);
+
+  const ring = document.createElement("div");
+  ring.className = "ring";
+  stage.appendChild(ring);
+
+  const bars = [];
+  for (let i = 0; i < BARS; i++) {
+    const ang = (i / BARS) * 360;
+    const spoke = document.createElement("div");
+    spoke.className = "spoke";
+    spoke.style.transform = `rotate(${ang}deg)`;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const w = cfg.barW || 2, len = cfg.barLen || 22;
+    bar.style.cssText = `--ir:${IR}px;width:${w}px;height:${len}px;left:${-w / 2}px;border-radius:${cfg.barRadius || "2px"};`;
+    if (cfg.staticGlow) bar.style.boxShadow = `0 0 5px ${cfg.staticGlow}`;
+    spoke.appendChild(bar);
+    ring.appendChild(spoke);
+    const skip = cfg.skip ? cfg.skip(i) : false;
+    if (skip) bar.style.opacity = "0";
+    bars.push({
+      el: bar, skip, i,
+      binA: ((i * 13) % N) / N, binB: ((i * 29 + 7) % N) / N, binC: ((i * 7 + 3) % N) / N,
+      phase: i * 2.399, oscf: 3.5 + (i % 9) * 0.85,
+      attack: 0.30 + (i % 6) * 0.06, release: 0.18 + (i % 8) * 0.035,
+      decay: 0.74 + (i % 9) * 0.02, k: 0.14 + (i % 7) * 0.018,
+      y: 0, v: 0, env: 0,
+    });
+  }
+
+  const co = document.createElement("div");
+  co.className = "co " + (cfg.coClass || "co-plain");
+  if (cfg.coVars) for (const k in cfg.coVars) co.style.setProperty(k, cfg.coVars[k]);
+  co.innerHTML = `<div class="pct"><div class="b">63<span>%</span></div><div class="r">resets 2h14m</div></div>`;
+  stage.appendChild(co);
+
+  if (cfg.fgDecor) stage.insertAdjacentHTML("beforeend", cfg.fgDecor);
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.innerHTML = `<div class="name"><i>${num}.</i>${cfg.name}</div><div class="fam">${cfg.fam}</div><div class="desc">${cfg.desc}</div>`;
+  tile.appendChild(meta);
+
+  gridEl.appendChild(tile);
+  instances.push({ bars, cfg });
+}
+
+const GROUPS = [
+  { el: document.getElementById("g0"), skins: SKINS.slice(0, 5), start: 1 },
+  { el: document.getElementById("g1"), skins: SKINS.slice(5, 10), start: 6 },
+  { el: document.getElementById("g2"), skins: SKINS.slice(10, 15), start: 11 },
+  { el: document.getElementById("g3"), skins: SKINS.slice(15, 20), start: 16 },
+  { el: document.getElementById("g4"), skins: SKINS.slice(20, 25), start: 21 },
+];
+for (const grp of GROUPS) {
+  grp.skins.forEach((cfg, idx) => buildTile(grp.el, cfg, grp.start + idx));
+}
+
+let t = 0, raf = 0;
+function frame() {
+  t += 0.016;
+  fakeSpectrumUpdate(t);
+  for (const inst of instances) {
+    const { bars, cfg } = inst;
+    for (const b of bars) {
+      if (b.skip) continue;
+      const a = lerpBin(fold(b.binA + t * 0.05));
+      const c = lerpBin(b.binB);
+      const dd = lerpBin(fold(b.binC - t * 0.03));
+      const osc = Math.sin(b.phase + t * b.oscf) * 0.5 + 0.5;
+      const tgt = Math.min(1, (a * 0.40 + c * 0.30 * osc + dd * 0.20) * RESPONSE);
+      if (tgt > b.env) b.env += (tgt - b.env) * b.attack;
+      else b.env += (tgt - b.env) * (b.release + SPRING * 0.15);
+      const force = (b.env - b.y) * b.k * (1 + SPRING * 1.3) * BOUNCE;
+      b.v = (b.v + force) * (b.decay - SPRING * 0.06);
+      b.y += b.v;
+      if (b.y < 0) { b.y = 0; b.v *= -0.3; }
+      const jj = JIT * 0.06 * Math.sin(t * (9 + b.i * 1.3) + b.phase) * b.env;
+      const frac = Math.max(0.04, Math.min(1.25, b.y + jj));
+      b.el.style.transform = `scaleY(${frac})`;
+      cfg.paint(b.el, frac, b.i, t, cfg.colors, cfg);
+    }
+  }
+  raf = requestAnimationFrame(frame);
+}
+raf = requestAnimationFrame(frame);
+</script>
+<style>
+@keyframes auroraflow { 0%{ background-position:0% 50%; } 100%{ background-position:100% 50%; } }
+</style>
+</body>
+</html>

@@ -1,0 +1,434 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Fable bar — design-taste-frontend set</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0f0f11; color: #e8e8ea; font: 13px/1.55 "Segoe UI", sans-serif; padding: 32px 40px 80px; }
+h1 { font-size: 19px; font-weight: 600; }
+.lead { color: #8a8a92; font-size: 12px; margin: 4px 0 8px; max-width: 680px; }
+.dials { color: #6a6a72; font-size: 11px; font-family: Consolas, monospace; margin-bottom: 6px; }
+.scope { color: #a08a4a; font-size: 11px; font-family: Consolas, monospace; margin-bottom: 28px; }
+.concept { margin-bottom: 38px; border-top: 1px solid #26262c; padding-top: 18px; }
+.ctitle { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.ctitle .dim { color: #6a6a72; font-weight: 400; font-size: 12px; }
+.rule { color: #7b7b85; font-size: 11px; font-family: Consolas, monospace; margin-bottom: 6px; }
+.cnote { color: #8a8a92; font-size: 12px; max-width: 660px; margin-bottom: 16px; }
+.cnote b { color: #cfcfd6; font-weight: 600; }
+.stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.slot { display: flex; flex-direction: column; gap: 8px; }
+.slabel { color: #5a5a62; font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
+.pad { padding: 14px; border-radius: 12px;
+  background: linear-gradient(45deg,#1a1a1f 25%,transparent 25%,transparent 75%,#1a1a1f 75%),
+              linear-gradient(45deg,#1a1a1f 25%,#141418 25%,#141418 75%,#1a1a1f 75%);
+  background-size: 12px 12px; background-position: 0 0, 6px 6px; }
+.zoom2 { transform: scale(2); transform-origin: top left; }
+.zwrap { overflow: hidden; }
+
+/* ── locked tokens ───────────────────────────────────────────────────────
+   ONE accent, green, inherited from the existing HUD. No violet, no second
+   hue for identity (Color Consistency Lock, 4.2). Radius scale: 10px card,
+   1px data marks, nothing in between (Shape Consistency Lock, 4.4).
+   Mono: Cascadia Mono ships with Windows 11, so no webfont, no FOIT, no CDN
+   in a Tauri offline HUD. This is the honest self-host answer. */
+:root {
+  --accent:  #5c9257;
+  --ink:     #e8e8ea;
+  --ink-2:   #9a9aa4;
+  --ink-3:   #62626b;
+  --hairline: rgba(255,255,255,.13);
+  --surface: rgba(22,22,26,.93);
+}
+.mono { font-family: "Cascadia Mono", Consolas, monospace; font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1; }
+
+.card { width: 200px; height: 112px; padding: 12px 13px; background: var(--surface);
+  color: var(--ink); border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
+  display: flex; flex-direction: column; }
+.card.compact { width: 120px; height: 92px; padding: 10px 11px; }
+.card.compact .lsfx { display: none; }
+.hd { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.hd .t { font-size: 9.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .5px; text-transform: uppercase; }
+.hd .c { margin-left: auto; font-size: 10px; color: var(--ink-2); }
+
+/* ══ T1 — trackless hairlines ══════════════════════════════════════════ */
+.t1 .rows { margin-top: 11px; display: grid; grid-template-columns: 1fr; row-gap: 9px; }
+.t1 .row { display: grid; grid-template-columns: auto 1fr auto; column-gap: 8px; align-items: baseline; }
+.t1 .k { font-size: 9.5px; color: var(--ink-3); letter-spacing: .3px; }
+.t1 .v { font-size: 12px; color: var(--ink); }
+.t1 .scale { position: relative; height: 1px; background: var(--hairline); align-self: center; }
+.t1 .scale i { position: absolute; left: 0; top: -1px; height: 3px; background: var(--accent); }
+.t1 .ft { margin-top: auto; font-size: 9.5px; color: var(--ink-3); }
+.t1 .ft b { color: var(--ink-2); font-weight: 400; }
+
+/* ══ T2 — mono ledger ══════════════════════════════════════════════════ */
+.t2 .rows { margin-top: 8px; }
+.t2 .row { display: flex; align-items: baseline; justify-content: space-between; padding: 5px 0; }
+.t2 .row + .row { border-top: 1px solid rgba(255,255,255,.07); }
+.t2 .k { font-size: 9.5px; color: var(--ink-3); letter-spacing: .4px; text-transform: uppercase; }
+.t2 .n { font-size: 15px; color: var(--ink); position: relative; padding-bottom: 3px; }
+/* the underline IS the bar: full width of the number is 100%, scaled by --p */
+.t2 .n::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: rgba(255,255,255,.08); }
+.t2 .n::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px;
+  width: var(--p); background: var(--accent); }
+.t2 .ft { margin-top: auto; padding-top: 6px; font-size: 9.5px; color: var(--ink-3); }
+
+/* ══ T3 — vertical column meters ═══════════════════════════════════════ */
+.t3 .body { flex: 1; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.t3 .lead { display: flex; flex-direction: column; }
+.t3 .lead .n { font-size: 30px; line-height: .95; color: var(--ink); }
+.t3 .lead .n .u { font-size: .5em; color: var(--ink-2); }
+.t3 .lead .cap { font-size: 9px; color: var(--ink-3); letter-spacing: .4px; text-transform: uppercase; margin-top: 4px; }
+.t3 .cols { display: flex; gap: 9px; align-items: flex-end; }
+.t3 .col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.t3 .col .tube { width: 3px; height: 44px; background: var(--hairline); border-radius: 1px;
+  display: flex; flex-direction: column; justify-content: flex-end; }
+.t3 .col .tube i { width: 100%; background: var(--accent); border-radius: 1px; }
+.t3 .col .k { font-size: 7.5px; color: var(--ink-3); letter-spacing: .3px; }
+
+/* ══ T4 — asymmetric split ═════════════════════════════════════════════ */
+.t4 { padding: 12px 13px 11px; }
+.t4 .grid { flex: 1; display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 12px; align-items: center; }
+.t4 .n { font-size: 32px; line-height: .9; color: var(--ink); letter-spacing: -.02em; }
+.t4 .n .u { font-size: .45em; color: var(--ink-2); }
+.t4 .sub { font-size: 8.5px; color: var(--ink-3); letter-spacing: .4px; text-transform: uppercase; margin-top: 5px; }
+.t4 .stack { display: grid; row-gap: 8px; }
+.t4 .item .top { display: flex; justify-content: space-between; align-items: baseline; }
+.t4 .item .k { font-size: 8px; color: var(--ink-3); letter-spacing: .4px; }
+.t4 .item .v { font-size: 10px; color: var(--ink-2); }
+.t4 .item .scale { position: relative; height: 1px; background: var(--hairline); margin-top: 3px; }
+.t4 .item .scale i { position: absolute; left: 0; top: -1px; height: 3px; background: var(--accent); }
+
+/* ══ T5 — edge-bleed lanes ═════════════════════════════════════════════ */
+.t5 { padding: 12px 0 0; overflow: hidden; }
+.t5 .in { padding: 0 13px; }
+.t5 .n { font-size: 28px; line-height: 1; color: var(--ink); }
+.t5 .n .u { font-size: .5em; color: var(--ink-2); }
+.t5 .keys { display: flex; justify-content: space-between; margin-top: 10px; font-size: 8px;
+  color: var(--ink-3); letter-spacing: .4px; }
+.t5 .lanes { margin-top: 6px; display: grid; row-gap: 3px; }
+.t5 .lane { height: 3px; background: rgba(255,255,255,.07); position: relative; }
+.t5 .lane i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+.t5 .lane.dim i { background: #3f5c3d; }
+.t5 .ft { padding: 8px 13px 10px; font-size: 9px; color: var(--ink-3); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<h1>Fable bar — design-taste-frontend set</h1>
+<div class="lead">
+  <b style="color:#cfcfd6">Design read:</b> desktop telemetry HUD for its own author, with an instrument-panel
+  language, leaning toward native CSS at cockpit density with one locked accent.
+</div>
+<div class="dials">DESIGN_VARIANCE 5 · MOTION_INTENSITY 2 · VISUAL_DENSITY 9</div>
+<div class="scope">Section 13: this skill declares dense product UI out of scope. Applied only 4.2 (Colour Lock), 4.4 (no cards above density 7), 7 (mono numbers), 9.A/9.F. Ignored: hero rules, eyebrow count, image strategy, GSAP.</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept t1">
+  <div class="ctitle">T1 — Trackless hairlines <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">9.F "NO scoring/progress bars with filled background tracks" · 7 density 8-10 "no card boxes; 1px lines separate data" · 4.2 Colour Consistency Lock</div>
+  <div class="cnote">
+    The filled grey track is the thing to kill. It exists to say "here is the maximum", but the card is a fixed
+    width, so the maximum is already the card. Delete the track, leave a 1px hairline as the scale, and let a 3px
+    accent mark ride it. <b>Three of these cost less ink than one of the current bars</b>, which is exactly why
+    all three fit in 112px without touching the height. One accent for all three: the label says which window it
+    is, colour has nothing to add. My earlier violet bar broke that lock for no reason.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card t1">
+        <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+        <div class="rows">
+          <div class="row"><span class="k mono">5H</span><div class="scale"><i style="width:32%"></i></div><span class="v mono">32%</span></div>
+          <div class="row"><span class="k mono">7D</span><div class="scale"><i style="width:39%"></i></div><span class="v mono">39%</span></div>
+          <div class="row"><span class="k mono">FBL</span><div class="scale"><i style="width:54%"></i></div><span class="v mono">54%</span></div>
+        </div>
+        <div class="ft mono">7D + FBL reset <b>Thu 9:59am</b></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card t1 compact">
+        <div class="hd"><span class="t">Usage</span><span class="c mono" style="font-size:8.5px">2h 14m</span></div>
+        <div class="rows" style="margin-top:9px;row-gap:8px">
+          <div class="row"><span class="k mono">5H</span><div class="scale"><i style="width:32%"></i></div><span class="v mono" style="font-size:11px">32</span></div>
+          <div class="row"><span class="k mono">7D</span><div class="scale"><i style="width:39%"></i></div><span class="v mono" style="font-size:11px">39</span></div>
+          <div class="row"><span class="k mono">FBL</span><div class="scale"><i style="width:54%"></i></div><span class="v mono" style="font-size:11px">54</span></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card t1">
+          <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+          <div class="rows">
+            <div class="row"><span class="k mono">5H</span><div class="scale"><i style="width:32%"></i></div><span class="v mono">32%</span></div>
+            <div class="row"><span class="k mono">7D</span><div class="scale"><i style="width:39%"></i></div><span class="v mono">39%</span></div>
+            <div class="row"><span class="k mono">FBL</span><div class="scale"><i style="width:54%"></i></div><span class="v mono">54%</span></div>
+          </div>
+          <div class="ft mono">7D + FBL reset <b>Thu 9:59am</b></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept t2">
+  <div class="ctitle">T2 — Mono ledger <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">7 density 8-10 "font-mono for all numbers" mandatory · 4.4 "group with divide-y or negative space, not cards"</div>
+  <div class="cnote">
+    Numbers are the design. Each window is a ledger row: name left, value right in 15px mono, and the bar
+    demoted to a 2px accent underline sitting directly beneath its own number, sized to the percentage. The bar
+    stops being a separate object competing for width and becomes typographic weight on the number it belongs to.
+    <b>Hairlines between rows, no card inside the card.</b> Honest weakness: the underline is only as wide as the
+    number, roughly 30px, so it reads as a trend, not a measurement. Works because the number is right there.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card t2">
+        <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+        <div class="rows">
+          <div class="row"><span class="k">Session</span><span class="n mono" style="--p:32%">32%</span></div>
+          <div class="row"><span class="k">Week</span><span class="n mono" style="--p:39%">39%</span></div>
+          <div class="row"><span class="k">Fable</span><span class="n mono" style="--p:54%">54%</span></div>
+        </div>
+        <div class="ft mono">resets Thu 9:59am</div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card t2 compact">
+        <div class="hd"><span class="t">Usage</span><span class="c mono" style="font-size:8.5px">2h 14m</span></div>
+        <div class="rows" style="margin-top:5px">
+          <div class="row" style="padding:4px 0"><span class="k" style="font-size:9px">5H</span><span class="n mono" style="font-size:13px;--p:32%">32%</span></div>
+          <div class="row" style="padding:4px 0"><span class="k" style="font-size:9px">7D</span><span class="n mono" style="font-size:13px;--p:39%">39%</span></div>
+          <div class="row" style="padding:4px 0"><span class="k" style="font-size:9px">FBL</span><span class="n mono" style="font-size:13px;--p:54%">54%</span></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card t2">
+          <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+          <div class="rows">
+            <div class="row"><span class="k">Session</span><span class="n mono" style="--p:32%">32%</span></div>
+            <div class="row"><span class="k">Week</span><span class="n mono" style="--p:39%">39%</span></div>
+            <div class="row"><span class="k">Fable</span><span class="n mono" style="--p:54%">54%</span></div>
+          </div>
+          <div class="ft mono">resets Thu 9:59am</div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept t3">
+  <div class="ctitle">T3 — Vertical column meters <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">4.4 "cards only when elevation communicates hierarchy" · 4.3 anti-centre bias · 7 density 9</div>
+  <div class="cnote">
+    Rotate the problem 90 degrees. Three horizontal bars fight for the card's width, which is the scarce axis;
+    three vertical tubes fight for height, which is free once the bars leave the left column. The hero number
+    gets the whole left side at 30px, bigger than today's 26px, and the three meters cluster right like a
+    mixing desk. <b>Height is what a percentage is easiest to read against</b>, and 44px of tube beats 4px of bar
+    for the same footprint. Costs you per-window numbers: the tubes are shape only, so you trade exact values
+    for instant relative comparison.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card t3">
+        <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+        <div class="body">
+          <div class="lead">
+            <span class="n mono">32<span class="u">%</span></span>
+            <span class="cap">Session</span>
+          </div>
+          <div class="cols">
+            <div class="col"><div class="tube"><i style="height:32%"></i></div><span class="k mono">5H</span></div>
+            <div class="col"><div class="tube"><i style="height:39%"></i></div><span class="k mono">7D</span></div>
+            <div class="col"><div class="tube"><i style="height:54%"></i></div><span class="k mono">FBL</span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card t3 compact">
+        <div class="hd"><span class="t" style="font-size:8.5px">Usage</span><span class="c mono" style="font-size:8px">2h 14m</span></div>
+        <div class="body" style="gap:8px">
+          <div class="lead">
+            <span class="n mono" style="font-size:22px">32<span class="u">%</span></span>
+            <span class="cap" style="font-size:7.5px">Session</span>
+          </div>
+          <div class="cols" style="gap:7px">
+            <div class="col"><div class="tube" style="height:34px"><i style="height:32%"></i></div><span class="k mono">5H</span></div>
+            <div class="col"><div class="tube" style="height:34px"><i style="height:39%"></i></div><span class="k mono">7D</span></div>
+            <div class="col"><div class="tube" style="height:34px"><i style="height:54%"></i></div><span class="k mono">FB</span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card t3">
+          <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+          <div class="body">
+            <div class="lead">
+              <span class="n mono">32<span class="u">%</span></span>
+              <span class="cap">Session</span>
+            </div>
+            <div class="cols">
+              <div class="col"><div class="tube"><i style="height:32%"></i></div><span class="k mono">5H</span></div>
+              <div class="col"><div class="tube"><i style="height:39%"></i></div><span class="k mono">7D</span></div>
+              <div class="col"><div class="tube"><i style="height:54%"></i></div><span class="k mono">FBL</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept t4">
+  <div class="ctitle">T4 — Asymmetric split <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">7 DESIGN_VARIANCE 4-7 "left-aligned headers over centre-aligned data, varied ratios" · grid-template-columns 1.15fr 1fr</div>
+  <div class="cnote">
+    A 1.15:1 grid instead of the current label-plus-bar rows. Session owns the left cell at 32px with nothing
+    competing; the two weekly windows stack in the right cell as trackless marks with their numbers set above
+    them, not beside them. Putting the number above its own mark <b>buys back the ~34px the right-hand percentage
+    column was eating</b>, so each mark still gets ~85px of scale despite living in half a card. The deliberate
+    imbalance is the point: two of these three numbers are not equally urgent and the layout should say so.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card t4">
+        <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+        <div class="grid">
+          <div>
+            <div class="n mono">32<span class="u">%</span></div>
+            <div class="sub">Session</div>
+          </div>
+          <div class="stack">
+            <div class="item">
+              <div class="top"><span class="k mono">WEEK</span><span class="v mono">39%</span></div>
+              <div class="scale"><i style="width:39%"></i></div>
+            </div>
+            <div class="item">
+              <div class="top"><span class="k mono">FABLE</span><span class="v mono">54%</span></div>
+              <div class="scale"><i style="width:54%"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card t4 compact">
+        <div class="hd"><span class="t" style="font-size:8.5px">Usage</span><span class="c mono" style="font-size:8px">2h 14m</span></div>
+        <div class="grid" style="grid-template-columns:1fr;row-gap:7px;align-content:center">
+          <div>
+            <div class="n mono" style="font-size:21px">32<span class="u">%</span></div>
+          </div>
+          <div class="stack" style="row-gap:6px">
+            <div class="item">
+              <div class="top"><span class="k mono">WEEK</span><span class="v mono" style="font-size:9px">39%</span></div>
+              <div class="scale"><i style="width:39%"></i></div>
+            </div>
+            <div class="item">
+              <div class="top"><span class="k mono">FABLE</span><span class="v mono" style="font-size:9px">54%</span></div>
+              <div class="scale"><i style="width:54%"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card t4">
+          <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+          <div class="grid">
+            <div>
+              <div class="n mono">32<span class="u">%</span></div>
+              <div class="sub">Session</div>
+            </div>
+            <div class="stack">
+              <div class="item">
+                <div class="top"><span class="k mono">WEEK</span><span class="v mono">39%</span></div>
+                <div class="scale"><i style="width:39%"></i></div>
+              </div>
+              <div class="item">
+                <div class="top"><span class="k mono">FABLE</span><span class="v mono">54%</span></div>
+                <div class="scale"><i style="width:54%"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept t5">
+  <div class="ctitle">T5 — Edge-bleed lanes <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">7 density 8-10 "tight paddings, no card boxes" · 4.4 Shape Consistency Lock (lanes inherit the card's 10px clip, no radius of their own)</div>
+  <div class="cnote">
+    The lanes run edge to edge and get clipped by the card's own corner radius instead of floating inside the
+    13px padding with their own rounded ends. That <b>recovers 26px of real width per lane</b>, the widest scale
+    of anything in either set, and it stops the bars reading as three little pills glued onto a panel. They read
+    as the panel's own instrumentation. The keys sit above as a single mono strip so no label column steals
+    width. Riskiest one here: bleeding to a clipped edge only looks intentional if the corner radius is exact,
+    and a half-pixel of WebView2 antialiasing on a transparent window will show.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card t5">
+        <div class="in">
+          <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+          <div class="n mono" style="margin-top:6px">32<span class="u">%</span></div>
+          <div class="keys mono"><span>5H 32</span><span>7D 39</span><span>FBL 54</span></div>
+        </div>
+        <div class="lanes">
+          <div class="lane"><i style="width:32%"></i></div>
+          <div class="lane dim"><i style="width:39%"></i></div>
+          <div class="lane dim"><i style="width:54%"></i></div>
+        </div>
+        <div class="ft mono"><span>12s ago</span><span>Thu 9:59am</span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card t5 compact" style="padding:10px 0 0">
+        <div class="in" style="padding:0 11px">
+          <div class="hd"><span class="t" style="font-size:8.5px">Usage</span><span class="c mono" style="font-size:8px">2h 14m</span></div>
+          <div class="n mono" style="margin-top:5px;font-size:21px">32<span class="u">%</span></div>
+          <div class="keys mono" style="margin-top:8px;font-size:7px"><span>5H 32</span><span>7D 39</span><span>FBL 54</span></div>
+        </div>
+        <div class="lanes" style="margin-top:5px">
+          <div class="lane"><i style="width:32%"></i></div>
+          <div class="lane dim"><i style="width:39%"></i></div>
+          <div class="lane dim"><i style="width:54%"></i></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card t5">
+          <div class="in">
+            <div class="hd"><span class="t">Usage</span><span class="c mono">2h 14m</span></div>
+            <div class="n mono" style="margin-top:6px">32<span class="u">%</span></div>
+            <div class="keys mono"><span>5H 32</span><span>7D 39</span><span>FBL 54</span></div>
+          </div>
+          <div class="lanes">
+            <div class="lane"><i style="width:32%"></i></div>
+            <div class="lane dim"><i style="width:39%"></i></div>
+            <div class="lane dim"><i style="width:54%"></i></div>
+          </div>
+          <div class="ft mono"><span>12s ago</span><span>Thu 9:59am</span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Audiowave Orb — Spectrum skin</title>
+<style>
+  :root{ --cyan:#9fefff; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font:13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;
+    color:#c9d4dc;
+    background:
+      radial-gradient(120% 90% at 50% 8%, #26313c 0%, #182028 42%, #0c1116 100%);
+    min-height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    padding:26px 16px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  h1{ font-weight:600; font-size:16px; color:#e7eef4; letter-spacing:.2px; }
+  .sub{ color:#7d8a96; font-size:12px; margin-top:3px; }
+
+  .stage{
+    margin-top:30px;
+    display:flex; gap:64px; align-items:center; justify-content:center;
+    flex-wrap:wrap;
+  }
+  .cell{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .cap{ font-size:11px; color:#6f7c88; letter-spacing:.4px; }
+
+  /* ---- the orb ---- */
+  .orb{ position:relative; }
+
+  /* rotating bar assembly */
+  .ring{
+    position:absolute; inset:0;
+    animation:spinr var(--spin,8s) linear infinite;
+    will-change:transform;
+  }
+  @keyframes spinr{ to{ transform:rotate(360deg); } }
+
+  .spoke{
+    position:absolute; left:50%; top:50%;
+    width:0; height:0;
+    will-change:transform;
+  }
+  .bar{
+    position:absolute;
+    left:calc(var(--bw) / -2);
+    width:var(--bw);
+    height:var(--len);
+    border-radius:var(--bw);
+    transform-origin:center bottom;
+    background:#ffffff;
+    box-shadow:0 0 6px rgba(255,255,255,.75), 0 0 14px rgba(180,220,255,.35);
+    will-change:transform,opacity;
+  }
+
+  /* center disc holding the stats — sibling of .ring so it never spins */
+  .co{
+    position:absolute; left:50%; top:50%;
+    border-radius:50%;
+    background:radial-gradient(circle at 50% 42%, #10161c 0%, #05080b 78%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.05),
+      inset 0 6px 18px rgba(0,0,0,.6),
+      0 0 22px rgba(0,0,0,.55);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px;
+    will-change:transform;
+    z-index:2;
+  }
+  .co .big{ font-weight:700; letter-spacing:.3px; line-height:1; }
+  .co .row{ display:flex; gap:10px; color:#aeb9c4; }
+  .co .row b{ color:#eef4f9; font-weight:600; }
+  .co .rst{ color:#6d7883; }
+
+  /* ---- controls ---- */
+  .panel{
+    margin-top:44px;
+    width:min(560px,92vw);
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:12px;
+    padding:16px 18px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .prow{ display:flex; align-items:center; gap:12px; }
+  .prow label{ width:74px; color:#8a97a3; font-size:12px; }
+  .prow input[type=range]{ flex:1; accent-color:var(--cyan); }
+  .prow .val{ width:56px; text-align:right; color:#cdd8e2; font-variant-numeric:tabular-nums; }
+  .tracks{ display:flex; gap:8px; flex-wrap:wrap; }
+  .tracks button{
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+    color:#c3cdd6; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px;
+  }
+  .tracks button.on{ background:var(--cyan); color:#04222b; border-color:var(--cyan); font-weight:600; }
+
+  .badges{ margin-top:22px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .badge{
+    font-size:11px; color:#8b98a4;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+    padding:4px 10px; border-radius:999px;
+  }
+  footer{ margin-top:20px; max-width:560px; text-align:center; color:#6b7783; font-size:12px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<h1>Audiowave Orb · Spectrum</h1>
+<div class="sub">rice skin mock — matched to reference short</div>
+
+<div class="stage">
+  <div class="cell">
+    <div class="orb" id="hero"></div>
+    <div class="cap">hero · 260px</div>
+  </div>
+  <div class="cell">
+    <div class="orb" id="real"></div>
+    <div class="cap">actual · 160px HUD</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="prow">
+    <label>Track</label>
+    <div class="tracks" id="tracks">
+      <button data-t="house" class="on">house</button>
+      <button data-t="trap">trap</button>
+      <button data-t="lofi">lofi</button>
+      <button data-t="dubstep">dubstep</button>
+      <button data-t="silence">silence</button>
+    </div>
+  </div>
+  <div class="prow"><label>Gain</label><input id="gain" type="range" min="0.4" max="2.4" step="0.05" value="0.60"><span class="val" id="gainv">0.60</span></div>
+  <div class="prow"><label>Fall</label><input id="fall" type="range" min="0.02" max="0.30" step="0.01" value="0.04"><span class="val" id="fallv">0.04</span></div>
+  <div class="prow"><label>Spin</label><input id="spin" type="range" min="4" max="18" step="0.5" value="14"><span class="val" id="spinv">14.0s</span></div>
+  <div class="prow"><label>Fan</label><input id="sig" type="range" min="0.04" max="0.20" step="0.005" value="0.060"><span class="val" id="sigv">0.060</span></div>
+  <div class="prow"><label>Lobes</label><input id="lobes" type="range" min="1" max="6" step="1" value="4"><span class="val" id="lobesv">4</span></div>
+</div>
+
+<div class="badges">
+  <span class="badge">68 bars</span>
+  <span class="badge">4 revolving lobes</span>
+  <span class="badge">bounce on beat</span>
+  <span class="badge">pure white + glow</span>
+  <span class="badge">dashed idle ring</span>
+  <span class="badge">stats upright</span>
+</div>
+
+<footer>
+  Several lobes of long bars around the ring — each a narrow tapering cluster driven by its own frequency band, so they bounce independently.
+  The whole bar ring revolves so the lobes sweep around the orb; bars snap up and fall elastic on the beat.
+  The stats disc in the center holds still. Idle = a neat dashed ring.
+</footer>
+
+<script>
+(function(){
+  var N=36;                    // fake spectrum bins
+  var BARS=68;                 // radial bars
+  var FLOOR=0.085;             // idle bar length (fraction of max) = the dashed ring
+  var SIG=0.060;               // lobe half-width (fraction of full circle)
+  var GAIN=0.60, FALL=0.04, SPIN=14;
+  var LOBES=4;                 // how many bouncing clusters around the ring
+
+  // ---------- fake spectrum tracks ----------
+  var spec=new Float32Array(N);
+  var track='house';
+  function fillSpec(t){
+    for(var i=0;i<N;i++) spec[i]=0;
+    var beat, bass, mids, air;
+    if(track==='silence'){ return; }
+    if(track==='house'){
+      beat=Math.max(0,Math.sin(t*2*Math.PI*2.0)); beat=Math.pow(beat,6);
+      bass=beat*0.95; mids=0.25+0.2*Math.sin(t*5.3); air=0.15+0.1*Math.sin(t*9.1);
+    } else if(track==='trap'){
+      var hat=Math.pow(Math.max(0,Math.sin(t*2*Math.PI*6)),8);
+      beat=Math.pow(Math.max(0,Math.sin(t*2*Math.PI*1.5)),10);
+      bass=beat; mids=0.2+0.3*hat; air=0.25*hat;
+    } else if(track==='lofi'){
+      beat=Math.pow(Math.max(0,Math.sin(t*2*Math.PI*1.2)),4);
+      bass=beat*0.6; mids=0.35+0.15*Math.sin(t*3.1); air=0.12;
+    } else { // dubstep
+      var wob=Math.sin(t*2*Math.PI*(2+1.5*Math.sin(t*0.8)));
+      beat=Math.pow(Math.max(0,wob),3);
+      bass=beat; mids=0.4*Math.abs(wob); air=0.3*Math.pow(Math.max(0,Math.sin(t*20)),4);
+    }
+    for(var b=0;b<N;b++){
+      var f=b/N, v;
+      if(f<0.25) v=bass*(1-f*1.2);
+      else if(f<0.65) v=mids*(0.8+0.4*Math.sin(b));
+      else v=air*(0.7+0.6*Math.sin(b*1.7));
+      spec[b]=Math.max(0,v);
+    }
+  }
+
+  // ---------- multi-lobe field (lobes fixed in ring frame; CSS revolves the ring) ----------
+  function gauss(p,c){ var d=Math.abs(p-c); if(d>0.5) d=1-d; return Math.exp(-(d*d)/(2*SIG*SIG)); }
+  // one amplitude per lobe, read from its own slice of the fake spectrum
+  var lamp=new Float32Array(6);
+  function bandAmp(lo,hi){ var s=0; for(var b=lo;b<hi;b++) s+=spec[b]; return s/(hi-lo); }
+  function fillLobes(){
+    for(var k=0;k<LOBES;k++){
+      var lo=Math.floor(k/LOBES*N), hi=Math.floor((k+1)/LOBES*N);
+      lamp[k]=Math.min(1, bandAmp(lo,hi)*GAIN*3.4);
+    }
+  }
+  // tallest lobe wins at each bar (max keeps the valleys between lobes crisp)
+  function field(p){
+    var m=0;
+    for(var k=0;k<LOBES;k++){ var v=lamp[k]*gauss(p, k/LOBES); if(v>m) m=v; }
+    return m;
+  }
+
+  // ---------- elastic bounce ----------
+  function step(b,tgt){
+    if(tgt>=b.y){ b.y=tgt; b.v=0; }                       // snap up (instant attack)
+    else { b.v+=(tgt-b.y)*FALL; b.v*=b.damp; b.y+=b.v; }   // gravity fall
+    if(b.y<FLOOR){ b.y=FLOOR; if(b.v<0) b.v*=-0.25; }
+    return b.y;
+  }
+
+  // ---------- build one orb ----------
+  function build(el,size){
+    el.innerHTML='';
+    el.style.width=size+'px'; el.style.height=size+'px';
+    var IR=size*0.30;              // disc radius (bar inner end)
+    var MAXLEN=size*0.42;          // fan peak reach
+    var BW=Math.max(2.4,size*0.022);
+    var CO=IR*2;                   // disc diameter
+
+    var ring=document.createElement('div'); ring.className='ring';
+    ring.style.setProperty('--bw',BW+'px');
+    ring.style.setProperty('--spin',SPIN+'s');
+    var bars=[];
+    for(var i=0;i<BARS;i++){
+      var sp=document.createElement('div'); sp.className='spoke';
+      sp.style.transform='rotate('+(i/BARS*360)+'deg)';
+      var bar=document.createElement('div'); bar.className='bar';
+      bar.style.setProperty('--len',MAXLEN+'px');
+      bar.style.bottom=IR+'px';
+      bar.style.transform='scaleY('+FLOOR+')';
+      sp.appendChild(bar); ring.appendChild(sp);
+      bars.push({ i:i, p:i/BARS, y:FLOOR, v:0, damp:0.80+((i*7)%5)*0.012, el:bar });
+    }
+    el.appendChild(ring);
+
+    var co=document.createElement('div'); co.className='co';
+    co.style.width=CO+'px'; co.style.height=CO+'px';
+    co.style.transform='translate(-50%,-50%)';
+    var fs=size/260;
+    co.innerHTML=
+      '<div class="big" style="font-size:'+(20*fs)+'px">63%</div>'+
+      '<div class="row" style="font-size:'+(10.5*fs)+'px"><span>5H&nbsp;<b>63%</b></span><span>7D&nbsp;<b>41%</b></span></div>'+
+      '<div class="rst" style="font-size:'+(9.5*fs)+'px">resets 2h 14m</div>';
+    el.appendChild(co);
+
+    return { el:el, bars:bars, co:co };
+  }
+
+  var hero=build(document.getElementById('hero'),260);
+  var real=build(document.getElementById('real'),160);
+  var orbs=[hero,real];
+
+  // ---------- render loop ----------
+  var t=0, bassAmp=0;
+  function frame(){
+    t+=0.016;
+    fillSpec(t);
+    fillLobes();
+    var raw=(spec[0]+spec[1]+spec[2]+spec[3])/4;
+    bassAmp+=(raw-bassAmp)*0.18;
+    var pulse=(1+bassAmp*0.05).toFixed(4);
+
+    for(var o=0;o<orbs.length;o++){
+      var orb=orbs[o];
+      for(var i=0;i<orb.bars.length;i++){
+        var b=orb.bars[i];
+        var tgt=FLOOR + field(b.p)*(1-FLOOR);
+        var f=step(b,tgt);
+        b.el.style.transform='scaleY('+f.toFixed(3)+')';
+        b.el.style.opacity=(0.5+f*0.5).toFixed(2);
+      }
+      orb.co.style.transform='translate(-50%,-50%) scale('+pulse+')';
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- controls ----------
+  function bind(id,vid,fmt,set){
+    var el=document.getElementById(id), v=document.getElementById(vid);
+    el.oninput=function(){ set(parseFloat(el.value)); v.textContent=fmt(parseFloat(el.value)); };
+  }
+  bind('gain','gainv',function(x){return x.toFixed(2);},function(x){GAIN=x;});
+  bind('fall','fallv',function(x){return x.toFixed(2);},function(x){FALL=x;});
+  bind('sig','sigv',function(x){return x.toFixed(3);},function(x){SIG=x;});
+  bind('lobes','lobesv',function(x){return x.toFixed(0);},function(x){LOBES=x;});
+  bind('spin','spinv',function(x){return x.toFixed(1)+'s';},function(x){
+    SPIN=x;
+    document.querySelectorAll('.orb .ring').forEach(function(r){ r.style.setProperty('--spin',x+'s'); });
+  });
+
+  document.getElementById('tracks').addEventListener('click',function(ev){
+    var btn=ev.target.closest('button'); if(!btn) return;
+    track=btn.dataset.t;
+    document.querySelectorAll('#tracks button').forEach(function(b){ b.classList.toggle('on',b===btn); });
+  });
+})();
+</script>
+</body>
+</html>

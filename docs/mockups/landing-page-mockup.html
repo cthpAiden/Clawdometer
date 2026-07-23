@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clawdometer, a HUD for your Claude Code limits</title>
+<meta name="description" content="Clawdometer is an unofficial always-on-top Windows HUD for Claude Code usage limits. Zero network requests, enforced at the build level.">
+<meta property="og:title" content="Clawdometer">
+<meta property="og:description" content="Your Claude Code limits, on your desktop. Zero network requests, enforced at the build level.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237cf6c8'/%3E%3Cstop offset='.55' stop-color='%236fd8ff'/%3E%3Cstop offset='1' stop-color='%23b98cff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Crect x='7' y='7' width='18' height='18' rx='4' fill='%2307090d'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#07090d; --bg-1:#12161d; --bg-2:#1b2230;
+    --surface:#141922; --surface-2:#1a2029;
+    --border:rgba(255,255,255,.08); --border-hi:rgba(255,255,255,.14);
+    --text-0:#eef1f5; --text-1:#a7afbe; --text-2:#6b7383;
+    --accent:#7cf6c8; --accent-ink:#04140e; --accent-dim:rgba(124,246,200,.14);
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --r-sm:8px; --r-md:14px; --r-full:999px;
+    --sp-hue-1:#6fd8ff; --sp-hue-2:#7cf6c8; --sp-hue-3:#baf25f;
+    --sp-hue-4:#ffcf6e; --sp-hue-5:#ff8a73; --sp-hue-6:#b98cff;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0; background:
+      radial-gradient(ellipse 900px 500px at 18% -6%, rgba(124,246,200,.07), transparent 60%),
+      radial-gradient(ellipse 900px 600px at 88% 10%, rgba(111,216,255,.05), transparent 55%),
+      linear-gradient(180deg,var(--bg-0),var(--bg-1) 45%,var(--bg-2));
+    color:var(--text-0); font-family:var(--sans); font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:var(--mono); font-weight:600; letter-spacing:-0.01em; margin:0; }
+  p{ margin:0; }
+  a{ color:inherit; text-decoration:none; }
+  ::selection{ background:var(--accent-dim); color:var(--text-0); }
+  .wrap{ max-width:1180px; margin:0 auto; padding-inline:24px; }
+
+  .skip-link{
+    position:fixed; top:-100px; left:14px; z-index:100; background:var(--accent); color:var(--accent-ink);
+    font-family:var(--mono); font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:var(--r-sm);
+    transition:top .15s ease;
+  }
+  .skip-link:focus{ top:14px; }
+
+  /* ============ NAV ============ */
+  .nav{
+    position:sticky; top:0; z-index:50; height:64px;
+    display:flex; align-items:center;
+    background:rgba(7,9,13,.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav .wrap{ display:flex; align-items:center; gap:32px; width:100%; }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:var(--mono); font-weight:600; font-size:14.5px; letter-spacing:-0.01em; white-space:nowrap; }
+  .brand svg{ width:22px; height:22px; flex:none; }
+  .nav-links{ display:flex; align-items:center; gap:26px; font-size:13.5px; color:var(--text-1); }
+  .nav-links a:hover{ color:var(--text-0); }
+  .nav-spacer{ flex:1; }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    font-family:var(--mono); font-size:13px; font-weight:600; white-space:nowrap;
+    padding:10px 18px; border-radius:var(--r-full); border:1px solid transparent;
+    transition:transform .15s cubic-bezier(.16,1,.3,1), background .15s ease, border-color .15s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn-primary:hover{ background:#93f8d3; }
+  .btn-ghost{ border-color:var(--border-hi); color:var(--text-0); }
+  .btn-ghost:hover{ border-color:var(--accent); background:var(--accent-dim); }
+  @media (max-width:760px){ .nav-links{ display:none; } }
+
+  main{ display:block; }
+
+  /* ============ HERO ============ */
+  .hero{ padding:56px 0 64px; }
+  .hero .wrap{ display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center; }
+  .hero h1{ font-family:var(--sans); font-weight:600; font-size:clamp(30px,3.6vw,44px); line-height:1.15; letter-spacing:-0.02em; }
+  .hero h1 em{ font-style:normal; background:linear-gradient(90deg,var(--accent),var(--sp-hue-1)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero-sub{ margin-top:18px; max-width:46ch; color:var(--text-1); font-size:16.5px; line-height:1.65; }
+  .hero-cta{ margin-top:28px; display:flex; gap:12px; flex-wrap:wrap; }
+  .hero-cta .btn{ padding:13px 22px; font-size:13.5px; }
+  .hero-visual{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .ring-stage{ position:relative; width:min(340px,86vw); aspect-ratio:1; }
+  .ring-stage canvas{ width:100%; height:100%; display:block; }
+  .ring-readout{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none; text-align:center;
+  }
+  .ring-readout .pct{ font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:34px; font-weight:600; }
+  .ring-readout .lbl{ font-family:var(--mono); font-size:11px; color:var(--text-2); letter-spacing:.06em; margin-top:4px; }
+  .ring-caption{ font-family:var(--mono); font-size:12px; color:var(--text-2); text-align:center; }
+
+  @media (max-width:900px){
+    .hero .wrap{ grid-template-columns:1fr; text-align:center; }
+    .hero-sub{ margin-inline:auto; }
+    .hero-cta{ justify-content:center; }
+  }
+
+  /* ============ SECTION SHELL ============ */
+  section{ padding:88px 0; }
+  section.tight{ padding:72px 0; }
+  .section-head{ max-width:640px; margin-bottom:44px; }
+  .section-head h2{ font-size:clamp(24px,2.6vw,32px); line-height:1.2; letter-spacing:-0.015em; }
+  .section-head p{ margin-top:14px; color:var(--text-1); font-size:15.5px; line-height:1.65; max-width:60ch; }
+  .band{ border-top:1px solid var(--border); }
+  .band-fill{ background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 40%); }
+
+  /* ============ PRIVACY / TERMINAL ============ */
+  .term{
+    background:var(--bg-0); border:1px solid var(--border); border-radius:var(--r-md);
+    overflow:hidden; box-shadow:0 30px 70px -30px rgba(0,0,0,.6);
+  }
+  .term-bar{ display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid var(--border); }
+  .term-dot{ width:9px; height:9px; border-radius:50%; background:var(--border-hi); }
+  .term-title{ margin-left:8px; font-family:var(--mono); font-size:11.5px; color:var(--text-2); }
+  .term-body{ padding:20px 22px 24px; font-family:var(--mono); font-size:13px; line-height:1.85; color:#c7cede; }
+  .term-body .muted{ color:var(--text-2); }
+  .term-body .ok{ color:var(--accent); }
+  .term-cursor{ display:inline-block; width:7px; height:14px; background:var(--accent); vertical-align:-2px; animation:blink 1s step-end infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .proof-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
+  .proof-chip{
+    display:inline-flex; align-items:center; gap:8px; padding:9px 14px 9px 10px;
+    border:1px solid var(--border-hi); border-radius:var(--r-full); font-family:var(--mono); font-size:12.5px; color:var(--text-1);
+  }
+  .proof-chip svg{ width:14px; height:14px; color:var(--accent); flex:none; }
+
+  .privacy-grid{ display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:start; }
+  @media (max-width:860px){ .privacy-grid{ grid-template-columns:1fr; } }
+
+  /* ============ BENTO (detection) ============ */
+  .bento{ display:grid; grid-template-columns:1.15fr .85fr; grid-template-rows:auto auto; gap:18px; }
+  .bento-cell{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:26px;
+    position:relative; overflow:hidden;
+  }
+  .bento-cell.wide{ grid-row:1 / 3; display:flex; flex-direction:column; justify-content:flex-end; min-height:340px; }
+  .bento-cell h3{ font-size:15px; font-weight:600; }
+  .bento-cell p{ margin-top:10px; color:var(--text-1); font-size:14px; line-height:1.6; }
+  .bento-cell code{ font-family:var(--mono); font-size:12.5px; color:var(--accent); background:var(--accent-dim); padding:2px 6px; border-radius:var(--r-sm); }
+  .bento-viz{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:56px; }
+  .compare-ring{ position:relative; width:104px; height:104px; }
+  .compare-ring canvas{ width:100%; height:100%; display:block; }
+  .compare-lbl{ position:absolute; bottom:-26px; left:0; right:0; text-align:center; font-family:var(--mono); font-size:11px; color:var(--text-2); letter-spacing:.04em; }
+  .bento-cell.wide .bento-copy{ position:relative; z-index:1; padding-top:170px; }
+  @media (max-width:760px){
+    .bento{ grid-template-columns:1fr; }
+    .bento-cell.wide{ grid-row:auto; min-height:300px; }
+  }
+
+  /* ============ ORB SHOWCASE ============ */
+  .orb-shell{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md);
+    padding:32px; display:grid; grid-template-columns:auto 1fr; gap:40px; align-items:center;
+  }
+  .orb-stage{ position:relative; width:260px; height:260px; }
+  .orb-stage canvas{ width:100%; height:100%; display:block; }
+  .orb-side{ display:flex; flex-direction:column; gap:18px; }
+  .skin-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .skin-chip{
+    font-family:var(--mono); font-size:12.5px; padding:9px 16px; border-radius:var(--r-full);
+    border:1px solid var(--border-hi); color:var(--text-1); cursor:pointer; background:transparent;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .skin-chip:hover{ color:var(--text-0); }
+  .skin-chip.active{ border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  .orb-meta{ display:flex; gap:22px; flex-wrap:wrap; font-family:var(--mono); font-size:12px; color:var(--text-2); }
+  .orb-meta b{ color:var(--text-0); font-weight:600; }
+  @media (max-width:760px){
+    .orb-shell{ grid-template-columns:1fr; justify-items:center; text-align:center; }
+    .orb-side{ align-items:center; }
+    .skin-row{ justify-content:center; }
+    .orb-meta{ justify-content:center; }
+  }
+
+  /* ============ INSTALL / DIFF ============ */
+  .diff{
+    background:var(--bg-0); border:1px solid var(--border); border-radius:var(--r-md);
+    font-family:var(--mono); font-size:13px; line-height:1.9; overflow:hidden;
+  }
+  .diff-head{ padding:11px 18px; border-bottom:1px solid var(--border); color:var(--text-2); font-size:11.5px; }
+  .diff-body{ padding:18px 22px; }
+  .diff-line{ display:flex; gap:12px; padding:1px 0; }
+  .diff-sym{ width:14px; flex:none; text-align:center; color:var(--text-2); }
+  .diff-line.add .diff-sym{ color:var(--accent); }
+  .diff-line.add .diff-txt{ color:var(--text-0); }
+  .diff-line.del{ opacity:.5; text-decoration:line-through; }
+  .diff-txt{ color:var(--text-1); white-space:pre; }
+
+  .install-grid{ display:grid; grid-template-columns:.95fr 1.05fr; gap:44px; align-items:start; }
+  @media (max-width:860px){ .install-grid{ grid-template-columns:1fr; } }
+  .install-note{ margin-top:22px; padding:16px 18px; border-left:2px solid var(--accent); background:var(--accent-dim); border-radius:0 var(--r-sm) var(--r-sm) 0; font-size:13.5px; color:var(--text-1); line-height:1.6; }
+  .install-note b{ color:var(--text-0); }
+
+  /* ============ FINAL CTA ============ */
+  .final-cta{ text-align:center; padding:100px 0; }
+  .final-cta h2{ font-size:clamp(26px,3.4vw,38px); letter-spacing:-0.02em; }
+  .final-cta p{ margin:16px auto 30px; max-width:44ch; color:var(--text-1); font-size:15.5px; }
+  .final-cta .btn{ padding:14px 26px; font-size:14px; }
+  .final-cta .below{ margin-top:20px; font-family:var(--mono); font-size:12.5px; color:var(--text-2); }
+  .final-cta .below a{ color:var(--text-1); border-bottom:1px solid var(--border-hi); }
+  .final-cta .below a:hover{ color:var(--accent); border-color:var(--accent); }
+
+  /* ============ FOOTER ============ */
+  footer{ border-top:1px solid var(--border); padding:36px 0; }
+  footer .wrap{ display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .foot-brand{ display:flex; align-items:center; gap:10px; }
+  .foot-brand svg{ width:18px; height:18px; opacity:.8; }
+  .foot-brand span{ font-family:var(--mono); font-size:12.5px; color:var(--text-2); }
+  .foot-links{ display:flex; align-items:center; gap:20px; font-family:var(--mono); font-size:12.5px; color:var(--text-1); }
+  .foot-links a:hover{ color:var(--accent); }
+  .foot-links svg{ width:15px; height:15px; }
+  .foot-legal{ width:100%; margin-top:22px; padding-top:18px; border-top:1px solid var(--border); font-size:12px; color:var(--text-2); line-height:1.6; }
+
+  /* ============ MOCKUP BADGE ============ */
+  .concept-tag{
+    position:fixed; left:14px; bottom:14px; z-index:60;
+    font-family:var(--mono); font-size:11px; color:var(--text-2);
+    padding:8px 12px; border-radius:var(--r-sm); border:1px solid var(--border);
+    background:rgba(7,9,13,.72); backdrop-filter:blur(8px);
+  }
+
+  .noise{
+    position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    .term-cursor{ animation:none !important; opacity:1 !important; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="noise"></div>
+<div class="concept-tag">mockup, not the live site</div>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="brand" href="#main">
+      <svg viewBox="0 0 32 32"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7cf6c8"/><stop offset=".55" stop-color="#6fd8ff"/><stop offset="1" stop-color="#b98cff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#bg1)"/><rect x="7" y="7" width="18" height="18" rx="4" fill="#07090d"/></svg>
+      Clawdometer
+    </a>
+    <div class="nav-links">
+      <a href="#privacy">Privacy</a>
+      <a href="#detect">How it knows</a>
+      <a href="#orb">Orb skin</a>
+      <a href="#install">Install</a>
+    </div>
+    <div class="nav-spacer"></div>
+    <a class="btn btn-primary" href="https://github.com/cthpAiden/Clawdometer/releases/latest">Download</a>
+  </div>
+</nav>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <h1>Know your limits <em>before</em> Claude Code hits them.</h1>
+        <p class="hero-sub">An always-on-top Windows HUD that reads your usage straight from Claude Code. No dashboard, no browser tab, no network calls.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="https://github.com/cthpAiden/Clawdometer/releases/latest">Download for Windows</a>
+          <a class="btn btn-ghost" href="https://github.com/cthpAiden/Clawdometer">View source</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="ring-stage">
+          <canvas id="heroCanvas"></canvas>
+          <div class="ring-readout">
+            <div class="pct" id="heroPct">83%</div>
+            <div class="lbl">5H WINDOW LEFT</div>
+          </div>
+        </div>
+        <div class="ring-caption">the HUD's actual idle / working ring, live</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="band band-fill">
+    <div class="wrap">
+      <div class="privacy-grid">
+        <div>
+          <div class="section-head" style="margin-bottom:0;">
+            <h2>Zero network requests. Not a policy, a build flag.</h2>
+            <p>Every binary is compiled under a <code style="font-family:var(--mono);color:var(--accent);">cargo-deny</code> ban on HTTP and TLS crates. If it can't be compiled in, it can't phone home.</p>
+          </div>
+          <div class="proof-row">
+            <span class="proof-chip"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>no HTTP/TLS crates compiled in</span>
+            <span class="proof-chip"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>no telemetry, no analytics SDK</span>
+            <span class="proof-chip"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>reads transcripts locally, nothing leaves</span>
+          </div>
+        </div>
+        <div class="term">
+          <div class="term-bar"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">powershell</span></div>
+          <div class="term-body">
+            <div><span class="muted">PS&gt;</span> cargo deny check bans</div>
+            <div class="muted">&nbsp;&nbsp;Scanning 3 binaries for banned dependencies...</div>
+            <div><span class="ok">&nbsp;&nbsp;ok</span> <span class="muted">no reqwest, hyper, native-tls, rustls found</span></div>
+            <div style="margin-top:10px;"><span class="muted">PS&gt;</span> netstat -ano | findstr clawdometer</div>
+            <div class="muted">&nbsp;&nbsp;(no rows returned)<span class="term-cursor"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="detect">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>It knows when Claude is working. Not because you told it to.</h2>
+        <p>Most statusline tools only update when Claude Code fires a hook, which the GUI client never does. Clawdometer reads the transcript directly instead.</p>
+      </div>
+      <div class="bento">
+        <div class="bento-cell wide">
+          <div class="bento-viz">
+            <div class="compare-ring"><canvas id="cmpIdle"></canvas><span class="compare-lbl">idle</span></div>
+            <div class="compare-ring"><canvas id="cmpWork"></canvas><span class="compare-lbl">generating</span></div>
+          </div>
+          <div class="bento-copy">
+            <h3>Same ring, driven by real state</h3>
+            <p>The breathing animation on the right is live, not a loop. It flips the instant the transcript's last message changes turn.</p>
+          </div>
+        </div>
+        <div class="bento-cell">
+          <h3>Reads the transcript, not a hook</h3>
+          <p>Inspects the last message's turn state under <code>~/.claude/projects/</code> locally, once per tick. No network, nothing leaves the process.</p>
+        </div>
+        <div class="bento-cell">
+          <h3>Works in every client</h3>
+          <p>The desktop and web GUI clients never fire a statusline hook. This detection method doesn't care, it keeps working anyway.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="orb" class="band band-fill">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>A rice skin, if you want one.</h2>
+        <p>Audiowave Orb replaces the plain ring with a live audio-reactive visualizer, built on WASAPI loopback capture and an FFT running against whatever's playing on your machine.</p>
+      </div>
+      <div class="orb-shell">
+        <div class="orb-stage"><canvas id="orbCanvas"></canvas></div>
+        <div class="orb-side">
+          <div class="skin-row">
+            <button class="skin-chip active" data-skin="mirror">Mirror ring</button>
+            <button class="skin-chip" data-skin="radial">Radial bars</button>
+            <button class="skin-chip" data-skin="peak">Peak hold</button>
+          </div>
+          <p style="color:var(--text-1); font-size:14.5px; line-height:1.6; max-width:34ch;">Switches skins live, no restart. Reacts to system audio in real time, not a canned loop.</p>
+          <div class="orb-meta">
+            <span><b>54</b> bars</span>
+            <span><b>WASAPI</b> loopback</span>
+            <span><b>spring</b> physics</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Drops into your statusline. Doesn't fight it.</h2>
+        <p>If you already had a statusline command configured, Clawdometer chains it instead of replacing it.</p>
+      </div>
+      <div class="install-grid">
+        <div>
+          <div class="diff">
+            <div class="diff-head">~/.claude/settings.json</div>
+            <div class="diff-body">
+              <div class="diff-line del"><span class="diff-sym">-</span><span class="diff-txt">"statusLine": "my-custom-script.ps1"</span></div>
+              <div class="diff-line add"><span class="diff-sym">+</span><span class="diff-txt">"statusLine": "clawdometer wrap"</span></div>
+            </div>
+          </div>
+          <div class="install-note"><b>uninstall</b> restores the original line exactly, from a full backup taken before <b>install</b> ever touched it.</div>
+        </div>
+        <div class="term">
+          <div class="term-bar"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">powershell</span></div>
+          <div class="term-body">
+            <div><span class="muted">PS&gt;</span> clawdometer install</div>
+            <div class="muted">&nbsp;&nbsp;backing up settings.json to ~/.clawdometer/backups/</div>
+            <div><span class="ok">&nbsp;&nbsp;ok</span> <span class="muted">chained your existing statusline, 2s timeout</span></div>
+            <div style="margin-top:10px;"><span class="muted">PS&gt;</span> clawdometer uninstall</div>
+            <div><span class="ok">&nbsp;&nbsp;ok</span> <span class="muted">restored original statusLine command<span class="term-cursor"></span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div class="wrap">
+      <h2>Try it on your own machine.</h2>
+      <p>One executable, no installer prompts, no account. Ten minutes to build from source if you'd rather not trust a binary.</p>
+      <a class="btn btn-primary" href="https://github.com/cthpAiden/Clawdometer/releases/latest">Download for Windows</a>
+      <div class="below">or <a href="https://github.com/cthpAiden/Clawdometer#readme">read the docs</a> first</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-brand">
+      <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#bg1)"/><rect x="7" y="7" width="18" height="18" rx="4" fill="#07090d"/></svg>
+      <span>Clawdometer</span>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/cthpAiden/Clawdometer"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+      <a href="https://github.com/cthpAiden/Clawdometer/releases">Releases</a>
+      <a href="https://github.com/cthpAiden/Clawdometer#readme">README</a>
+    </div>
+    <div class="foot-legal">Unofficial. Not affiliated with or endorsed by Anthropic.</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function dprCanvas(cv){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== w*dpr || cv.height !== h*dpr){ cv.width = w*dpr; cv.height = h*dpr; }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return { ctx, w, h };
+  }
+
+  const BANDS = 48;
+  const spectrum = new Float32Array(BANDS);
+  const hues = ['#6fd8ff','#7cf6c8','#baf25f','#ffcf6e','#ff8a73','#b98cff'];
+  let bass = 0, mid = 0, treble = 0, t = 0;
+
+  function updateAudio(dt){
+    t += dt;
+    const kick = Math.max(0, Math.sin(t*3.14)) ** 6;
+    const snare = Math.max(0, Math.sin(t*1.57 + 1.1)) ** 10;
+    const hat = (Math.sin(t*13.2) * 0.5 + 0.5) * 0.4 + Math.random()*0.15;
+    bass += (kick*0.9 - bass) * 0.35;
+    mid += (snare*0.7 - mid) * 0.3;
+    treble += (hat - treble) * 0.4;
+    for (let i=0;i<BANDS;i++){
+      const f = i / BANDS;
+      const target = (bass*Math.max(0,1-f*3) + mid*Math.max(0,1-Math.abs(f-0.45)*3) + treble*Math.max(0,f*1.4-0.2)) * (0.55+Math.random()*0.5);
+      spectrum[i] += (target - spectrum[i]) * 0.5;
+    }
+  }
+
+  function mirrorRing(cv, radius, pulse){
+    const { ctx, w, h } = dprCanvas(cv);
+    ctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2;
+    const r0 = radius ?? Math.min(w,h)*0.32;
+    ctx.save();
+    ctx.translate(cx,cy);
+    for (let i=0;i<BANDS;i++){
+      const ang = (i/BANDS) * Math.PI*2;
+      const mag = spectrum[i] * (pulse ?? 1);
+      const len = 10 + mag * (Math.min(w,h)*0.22);
+      const x1 = Math.cos(ang)*r0, y1 = Math.sin(ang)*r0;
+      const x2 = Math.cos(ang)*(r0+len), y2 = Math.sin(ang)*(r0+len);
+      ctx.strokeStyle = hues[i % hues.length];
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = Math.max(1.5, w*0.006);
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,.14)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0,0,r0,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function radialBars(cv){
+    const { ctx, w, h } = dprCanvas(cv);
+    ctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2, r0 = Math.min(w,h)*0.22;
+    ctx.save(); ctx.translate(cx,cy);
+    for (let i=0;i<BANDS;i++){
+      const ang = (i/BANDS) * Math.PI*2 - Math.PI/2;
+      const len = 6 + spectrum[i]*(Math.min(w,h)*0.3);
+      ctx.save(); ctx.rotate(ang);
+      ctx.fillStyle = hues[i % hues.length];
+      ctx.globalAlpha = 0.9;
+      const bw = Math.max(2, (Math.PI*2*r0/BANDS)*0.55);
+      ctx.fillRect(-bw/2, r0, bw, len);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  const peaks = new Float32Array(BANDS);
+  function peakHold(cv){
+    const { ctx, w, h } = dprCanvas(cv);
+    ctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2, r0 = Math.min(w,h)*0.24;
+    ctx.save(); ctx.translate(cx,cy);
+    for (let i=0;i<BANDS;i++){
+      const ang = (i/BANDS) * Math.PI*2;
+      peaks[i] = Math.max(spectrum[i], peaks[i]-0.012);
+      const len = 8 + spectrum[i]*(Math.min(w,h)*0.24);
+      const plen = 8 + peaks[i]*(Math.min(w,h)*0.24);
+      const x1 = Math.cos(ang)*r0, y1 = Math.sin(ang)*r0;
+      const x2 = Math.cos(ang)*(r0+len), y2 = Math.sin(ang)*(r0+len);
+      ctx.strokeStyle = hues[i % hues.length]; ctx.globalAlpha = 0.85; ctx.lineWidth = Math.max(1.5,w*0.005); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      const px = Math.cos(ang)*(r0+plen), py = Math.sin(ang)*(r0+plen);
+      ctx.fillStyle = hues[i % hues.length]; ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(px,py,1.6,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function simpleRing(cv, active){
+    const { ctx, w, h } = dprCanvas(cv);
+    ctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2, r = Math.min(w,h)*0.32;
+    const pulse = active ? (Math.sin(t*4)*0.5+0.5) : 0;
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle = active ? '#7cf6c8' : 'rgba(255,255,255,.25)';
+    ctx.globalAlpha = active ? 0.5 + pulse*0.4 : 0.6;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0,0,r + (active ? pulse*4 : 0),0,Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = active ? '#7cf6c8' : 'rgba(255,255,255,.4)';
+    ctx.beginPath(); ctx.arc(0,0,3.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  const heroCanvas = document.getElementById('heroCanvas');
+  const orbCanvas = document.getElementById('orbCanvas');
+  const cmpIdle = document.getElementById('cmpIdle');
+  const cmpWork = document.getElementById('cmpWork');
+  let skin = 'mirror';
+
+  document.querySelectorAll('.skin-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.querySelectorAll('.skin-chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      skin = chip.dataset.skin;
+    });
+  });
+
+  let last = performance.now();
+  function frame(now){
+    const dt = reduceMotion ? 0.016 : Math.min(0.05, (now-last)/1000);
+    last = now;
+    if (!reduceMotion) updateAudio(dt);
+    else if (spectrum.every(v=>v===0)) for(let i=0;i<BANDS;i++) spectrum[i]=0.3+ (i%3)*0.1;
+
+    mirrorRing(heroCanvas, null, 0.7);
+    if (skin === 'mirror') mirrorRing(orbCanvas);
+    else if (skin === 'radial') radialBars(orbCanvas);
+    else peakHold(orbCanvas);
+
+    simpleRing(cmpIdle, false);
+    simpleRing(cmpWork, true);
+
+    if (!reduceMotion) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  if (reduceMotion) frame(performance.now());
+
+  window.addEventListener('resize', ()=>{
+    if (reduceMotion) frame(performance.now());
+  });
+})();
+</script>
+</body>
+</html>

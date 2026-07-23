@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clawdometer — Bento Bars skin (regular + compact)</title>
+<style>
+  :root{ --ink:#e8e8ea; --dim:#8a8a92; --dimr:#6a6a72; --tr:#2c2c32; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font:13px/1.5 "Segoe UI",-apple-system,Roboto,sans-serif; color:var(--ink);
+    background:radial-gradient(130% 100% at 50% -10%, #20242c 0%, #14161b 45%, #08090c 100%);
+    min-height:100vh; padding:36px 18px 90px; -webkit-font-smoothing:antialiased; }
+  header{ text-align:center; max-width:760px; margin-inline:auto; }
+  header h1{ font-size:20px; font-weight:600; }
+  header p{ color:var(--dim); font-size:12.5px; margin-top:6px; }
+  mono{ font-family:"Cascadia Code",Consolas,monospace; }
+  h2.sec{ max-width:1080px; margin:52px auto 0; font-size:12px; font-weight:600; letter-spacing:2px;
+    color:#6aa9e8; text-transform:uppercase; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,.07); }
+  .row{ max-width:1080px; margin:26px auto 0; display:flex; flex-wrap:wrap; gap:22px; justify-content:center; }
+  .tile{ background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius:14px;
+    padding:18px 16px 12px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .stage{ min-width:236px; min-height:184px; border-radius:10px; padding:18px;
+    background:linear-gradient(135deg,rgba(120,140,170,.09),rgba(90,60,120,.09)),#0b0c10;
+    display:flex; align-items:center; justify-content:center; }
+  .meta{ text-align:center }
+  .meta .n{ font-weight:600; font-size:12.5px }
+  .meta .d{ color:var(--dim); font-size:11px; margin-top:3px; max-width:230px }
+
+  /* ---------------- the skin ---------------- */
+  /* Card box matches the shipped HUD exactly: 200x136 regular, 120x106 compact. */
+  .bento{ width:200px; height:136px; padding:11px; border-radius:10px;
+    background:rgba(24,24,28,.92); color:var(--ink);
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6px; }
+  .cell{ background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08);
+    border-radius:9px; padding:8px 9px; display:flex; flex-direction:column; justify-content:center; overflow:hidden; }
+  .cell .top{ display:flex; justify-content:space-between; align-items:baseline; gap:4px; }
+  .cell .k{ font-size:8px; line-height:1; letter-spacing:1.2px; color:var(--dim); font-weight:600; white-space:nowrap; }
+  .cell .v{ font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1; }
+  .cell .v s{ font-size:.62em; text-decoration:none; opacity:.75; }
+  .cell .bar{ height:5px; border-radius:99px; background:var(--tr); margin-top:7px; overflow:hidden; }
+  .cell .bar i{ display:block; height:100%; border-radius:inherit; transition:width .3s; }
+  /* 5H is the headline window — bigger number, same cell footprint. */
+  .cell.hero .v{ font-size:19px; }
+  .cell.hero .bar{ height:6px; }
+  /* RESET is time, not usage — never threshold-colored, so it can't be misread
+     as a fourth limit. Muted grey fill = fraction of the 5h window elapsed. */
+  .cell.time .v{ font-size:12px; color:#b8b8c0; }
+  .cell.time .bar i{ background:#4a4a54; }
+  /* Fable is absent until /usage has seen it this week (and Fable was used). */
+  .cell.empty .v{ color:var(--dimr); }
+  .cell.empty .bar i{ width:0; }
+
+  .bento.compact{ width:120px; height:106px; padding:9px; gap:5px; border-radius:9px; }
+  .bento.compact .cell{ padding:5px 7px; border-radius:7px; }
+  .bento.compact .k{ font-size:7px; letter-spacing:.8px; }
+  .bento.compact .v{ font-size:11px; }
+  .bento.compact .cell.hero .v{ font-size:13px; }
+  .bento.compact .cell.time .v{ font-size:9px; }
+  .bento.compact .cell .bar{ height:4px; margin-top:4px; }
+  .bento.compact .cell.hero .bar{ height:4px; }
+  /* 47px of cell can't hold "RESET" and "2h 14m" on one line, so compact stacks
+     the label over the value instead of shrinking either past legibility. */
+  .bento.compact .cell .top{ flex-direction:column; align-items:flex-start; gap:2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Bento Bars — Clawdometer skin</h1>
+  <p>Concept <mono>33</mono> from <mono>concepts-100.html</mono>, wired to data that actually exists.
+  <b>AVG → FABLE</b>, and <b>MAX → RESET</b> (there is no history store, so avg/peak would be invented).
+  Card boxes are the real ones: <mono>200×136</mono> regular, <mono>120×106</mono> compact.
+  Colors are <mono>usage-color.js</mono> — blue &lt;75, yellow 75–90, red ≥90.</p>
+</header>
+
+<h2 class="sec">Regular · 200 × 136</h2>
+<div class="row" id="regular"></div>
+
+<h2 class="sec">Compact · 120 × 106</h2>
+<div class="row" id="compact"></div>
+
+<h2 class="sec">Why RESET is the fourth cell</h2>
+<div class="row" id="alts"></div>
+
+<script>
+const OK={bar:'#3f7fbf',num:'#6aa9e8'}, WARN={bar:'#f59e0b',num:'#f0b429'}, CRIT={bar:'#e5484d',num:'#e5484d'};
+const lvl = p => p>=90?CRIT : p>=75?WARN : OK;
+
+// One cell. `pct` drives the bar width; `val` is what the eye reads.
+const cell = ({k,val,pct,cls='',color}) => `
+  <div class="cell ${cls}">
+    <div class="top">
+      <span class="k">${k}</span>
+      <span class="v" style="${color?`color:${color}`:''}">${val}</span>
+    </div>
+    <div class="bar"><i style="width:${pct}%;background:${color||'#4a4a54'}"></i></div>
+  </div>`;
+
+const pctCell = (k,p,cls='') => p==null
+  ? cell({k, val:'—', pct:0, cls:cls+' empty'})
+  : cell({k, val:`${p}<s>%</s>`, pct:p, cls, color:lvl(p).num});
+
+// elapsed = how far through the 5h window we are. 2h14m left of 5h → 55% gone.
+const resetCell = (left, elapsed) => cell({k:'RESET', val:left, pct:elapsed, cls:'time'});
+
+const card = (d, compact=false) => `
+  <div class="bento${compact?' compact':''}">
+    ${pctCell('5H', d.s5, 'hero')}
+    ${pctCell('7D', d.s7)}
+    ${pctCell('FABLE', d.fb)}
+    ${resetCell(d.left, d.elapsed)}
+  </div>`;
+
+const tile = (inner,n,dsc) =>
+  `<div class="tile"><div class="stage">${inner}</div><div class="meta"><div class="n">${n}</div><div class="d">${dsc}</div></div></div>`;
+
+// Four states worth seeing: nominal, Fable never used this week, warn, crit.
+const STATES = [
+  {d:{s5:34,s7:71,fb:54,left:'2h 14m',elapsed:55}, n:'Nominal', dsc:'5H well under the time bar — burning slower than the clock.'},
+  {d:{s5:34,s7:71,fb:null,left:'2h 14m',elapsed:55}, n:'No Fable yet', dsc:'fable_week absent until /usage sees it. Cell stays, reads —.'},
+  {d:{s5:82,s7:76,fb:88,left:'41m',elapsed:86}, n:'Warn', dsc:'75–90% turns yellow on each window independently.'},
+  {d:{s5:96,s7:91,fb:99,left:'8m',elapsed:97}, n:'Critical', dsc:'≥90% red. Card still pulses via body.critical.'},
+];
+document.getElementById('regular').innerHTML = STATES.map(s=>tile(card(s.d,false),s.n,s.dsc)).join('');
+document.getElementById('compact').innerHTML = STATES.map(s=>tile(card(s.d,true),s.n,s.dsc)).join('');
+
+// The pace read: usage bar vs time bar, side by side, no math asked of the user.
+const paceD = {s5:88,s7:71,fb:54,left:'3h 20m',elapsed:33};
+const altHTML = [
+  tile(card(paceD,false),'Pace read',
+    '5H at 88% but only 33% of the window gone — the two bars disagree at a glance. That comparison is the whole reason RESET earns a cell.'),
+  tile(`<div class="bento">
+      ${pctCell('5H',34,'hero')}${pctCell('7D',71)}${pctCell('FABLE',54)}
+      ${cell({k:'BURN',val:'1.6<s>×</s>',pct:80,cls:'time',color:'#f0b429'})}
+    </div>`,'Alt · BURN',
+    'Derived: 5H% ÷ elapsed%. Same signal as the pace read but pre-chewed, and needs an arbitrary cap to become a bar.'),
+  tile(`<div class="bento" style="grid-template-rows:1fr 1fr">
+      ${pctCell('5H',34,'hero')}${pctCell('7D',71)}${pctCell('FABLE',54)}
+      ${cell({k:'MAX',val:'89<s>%</s>',pct:89,cls:'',color:CRIT.num})}
+    </div>`,'Rejected · MAX',
+    'No history is stored anywhere in the app — this number can only be a lie. Same for AVG.'),
+];
+document.getElementById('alts').innerHTML = altHTML.join('');
+</script>
+</body>
+</html>

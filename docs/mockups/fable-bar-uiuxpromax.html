@@ -1,0 +1,388 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Fable bar — ui-ux-pro-max set</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0f0f11; color: #e8e8ea; font: 13px/1.55 "Segoe UI", sans-serif; padding: 32px 40px 80px; }
+h1 { font-size: 19px; font-weight: 600; }
+.lead { color: #8a8a92; font-size: 12px; margin: 4px 0 8px; }
+.dials { color: #6a6a72; font-size: 11px; font-family: Consolas, monospace; margin-bottom: 28px; }
+.concept { margin-bottom: 38px; border-top: 1px solid #26262c; padding-top: 18px; }
+.ctitle { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.ctitle .dim { color: #6a6a72; font-weight: 400; font-size: 12px; }
+.rule { color: #7b7b85; font-size: 11px; font-family: Consolas, monospace; margin-bottom: 6px; }
+.cnote { color: #8a8a92; font-size: 12px; max-width: 660px; margin-bottom: 16px; }
+.cnote b { color: #cfcfd6; font-weight: 600; }
+.stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.slot { display: flex; flex-direction: column; gap: 8px; }
+.slabel { color: #5a5a62; font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
+.pad { padding: 14px; border-radius: 12px;
+  background: linear-gradient(45deg,#1a1a1f 25%,transparent 25%,transparent 75%,#1a1a1f 75%),
+              linear-gradient(45deg,#1a1a1f 25%,#141418 25%,#141418 75%,#1a1a1f 75%);
+  background-size: 12px 12px; background-position: 0 0, 6px 6px; }
+.zoom2 { transform: scale(2); transform-origin: top left; }
+.zwrap { overflow: hidden; }
+
+/* ── shared HUD base ─────────────────────────────────────────────────── */
+.card {
+  width: 200px; height: 112px; padding: 11px 13px;
+  background: rgba(24,24,28,.92); color: #e8e8ea;
+  border-radius: 10px; font: 12px/1.4 "Segoe UI", sans-serif;
+  display: flex; flex-direction: column;
+}
+.card.compact { width: 120px; height: 92px; padding: 10px 11px; }
+.header { display: flex; align-items: center; gap: 8px; white-space: nowrap; margin-bottom: 8px; }
+.label { font-weight: 600; font-size: 10px; }
+.countdown { margin-left: auto; margin-right: 3px; color: #b8b8c0; background: #2c2c32;
+  font-size: 10px; padding: 2px 7px; border-radius: 8px; }
+.card.compact .countdown { font-size: 8px; padding: 2px 5px; }
+.card.compact .lsfx { display: none; }
+.foot { margin-top: auto; display: flex; justify-content: space-between; color: #6a6a72;
+  font-size: 10px; white-space: nowrap; }
+.foot b { color: #63b35f; font-weight: 400; }
+.card.compact .foot { display: none; }
+/* semantic tokens — colour encodes STATE, never identity */
+:root {
+  --ok:   #4a7c47;
+  --warn: #b3892f;
+  --crit: #c0454a;
+  --track:#2c2c32;
+  --band: rgba(255,255,255,.045);
+}
+.mono { font-family: Consolas, "Cascadia Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ══ P1 — Bullet chart grid ════════════════════════════════════════════ */
+.p1 .rows { display: grid; grid-template-columns: auto 1fr auto; column-gap: 8px; row-gap: 7px; align-items: center; }
+.p1 .k { font-size: 9.5px; font-weight: 600; color: #8a8a92; letter-spacing: .3px; }
+.p1 .blt { position: relative; height: 7px; border-radius: 3px; overflow: hidden;
+  background: linear-gradient(90deg, var(--band) 0 60%, rgba(255,255,255,.07) 60% 90%, rgba(255,255,255,.10) 90% 100%), var(--track); }
+.p1 .perf { position: absolute; left: 0; top: 1.5px; height: 4px; border-radius: 2px; background: var(--ok); }
+.p1 .tgt { position: absolute; left: 90%; top: -1px; bottom: -1px; width: 1.5px; background: #e8e8ea; }
+.p1 .v { font-size: 10px; color: #cfcfd6; min-width: 26px; text-align: right; }
+.p1 .scale { display: grid; grid-template-columns: auto 1fr auto; column-gap: 8px; margin-top: 5px; }
+.p1 .scale .sk { grid-column: 2; display: flex; justify-content: space-between; font-size: 7.5px; color: #55555d; }
+
+/* ══ P2 — state-encoded colour + glyph ═════════════════════════════════ */
+.p2 .rows { display: grid; grid-template-columns: auto 1fr auto auto; column-gap: 7px; row-gap: 8px; align-items: center; }
+.p2 .k { font-size: 10px; color: #8a8a92; }
+.p2 .bar { height: 5px; border-radius: 3px; background: var(--track); overflow: hidden; }
+.p2 .fill { height: 100%; border-radius: inherit; background: var(--ok); }
+.p2 .fill.warn { background: var(--warn); }
+.p2 .fill.crit { background: var(--crit); }
+.p2 .v { font-size: 10px; color: #cfcfd6; min-width: 26px; text-align: right; }
+.p2 .g { width: 9px; height: 9px; display: block; }
+.p2 .g.hide { visibility: hidden; }
+.p2 .big { font-size: 24px; font-weight: 600; line-height: 1; margin-bottom: 7px; }
+.p2 .big .u { font-size: .58em; }
+.p2 .big.crit { color: #e08a8d; }
+
+/* ══ P3 — rail cluster, one shared reset ═══════════════════════════════ */
+.p3 .split { display: flex; gap: 10px; align-items: center; }
+.p3 .big { font-size: 25px; font-weight: 600; line-height: 1; }
+.p3 .big .u { font-size: .58em; color: #9a9aa2; }
+.p3 .rails { flex: 1; display: grid; grid-template-columns: auto 1fr auto; column-gap: 6px; row-gap: 5px; align-items: center; }
+.p3 .k { font-size: 8.5px; font-weight: 600; color: #75757e; letter-spacing: .3px; }
+.p3 .bar { height: 3px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.p3 .fill { height: 100%; border-radius: inherit; background: var(--ok); }
+.p3 .v { font-size: 9px; color: #b8b8c0; min-width: 22px; text-align: right; }
+.p3 .cap { margin-top: 7px; font-size: 9px; color: #6a6a72; }
+
+/* ══ P4 — segmented meters ═════════════════════════════════════════════ */
+.p4 .rows { display: grid; grid-template-columns: auto 1fr auto; column-gap: 8px; row-gap: 7px; align-items: center; }
+.p4 .k { font-size: 9.5px; font-weight: 600; color: #8a8a92; letter-spacing: .3px; }
+.p4 .seg { display: flex; gap: 1.5px; }
+.p4 .seg i { flex: 1; height: 6px; border-radius: 1px; background: var(--track); }
+.p4 .seg i.on { background: var(--ok); }
+.p4 .seg i.on.warn { background: var(--warn); }
+.p4 .v { font-size: 10px; color: #cfcfd6; min-width: 26px; text-align: right; }
+
+/* ══ P5 — adaptive hero metric ═════════════════════════════════════════ */
+.p5 .hero { display: flex; align-items: baseline; gap: 6px; }
+.p5 .hero .n { font-size: 26px; font-weight: 600; line-height: 1; }
+.p5 .hero .n .u { font-size: .58em; }
+.p5 .hero .tag { font-size: 9px; font-weight: 600; color: #cbb8f0; background: rgba(139,111,196,.2);
+  border-radius: 7px; padding: 1.5px 6px; letter-spacing: .3px; }
+.p5 .hbar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; margin: 7px 0 8px; }
+.p5 .hbar .fill { height: 100%; border-radius: inherit; background: var(--ok); }
+.p5 .rows { display: grid; grid-template-columns: auto 1fr auto; column-gap: 7px; row-gap: 5px; align-items: center; }
+.p5 .k { font-size: 8.5px; font-weight: 600; color: #75757e; letter-spacing: .3px; }
+.p5 .bar { height: 3px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.p5 .fill { height: 100%; border-radius: inherit; background: #5c6b5b; }
+.p5 .v { font-size: 9px; color: #b8b8c0; min-width: 22px; text-align: right; }
+</style>
+</head>
+<body>
+
+<h1>Fable bar — ui-ux-pro-max set</h1>
+<div class="lead">Rule-driven. Every concept below traces to a specific rule from the skill's database, printed above each one.</div>
+<div class="dials">design-system: Modern Dark · variance 6 · density 9 (Dense/Dashboard) · product read: real-time ops telemetry</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept p1">
+  <div class="ctitle">P1 — Bullet chart grid <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">chart.csv "Performance vs Target (Compact)" → Bullet Chart · a11y AAA · "space-constrained contexts where a gauge is too large" · "for 3+ KPIs use bullet chart grid layout"</div>
+  <div class="cnote">
+    The literal answer the chart database gives for this exact problem. Three equal bullets: label, qualitative
+    background bands (ok / warn / danger zones baked into the track), performance bar, and a white target marker
+    at the 90% throttle threshold. <b>You gain a threshold you can see</b> — right now nothing on the card tells
+    you where "about to get cut off" actually is. The cost is the 26px hero number: three peers means no hero.
+    Grade AAA because every value is visible as text, never hover-only.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card p1">
+        <div class="header"><span class="label">Usage</span><span class="countdown mono">2h 14m</span></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="blt"><div class="perf" style="width:32%"></div><div class="tgt"></div></div><span class="v mono">32%</span>
+          <span class="k">7D</span><div class="blt"><div class="perf" style="width:39%"></div><div class="tgt"></div></div><span class="v mono">39%</span>
+          <span class="k">FBL</span><div class="blt"><div class="perf" style="width:54%"></div><div class="tgt"></div></div><span class="v mono">54%</span>
+        </div>
+        <div class="scale"><div class="sk mono"><span>0</span><span>50</span><span>90</span></div></div>
+        <div class="foot"><span>12s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card p1 compact">
+        <div class="header"><span class="label">Usage</span><span class="countdown mono">2h 14m</span></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="blt"><div class="perf" style="width:32%"></div><div class="tgt"></div></div><span class="v mono">32</span>
+          <span class="k">7D</span><div class="blt"><div class="perf" style="width:39%"></div><div class="tgt"></div></div><span class="v mono">39</span>
+          <span class="k">FBL</span><div class="blt"><div class="perf" style="width:54%"></div><div class="tgt"></div></div><span class="v mono">54</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card p1">
+          <div class="header"><span class="label">Usage</span><span class="countdown mono">2h 14m</span></div>
+          <div class="rows">
+            <span class="k">5H</span><div class="blt"><div class="perf" style="width:32%"></div><div class="tgt"></div></div><span class="v mono">32%</span>
+            <span class="k">7D</span><div class="blt"><div class="perf" style="width:39%"></div><div class="tgt"></div></div><span class="v mono">39%</span>
+            <span class="k">FBL</span><div class="blt"><div class="perf" style="width:54%"></div><div class="tgt"></div></div><span class="v mono">54%</span>
+          </div>
+          <div class="scale"><div class="sk mono"><span>0</span><span>50</span><span>90</span></div></div>
+          <div class="foot"><span>12s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept p2">
+  <div class="ctitle">P2 — State-encoded colour + glyph <span class="dim">· 200×120, 120×98 (+8px)</span></div>
+  <div class="rule">§6 color-semantic · §1 color-not-only "Don't convey info by color alone (add icon/text)" · §6 number-tabular</div>
+  <div class="cnote">
+    Corrects the mistake in my earlier set. I gave Fable a violet bar to tell it apart from Weekly — that spends
+    colour on <b>identity</b>, which the label already handles. Semantic tokens say colour encodes <b>state</b>:
+    all three bars are green while healthy, amber ≥75%, red ≥90%, and a triangle glyph appears alongside so the
+    warning survives for a colourblind reader (color-not-only). Second card shows Fable in the critical state —
+    note it reads instantly even though nothing about the layout moved.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Healthy</span><div class="pad">
+      <div class="card p2" style="height:120px">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown mono">2h 14m</span></div>
+        <div class="big mono">32<span class="u">%</span></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="v mono">32%</span><span class="g hide"></span>
+          <span class="k">7D</span><div class="bar"><div class="fill" style="width:39%"></div></div><span class="v mono">39%</span><span class="g hide"></span>
+          <span class="k">FBL</span><div class="bar"><div class="fill" style="width:54%"></div></div><span class="v mono">54%</span><span class="g hide"></span>
+        </div>
+        <div class="foot"><span>12s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Fable critical</span><div class="pad">
+      <div class="card p2" style="height:120px">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown mono">2h 14m</span></div>
+        <div class="big mono">78<span class="u">%</span></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="bar"><div class="fill" style="width:78%"></div></div><span class="v mono">78%</span><span class="g hide"></span>
+          <span class="k">7D</span><div class="bar"><div class="fill warn" style="width:76%"></div></div><span class="v mono">76%</span>
+            <svg class="g" viewBox="0 0 12 12" fill="none" aria-label="warning"><path d="M6 1.4 11 10.6H1L6 1.4Z" stroke="#b3892f" stroke-width="1.3" stroke-linejoin="round"/><path d="M6 4.8v2.4" stroke="#b3892f" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="8.9" r=".65" fill="#b3892f"/></svg>
+          <span class="k">FBL</span><div class="bar"><div class="fill crit" style="width:94%"></div></div><span class="v mono" style="color:#e08a8d">94%</span>
+            <svg class="g" viewBox="0 0 12 12" fill="none" aria-label="critical"><circle cx="6" cy="6" r="5" stroke="#c0454a" stroke-width="1.3"/><path d="M6 3.3v3.2" stroke="#c0454a" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="8.5" r=".65" fill="#c0454a"/></svg>
+        </div>
+        <div class="foot"><span>12s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2× critical</span><div class="zwrap" style="width:456px;height:296px">
+      <div class="pad zoom2">
+        <div class="card p2" style="height:120px">
+          <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown mono">2h 14m</span></div>
+          <div class="big mono">78<span class="u">%</span></div>
+          <div class="rows">
+            <span class="k">5H</span><div class="bar"><div class="fill" style="width:78%"></div></div><span class="v mono">78%</span><span class="g hide"></span>
+            <span class="k">7D</span><div class="bar"><div class="fill warn" style="width:76%"></div></div><span class="v mono">76%</span>
+              <svg class="g" viewBox="0 0 12 12" fill="none"><path d="M6 1.4 11 10.6H1L6 1.4Z" stroke="#b3892f" stroke-width="1.3" stroke-linejoin="round"/><path d="M6 4.8v2.4" stroke="#b3892f" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="8.9" r=".65" fill="#b3892f"/></svg>
+            <span class="k">FBL</span><div class="bar"><div class="fill crit" style="width:94%"></div></div><span class="v mono" style="color:#e08a8d">94%</span>
+              <svg class="g" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#c0454a" stroke-width="1.3"/><path d="M6 3.3v3.2" stroke="#c0454a" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="8.5" r=".65" fill="#c0454a"/></svg>
+          </div>
+          <div class="foot"><span>12s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept p3">
+  <div class="ctitle">P3 — Rail cluster, shared reset caption <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">§6 whitespace-balance "use whitespace to group related items" · §5 content-priority "show core content first"</div>
+  <div class="cnote">
+    Hero number keeps the left, all three rails cluster on the right as one visual group. Grouping is the point:
+    7D and Fable reset at the same instant, so one caption serves both and you stop repeating "resets Thu 9:59am"
+    twice. Fits in the current 112px with no growth. <b>Weakness:</b> 3px rails at ~90px of track — readable as
+    "roughly where am I", not as a precise gauge. The numbers carry the precision.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card p3">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown mono">2h 14m</span></div>
+        <div class="split">
+          <div class="big mono">32<span class="u">%</span></div>
+          <div class="rails">
+            <span class="k">5H</span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="v mono">32%</span>
+            <span class="k">7D</span><div class="bar"><div class="fill" style="width:39%"></div></div><span class="v mono">39%</span>
+            <span class="k">FBL</span><div class="bar"><div class="fill" style="width:54%"></div></div><span class="v mono">54%</span>
+          </div>
+        </div>
+        <div class="foot"><span>12s ago</span><span>7D + FBL reset <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Compact</span><div class="pad">
+      <div class="card p3 compact">
+        <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown mono">2h 14m</span></div>
+        <div class="split" style="flex-direction:column;align-items:stretch;gap:7px">
+          <div class="big mono" style="font-size:19px">32<span class="u">%</span></div>
+          <div class="rails">
+            <span class="k">5H</span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="v mono">32</span>
+            <span class="k">7D</span><div class="bar"><div class="fill" style="width:39%"></div></div><span class="v mono">39</span>
+            <span class="k">FBL</span><div class="bar"><div class="fill" style="width:54%"></div></div><span class="v mono">54</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card p3">
+          <div class="header"><span class="label">Current<span class="lsfx"> session</span></span><span class="countdown mono">2h 14m</span></div>
+          <div class="split">
+            <div class="big mono">32<span class="u">%</span></div>
+            <div class="rails">
+              <span class="k">5H</span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="v mono">32%</span>
+              <span class="k">7D</span><div class="bar"><div class="fill" style="width:39%"></div></div><span class="v mono">39%</span>
+              <span class="k">FBL</span><div class="bar"><div class="fill" style="width:54%"></div></div><span class="v mono">54%</span>
+            </div>
+          </div>
+          <div class="foot"><span>12s ago</span><span>7D + FBL reset <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept p4">
+  <div class="ctitle">P4 — Segmented meters <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">chart.csv a11y-fallback "color ranges labeled with threshold text" · §10 pattern-texture "supplement color with patterns so data is distinguishable without color"</div>
+  <div class="cnote">
+    Ten discrete segments instead of a continuous fill. At HUD scale this is the honest move: a 120px continuous
+    bar implies a precision it does not have, while <b>"6 of 10 lit" is countable at a glance</b> and survives
+    both a bad monitor and a colourblind reader, because the segment boundary is a shape, not a hue. Last two
+    segments render amber, so the danger zone has texture as well as colour. The tradeoff is a slightly technical,
+    equalizer-ish look, and you lose the sub-10% resolution.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">Regular</span><div class="pad">
+      <div class="card p4">
+        <div class="header"><span class="label">Usage</span><span class="countdown mono">2h 14m</span></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="v mono">32%</span>
+          <span class="k">7D</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="v mono">39%</span>
+          <span class="k">FBL</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><span class="v mono">54%</span>
+        </div>
+        <div class="foot"><span>12s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Near limit</span><div class="pad">
+      <div class="card p4">
+        <div class="header"><span class="label">Usage</span><span class="countdown mono">18m</span></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span class="v mono">78%</span>
+          <span class="k">7D</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span class="v mono">76%</span>
+          <span class="k">FBL</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on warn"></i><i class="on warn"></i></div><span class="v mono">94%</span>
+        </div>
+        <div class="foot"><span>4s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card p4">
+          <div class="header"><span class="label">Usage</span><span class="countdown mono">18m</span></div>
+          <div class="rows">
+            <span class="k">5H</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span class="v mono">78%</span>
+            <span class="k">7D</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><span class="v mono">76%</span>
+            <span class="k">FBL</span><div class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on warn"></i><i class="on warn"></i></div><span class="v mono">94%</span>
+          </div>
+          <div class="foot"><span>4s ago</span><span>resets <b>Thu 9:59am</b></span></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="concept p5">
+  <div class="ctitle">P5 — Adaptive hero metric <span class="dim">· 200×112, 120×92 (no growth)</span></div>
+  <div class="rule">§5 content-priority · §4 primary-action "each screen should have only one primary CTA; secondary visually subordinate"</div>
+  <div class="cnote">
+    The card auto-promotes whichever window is closest to cutting you off into the hero number, and demotes the
+    other two to muted rails. Right now the 26px number is hard-wired to the 5-hour session, which is a guess
+    about what matters — with three windows that guess is wrong two-thirds of the time. <b>The chip tells you
+    which window you're looking at.</b> Second card shows Fable promoted. Real risk: the hero number changes
+    meaning underneath you, so a glance-and-go read can be misread. Only works if the chip is unmissable.
+  </div>
+  <div class="stage">
+    <div class="slot"><span class="slabel">5H leading</span><div class="pad">
+      <div class="card p5">
+        <div class="header"><span class="label">Closest limit</span><span class="countdown mono">2h 14m</span></div>
+        <div class="hero"><span class="n mono">54<span class="u">%</span></span><span class="tag">FABLE WK</span></div>
+        <div class="hbar"><div class="fill" style="width:54%"></div></div>
+        <div class="rows">
+          <span class="k">5H</span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="v mono">32%</span>
+          <span class="k">7D</span><div class="bar"><div class="fill" style="width:39%"></div></div><span class="v mono">39%</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">Session leading</span><div class="pad">
+      <div class="card p5">
+        <div class="header"><span class="label">Closest limit</span><span class="countdown mono">18m</span></div>
+        <div class="hero"><span class="n mono">88<span class="u">%</span></span><span class="tag" style="color:#a8d3a4;background:rgba(74,124,71,.24)">SESSION</span></div>
+        <div class="hbar"><div class="fill" style="width:88%;background:var(--warn)"></div></div>
+        <div class="rows">
+          <span class="k">7D</span><div class="bar"><div class="fill" style="width:41%"></div></div><span class="v mono">41%</span>
+          <span class="k">FBL</span><div class="bar"><div class="fill" style="width:56%"></div></div><span class="v mono">56%</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="slot"><span class="slabel">2×</span><div class="zwrap" style="width:456px;height:280px">
+      <div class="pad zoom2">
+        <div class="card p5">
+          <div class="header"><span class="label">Closest limit</span><span class="countdown mono">2h 14m</span></div>
+          <div class="hero"><span class="n mono">54<span class="u">%</span></span><span class="tag">FABLE WK</span></div>
+          <div class="hbar"><div class="fill" style="width:54%"></div></div>
+          <div class="rows">
+            <span class="k">5H</span><div class="bar"><div class="fill" style="width:32%"></div></div><span class="v mono">32%</span>
+            <span class="k">7D</span><div class="bar"><div class="fill" style="width:39%"></div></div><span class="v mono">39%</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+</body>
+</html>
