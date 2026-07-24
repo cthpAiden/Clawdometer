@@ -6,6 +6,7 @@ mod updater;
 mod usage_refresher;
 mod watcher;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -22,6 +23,24 @@ const OPACITY_STEPS: [(&str, f64); 4] =
 /// the ~/.clawdometer watcher every time. Coalesce to one save per drag.
 static MOVE_DEBOUNCE: Mutex<ui_prefs::MoveDebouncer> = Mutex::new(ui_prefs::MoveDebouncer::new());
 const MOVE_SETTLE: Duration = Duration::from_millis(500);
+
+/// Mirrors the payload's `offline` flag (refresher failing + data stale). The
+/// card-skin windows must grow by the alert strip's height while it's set —
+/// the strip sits below the content, not over it — so apply_prefs reads this
+/// on every resize and the watcher flips it via note_offline.
+static OFFLINE: AtomicBool = AtomicBool::new(false);
+
+/// Strip heights must match .offstrip in style.css exactly (same contract as
+/// the card footprints below).
+const OFFLINE_STRIP: f64 = 24.0;
+const OFFLINE_STRIP_COMPACT: f64 = 20.0;
+
+/// Called by the watcher when the payload's offline flag changes: re-applies
+/// the window size so the strip (or its absence) never paints clipped.
+pub fn note_offline(app: &tauri::AppHandle, offline: bool) {
+    OFFLINE.store(offline, Ordering::Relaxed);
+    apply_prefs(app, &current_prefs(app));
+}
 
 fn save_position(app: &tauri::AppHandle, x: i32, y: i32) {
     let mut p = current_prefs(app);
@@ -70,18 +89,26 @@ fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
         // their own footprints. Must match #underline / #card / #bento /
         // #clawdboy in style.css exactly — the window is sized to the card, so a
         // stale number here clips the bottom.
+        // While offline, the three card skins append the red alert strip below
+        // their content, so their windows gain exactly its height; the orb and
+        // ClawdBoy repaint in place and keep their footprints.
+        let strip = if OFFLINE.load(Ordering::Relaxed) {
+            if prefs.compact { OFFLINE_STRIP_COMPACT } else { OFFLINE_STRIP }
+        } else {
+            0.0
+        };
         let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
             (160.0, 160.0)
         } else if prefs.rice.starts_with("clawdboy") {
             // All three handhelds share one shell, so one footprint covers them.
             if prefs.compact { (120.0, 106.0) } else { (200.0, 136.0) }
         } else if prefs.rice == "bento" {
-            if prefs.compact { (120.0, 112.0) } else { (206.0, 138.0) }
+            if prefs.compact { (120.0, 112.0 + strip) } else { (206.0, 138.0 + strip) }
         } else if prefs.rice == "rowline" {
-            if prefs.compact { (120.0, 100.0) } else { (172.0, 100.0) }
+            if prefs.compact { (120.0, 100.0 + strip) } else { (172.0, 100.0 + strip) }
         } else {
             // "classic" = Underline (U8), the default skin.
-            if prefs.compact { (120.0, 114.0) } else { (200.0, 122.0) }
+            if prefs.compact { (120.0, 114.0 + strip) } else { (200.0, 122.0 + strip) }
         };
         let _ = win.set_size(tauri::LogicalSize::new(w, h));
     }

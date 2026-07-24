@@ -172,6 +172,10 @@ function render() {
   // watcher::any_session_generating) so idle live.json refreshes never trip it.
   const isWorking = !!(current && current.working);
   document.body.classList.toggle("working", isWorking);
+  // Red offline alert (refresher failing + data stale, derived backend-side).
+  // The card windows were already resized by note_offline before this payload
+  // arrived, so flipping the class here never paints clipped.
+  document.body.classList.toggle("offline", !!(current && current.offline));
   // New turn (idle -> working): advance to the next shuffled animation.
   if (isWorking && !wasWorking) nextClawdAnim();
   wasWorking = isWorking;

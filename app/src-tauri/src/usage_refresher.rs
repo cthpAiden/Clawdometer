@@ -13,6 +13,7 @@
 
 use std::io::Read as _;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{RecvTimeoutError, Sender};
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -47,6 +48,17 @@ const REFRESH_TRIES: usize = 3;
 const RETRY_SPACING: Duration = Duration::from_secs(10);
 
 static REFRESH_TX: OnceLock<Sender<()>> = OnceLock::new();
+
+/// True after the last refresh attempt exhausted all its retries (claude CLI
+/// missing, signed out, output reworded). Cleared by the next success. The
+/// watcher combines this with snapshot age into the payload's `offline` flag —
+/// the flag alone is not enough, because a statusline-fed session can keep the
+/// data fresh while the headless CLI happens to be broken.
+static FAILING: AtomicBool = AtomicBool::new(false);
+
+pub fn is_failing() -> bool {
+    FAILING.load(Ordering::Relaxed)
+}
 
 /// A GUI-subsystem process starts with no console, and `claude -p /usage` only
 /// prints its rate-limit summary lines when a console is attached (measured:
@@ -100,6 +112,7 @@ pub fn spawn() {
             }
             last_attempt = Some(std::time::Instant::now());
             last_failed = !refresh_once();
+            FAILING.store(last_failed, Ordering::Relaxed);
             // A refresh can take minutes (CLI timeouts × retries). Tray clicks
             // queued while it ran — or spammed before it — are satisfied by
             // the refresh that just finished; drain them so each doesn't spawn

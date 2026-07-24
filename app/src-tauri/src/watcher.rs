@@ -15,11 +15,19 @@ const ACTIVE_CAP_SECS: i64 = 300;
 // any single JSONL line; a partial leading fragment just fails to parse.
 const TAIL_BYTES: u64 = 512 * 1024;
 
+// `offline` needs the merged snapshot to be stale on top of the refresher
+// failing: the refresher retries within a minute of data going stale, so by
+// this age a healthy setup would have refreshed several times over — while a
+// statusline-fed session keeps the age near zero and rightly suppresses the
+// alert even if the headless CLI happens to be broken.
+const OFFLINE_STALE_SECS: i64 = 180;
+
 pub fn build_payload(
     state_path: &Path,
     live_path: &Path,
     transcripts_dir: &Path,
     now_epoch_secs: i64,
+    refresh_failing: bool,
 ) -> serde_json::Value {
     // `working` = some Claude Code session is mid-turn, judged by the turn state
     // in its transcript (not by file age — a transcript is silent during a long
@@ -28,7 +36,7 @@ pub fn build_payload(
     let working = any_session_generating(transcripts_dir, now_epoch_secs);
     // state.json (statusline hook) merged with live.json (headless /usage
     // refresh) — whichever snapshot is newer wins.
-    let state = merge(
+    let merged = merge(
         clawdometer_core::state::read_state(state_path),
         clawdometer_core::state::read_state(live_path),
     )
@@ -41,13 +49,32 @@ pub fn build_payload(
         }
         s
     });
+    // The refresher failing + nothing else feeding data = the numbers on
+    // screen can no longer be trusted. A missing or unparsable snapshot with a
+    // failing refresher is the same situation (never signed in, state wiped).
+    let offline = refresh_failing
+        && merged.as_ref().map_or(true, |s| {
+            snapshot_age_secs(&s.captured_at, now_epoch_secs)
+                .map_or(true, |age| age > OFFLINE_STALE_SECS)
+        });
     // The webview gets only what it renders: rate_limits + captured_at.
     // session_id / transcript_path / model / cli_version stay on this side
     // of the IPC boundary.
-    let state = state
+    let state = merged
         .map(|s| serde_json::json!({ "captured_at": s.captured_at, "rate_limits": s.rate_limits }))
         .unwrap_or(serde_json::Value::Null);
-    serde_json::json!({ "state": state, "working": working })
+    serde_json::json!({ "state": state, "working": working, "offline": offline })
+}
+
+/// Age of a snapshot in seconds (negative when future-stamped by a stepped
+/// clock — the caller treats that as fresh, matching the refresher's slack).
+fn snapshot_age_secs(captured_at: &str, now_epoch_secs: i64) -> Option<i64> {
+    let t = time::OffsetDateTime::parse(
+        captured_at,
+        &time::format_description::well_known::Rfc3339,
+    )
+    .ok()?;
+    Some(now_epoch_secs - t.unix_timestamp())
 }
 
 /// True while some Claude Code session is mid-turn. Scans transcripts under
@@ -210,8 +237,12 @@ pub fn spawn(app: AppHandle) {
         });
 
         // initial emission so the UI renders immediately
-        let payload = build_payload(&state_path, &live_path, &transcripts_dir, now_epoch_secs());
+        let payload = build_payload(
+            &state_path, &live_path, &transcripts_dir, now_epoch_secs(),
+            crate::usage_refresher::is_failing(),
+        );
         let mut last_payload = payload.clone();
+        let mut last_offline = payload["offline"] == true;
         let _ = app.emit(STATE_EVENT, &payload);
         update_tooltip(&app, &payload);
 
@@ -223,7 +254,17 @@ pub fn spawn(app: AppHandle) {
         loop {
             // wake on FS event or every 2s (debounce fallback poll)
             let _ = rx.recv_timeout(Duration::from_secs(2));
-            let payload = build_payload(&state_path, &live_path, &transcripts_dir, now_epoch_secs());
+            let payload = build_payload(
+                &state_path, &live_path, &transcripts_dir, now_epoch_secs(),
+                crate::usage_refresher::is_failing(),
+            );
+            // Card-skin windows grow by the alert strip's height while offline;
+            // resize before the emit so the strip never paints clipped.
+            let offline = payload["offline"] == true;
+            if offline != last_offline {
+                last_offline = offline;
+                crate::note_offline(&app, offline);
+            }
             // The payload is timestamp-free, so identical data never re-emits.
             if startup_grace > 0 || payload != last_payload {
                 startup_grace = startup_grace.saturating_sub(1);
@@ -279,15 +320,21 @@ mod tests {
         }
     }
 
+    fn epoch(rfc3339: &str) -> i64 {
+        time::OffsetDateTime::parse(rfc3339, &time::format_description::well_known::Rfc3339)
+            .unwrap()
+            .unix_timestamp()
+    }
+
     #[test]
     fn payload_is_null_state_when_file_missing_or_torn() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("state.json");
         let live = dir.path().join("live.json");
         let noproj = dir.path().join("noproj");
-        assert!(build_payload(&missing, &live, &noproj, 0)["state"].is_null());
+        assert!(build_payload(&missing, &live, &noproj, 0, false)["state"].is_null());
         std::fs::write(&missing, "{ torn").unwrap();
-        assert!(build_payload(&missing, &live, &noproj, 0)["state"].is_null());
+        assert!(build_payload(&missing, &live, &noproj, 0, false)["state"].is_null());
     }
 
     #[test]
@@ -298,7 +345,7 @@ mod tests {
         let input = clawdometer_core::schema::parse_statusline_input(raw).unwrap();
         let state = clawdometer_core::state::State::from_input(&input, "t".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload = build_payload(&path, &dir.path().join("live.json"), &dir.path().join("noproj"), 0);
+        let payload = build_payload(&path, &dir.path().join("live.json"), &dir.path().join("noproj"), 0, false);
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 1);
         assert_eq!(payload["state"]["captured_at"], "t");
     }
@@ -312,9 +359,39 @@ mod tests {
         let l = snapshot("2026-07-12T00:05:00Z", Some(99), 9_999_999_999);
         clawdometer_core::state::write_state_atomic(&state_path, &s).unwrap();
         clawdometer_core::state::write_state_atomic(&live_path, &l).unwrap();
-        let payload = build_payload(&state_path, &live_path, &dir.path().join("noproj"), 0);
+        let payload = build_payload(&state_path, &live_path, &dir.path().join("noproj"), 0, false);
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 99);
         assert_eq!(payload["state"]["captured_at"], "2026-07-12T00:05:00Z");
+    }
+
+    /// The offline flag needs BOTH a failing refresher and stale (or absent)
+    /// data — either alone must not alarm: a failing headless CLI is invisible
+    /// while a statusline session keeps the data fresh, and stale data with a
+    /// healthy refresher just means a refresh is about to land.
+    #[test]
+    fn offline_only_when_refresh_failing_and_data_stale() {
+        let dir = tempfile::tempdir().unwrap();
+        let state_path = dir.path().join("state.json");
+        let live = dir.path().join("live.json");
+        let noproj = dir.path().join("noproj");
+        // no data at all: failing refresher => offline; healthy => warming up
+        assert_eq!(build_payload(&state_path, &live, &noproj, 1_000, true)["offline"], true);
+        assert_eq!(build_payload(&state_path, &live, &noproj, 1_000, false)["offline"], false);
+        let s = snapshot("2026-07-12T00:00:00Z", Some(50), 9_999_999_999);
+        clawdometer_core::state::write_state_atomic(&state_path, &s).unwrap();
+        // fresh snapshot (60s old) suppresses offline even while failing
+        let now = epoch("2026-07-12T00:01:00Z");
+        assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], false);
+        // exactly at the threshold: still fresh (strictly-older-than)
+        let now = epoch("2026-07-12T00:03:00Z");
+        assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], false);
+        // past the threshold: offline iff failing
+        let now = epoch("2026-07-12T00:03:01Z");
+        assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], true);
+        assert_eq!(build_payload(&state_path, &live, &noproj, now, false)["offline"], false);
+        // future-stamped snapshot (stepped clock) reads fresh, not offline
+        let now = epoch("2026-07-11T00:00:00Z");
+        assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], false);
     }
 
     #[test]
@@ -328,13 +405,13 @@ mod tests {
         state.transcript_path = Some("C:\\transcripts\\x.jsonl".into());
         state.cli_version = Some("2.1.205".into());
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
-        let payload = build_payload(&path, &dir.path().join("live.json"), &dir.path().join("noproj"), 0);
+        let payload = build_payload(&path, &dir.path().join("live.json"), &dir.path().join("noproj"), 0, false);
         let obj = payload["state"].as_object().unwrap();
         assert_eq!(obj.keys().collect::<Vec<_>>(), ["captured_at", "rate_limits"]);
         assert!(payload.get("poll_error").is_none(), "dead field must be gone");
-        // top level carries only the render state + the activity flag
+        // top level carries only the render state + the two activity flags
         let top = payload.as_object().unwrap();
-        assert_eq!(top.keys().collect::<Vec<_>>(), ["state", "working"]);
+        assert_eq!(top.keys().collect::<Vec<_>>(), ["offline", "state", "working"]);
     }
 
     #[test]
@@ -346,16 +423,16 @@ mod tests {
         let state = snapshot("t", Some(42), 1_000);
         clawdometer_core::state::write_state_atomic(&path, &state).unwrap();
         // before the reset: the snapshot's percentage
-        let before = build_payload(&path, &live, &noproj, 999);
+        let before = build_payload(&path, &live, &noproj, 999, false);
         assert_eq!(before["state"]["rate_limits"]["five_hour"]["used_percentage"], 42);
         // at/after the reset: derived 0%, resets_at kept for the UI label
-        let after = build_payload(&path, &live, &noproj, 1_000);
+        let after = build_payload(&path, &live, &noproj, 1_000, false);
         assert_eq!(after["state"]["rate_limits"]["five_hour"]["used_percentage"], 0);
         assert_eq!(after["state"]["rate_limits"]["five_hour"]["resets_at"], 1_000);
         // the transition changes the payload exactly once, so the watcher
         // loop's compare re-emits at the boundary
         assert_ne!(before, after);
-        assert_eq!(after, build_payload(&path, &live, &noproj, 2_000));
+        assert_eq!(after, build_payload(&path, &live, &noproj, 2_000, false));
     }
 
     #[test]
@@ -507,7 +584,7 @@ mod tests {
 
     fn working_at(root: &Path, now: i64) -> bool {
         let dir = tempfile::tempdir().unwrap();
-        build_payload(&dir.path().join("state.json"), &dir.path().join("live.json"), root, now)
+        build_payload(&dir.path().join("state.json"), &dir.path().join("live.json"), root, now, false)
             ["working"]
             == true
     }
@@ -548,6 +625,7 @@ mod tests {
             &live_path,
             &dir.path().join("noproj"),
             4_000_000_000,
+            false,
         );
         assert_eq!(payload["working"], false);
         assert_eq!(payload["state"]["rate_limits"]["five_hour"]["used_percentage"], 88);

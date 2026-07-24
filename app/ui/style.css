@@ -31,6 +31,7 @@ html, body { background: transparent; overflow: hidden; }
 #card, #bento, #underline {
   color: #e7e4d9; background: var(--cc-panel);
   border-radius: 14px; overflow: hidden;
+  position: relative; /* anchors the offline strip to the panel's own bottom */
   font: 12px/1.4 var(--font-sans); font-variant-numeric: tabular-nums;
 }
 /* Title centred over the whole header; clawd (left) and resets (right) are
@@ -322,6 +323,72 @@ body.compact #underline { width: 120px; height: 114px; padding: 8px 10px; }
 body.compact #underline .ttl { font-size: 12px; }
 body.compact #underline .urow .lbl { font-size: 9px; }
 body.compact #underline .urow .pct { font-size: 12px; }
+
+/* ── Offline alert ─────────────────────────────────────────────────────────
+   body.offline = the payload's offline flag (headless /usage refresher failing
+   AND the merged snapshot stale — see watcher::build_payload): the numbers on
+   screen can no longer be trusted. The three card skins append a red strip
+   BELOW the content — the panel grows by exactly the strip height, and
+   apply_prefs (main.rs) grows the window by the same amount, so nothing is
+   covered and nothing clips. The orb swaps its centre readout; ClawdBoy shows
+   a two-color link-error screen (its glass cannot render red). */
+.offstrip {
+  display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 24px;
+  background: #3a1f1c; color: #e5675a;
+  align-items: center; justify-content: center; gap: 5px;
+  font: 700 11px var(--font-sans); letter-spacing: .2px; white-space: nowrap;
+}
+.offstrip .oi { font-size: 13px; line-height: 1; }
+.offstrip .olc { display: none; }
+body.compact .offstrip { height: 20px; font-size: 9.5px; gap: 4px; }
+body.compact .offstrip .oi { font-size: 11px; }
+body.compact .offstrip .olf { display: none; }
+body.compact .offstrip .olc { display: inline; }
+body.offline #card .offstrip, body.offline #bento .offstrip,
+body.offline #underline .offstrip { display: flex; }
+/* Panel heights = base footprint + strip (24 regular / 20 compact). Must match
+   the windows in apply_prefs. The compact rules must out-specify the plain
+   body.compact sizing rules, hence the double class. */
+body.offline #underline { height: 146px; }
+body.offline.compact #underline { height: 134px; }
+body.offline #card { height: 124px; }
+body.offline.compact #card { height: 120px; }
+/* Bento's 1fr grid row would stretch its cells into the strip; the extra
+   padding-bottom (base padding + strip) keeps the grid clear of it. */
+body.offline #bento { height: 162px; padding-bottom: 34px; }
+body.offline.compact #bento { height: 132px; padding-bottom: 28px; }
+
+/* Orb: centre readout swaps to a grey mascot + OFFLINE; the ring dims via
+   opacity (compositor-safe on the transparent WebView2 window). */
+#orb .orb-off { display: none; flex-direction: column; align-items: center; gap: 5px; }
+#orb .orb-off .clawd { color: #6b675e; }
+#orb .orb-off .t1 { font: 800 12px var(--font-sans); color: #e5675a; letter-spacing: .5px; }
+#orb .orb-off .t2 {
+  font: 700 8.5px var(--font-sans); color: #c98a80;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+body.offline #orb .st, body.offline #orb .reset { display: none; }
+body.offline #orb .orb-off { display: flex; }
+body.offline #orb .ring { opacity: .3; }
+
+/* ClawdBoy: the link-error screen replaces whichever layout is active. Same
+   two colors as everything on the glass — ink text, glass-through eyes. */
+#clawdboy .cb-nolink {
+  display: none; height: 100%; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+}
+#clawdboy .cb-nolink .clawd svg { width: 32px; height: auto; }
+#clawdboy .cb-nolink .t1 { font: 800 13px var(--font-mono); letter-spacing: 1px; }
+#clawdboy .cb-nolink .t2 { font: 700 9px var(--font-mono); letter-spacing: .5px; }
+body.compact #clawdboy .cb-nolink { gap: 3px; }
+body.compact #clawdboy .cb-nolink .clawd svg { width: 22px; }
+body.compact #clawdboy .cb-nolink .t1 { font-size: 10px; }
+body.compact #clawdboy .cb-nolink .t2 { font-size: 7px; }
+/* The .cb-scr hop out-specifies the data-rice layout gates (which sit later
+   in the file at equal specificity otherwise), so offline always wins. */
+body.offline #clawdboy .cb-scr .cb-table, body.offline #clawdboy .cb-scr .cb-menu,
+body.offline #clawdboy .cb-scr .cb-quad { display: none; }
+body.offline #clawdboy .cb-scr .cb-nolink { display: flex; }
 
 /* ── Audiowave Orb rice skin ──────────────────────────────────────────────
    A circular 54-bar ring that reacts to system audio, wrapped around a center

@@ -28,6 +28,7 @@
         <span id="txtfb" class="pct">—</span>
       </div>
     </div>
+    <div class="offstrip"><span class="oi">⚠</span><span class="olf">offline · check CLI login</span><span class="olc">check CLI login</span></div>
   </div>
   <div id="bento">
     <div class="hd2">
@@ -47,6 +48,7 @@
       <div class="celtop"><span class="lbl">Fable</span><span class="pct" id="bfv">—</span></div>
       <div class="bar"><div id="bfb" class="fill"></div></div>
     </div>
+    <div class="offstrip"><span class="oi">⚠</span><span class="olf">offline · check CLI login</span><span class="olc">check CLI login</span></div>
   </div>
   <div id="underline">
     <div class="uhead">
@@ -57,6 +59,7 @@
     <div class="u"><div class="urow"><span class="lbl">Current</span><span id="utxt5h" class="pct">—</span></div><div class="uline"><i id="uln5h"></i></div></div>
     <div class="u"><div class="urow"><span class="lbl">Weekly</span><span id="utxt7d" class="pct">—</span></div><div class="uline"><i id="uln7d"></i></div></div>
     <div class="u"><div class="urow"><span class="lbl">Fable</span><span id="utxtfb" class="pct">—</span></div><div class="uline"><i id="ulnfb"></i></div></div>
+    <div class="offstrip"><span class="oi">⚠</span><span class="olf">offline · check CLI login</span><span class="olc">check CLI login</span></div>
   </div>
   <!-- ClawdBoy — a handheld console whose screen is a true 2-bit panel: one glass
        color, one ink color, no third value. Three layouts share the plastic shell;
@@ -87,6 +90,13 @@
           <div class="cb-q"><span class="k">FABLE</span><span class="cb-v" data-k="fb">—</span></div>
           <div class="cb-q mas"><span class="clawd-i" data-px="0.89"></span><span class="cb-v rst" data-k="rst">—</span></div>
         </div>
+        <!-- Link-error screen: shown on body.offline in place of whichever
+             layout is active. Two colors only, like everything on the glass. -->
+        <div class="cb-nolink">
+          <span class="clawd-i" data-px="1.47"></span>
+          <div class="t1">NO LINK !</div>
+          <div class="t2">CHECK CLI LOGIN</div>
+        </div>
       </div>
       <div class="cb-ctl">
         <div class="cb-dpad"></div>
@@ -101,6 +111,11 @@
       <div class="st"><span class="k">5H · <b id="o5h" class="g">—</b></span><div class="track"><i id="ob5"></i></div></div>
       <div class="st s2"><span class="k">7D · <b id="o7d">—</b></span><div class="track"><i id="ob7"></i></div></div>
       <div class="reset" id="oreset"></div>
+      <div class="orb-off">
+        <span class="clawd-i" data-px="1.4"></span>
+        <div class="t1">OFFLINE</div>
+        <div class="t2">check CLI login</div>
+      </div>
     </div>
   </div>
   <script src="usage-color.js"></script>
