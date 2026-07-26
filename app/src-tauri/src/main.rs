@@ -49,12 +49,51 @@ fn save_position(app: &tauri::AppHandle, x: i32, y: i32) {
     ui_prefs::save(&ui_path(), &p);
 }
 
+/// Windows' own move loop stops a dragged window at the top of the work area
+/// but lets it run right off the left, right and bottom edges. Pull the HUD
+/// back inside the work area of whichever monitor it overlaps most (nearest by
+/// centre when it overlaps none), so a drag can't park it out of reach.
+fn clamp_into_work_area(app: &tauri::AppHandle, x: i32, y: i32) -> (i32, i32) {
+    let Some(win) = app.get_webview_window("hud") else { return (x, y) };
+    let Ok(size) = win.outer_size() else { return (x, y) };
+    let (w, h) = (size.width as i32, size.height as i32);
+    let Ok(monitors) = win.available_monitors() else { return (x, y) };
+    let best = monitors.iter().max_by_key(|m| {
+        let a = m.work_area();
+        let (mx, my) = (a.position.x, a.position.y);
+        let (mw, mh) = (a.size.width as i32, a.size.height as i32);
+        let ov_w = ((x + w).min(mx + mw) - x.max(mx)).max(0) as i64;
+        let ov_h = ((y + h).min(my + mh) - y.max(my)).max(0) as i64;
+        let dx = ((x + w / 2) - (mx + mw / 2)) as i64;
+        let dy = ((y + h / 2) - (my + mh / 2)) as i64;
+        (ov_w * ov_h, -(dx * dx + dy * dy))
+    });
+    let Some(m) = best else { return (x, y) };
+    let a = m.work_area();
+    let (mx, my) = (a.position.x, a.position.y);
+    let (mw, mh) = (a.size.width as i32, a.size.height as i32);
+    // min-then-max order matters if the HUD is ever taller/wider than the work
+    // area: the low clamp wins, keeping the top-left corner on screen.
+    (x.min(mx + mw - w).max(mx), y.min(my + mh - h).max(my))
+}
+
+/// Clamp a settled drag back on screen, then persist where it actually landed.
+fn settle_position(app: &tauri::AppHandle, x: i32, y: i32) {
+    let (cx, cy) = clamp_into_work_area(app, x, y);
+    if (cx, cy) != (x, y) {
+        if let Some(win) = app.get_webview_window("hud") {
+            let _ = win.set_position(tauri::PhysicalPosition::new(cx, cy));
+        }
+    }
+    save_position(app, cx, cy);
+}
+
 /// Persist any not-yet-settled drag position immediately (quit path — the
 /// flusher thread dies with the process).
 fn flush_pending_move(app: &tauri::AppHandle) {
     let pos = MOVE_DEBOUNCE.lock().ok().and_then(|mut d| d.take_now());
     if let Some((x, y)) = pos {
-        save_position(app, x, y);
+        settle_position(app, x, y);
     }
 }
 
@@ -508,7 +547,7 @@ fn main() {
                     .ok()
                     .and_then(|mut d| d.take_if_settled(Instant::now(), MOVE_SETTLE));
                 if let Some((x, y)) = pos {
-                    save_position(&flush_handle, x, y);
+                    settle_position(&flush_handle, x, y);
                 }
             });
             Ok(())
