@@ -1,0 +1,332 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Clawd — 3D &amp; animation concepts</title>
+<!--
+  Concept gallery: what a dimensional / animated Clawd could look like.
+  EVERY render below is built from the LOCKED geometry in clawd-sprite.svg —
+  body/arm/leg/eye rects are reused verbatim, never redrawn by eye. Depth is
+  added *behind* or *on top of* that silhouette, so the front-on outline is
+  byte-identical to the shipped sprite unless a card is badged BREAKS LOCK.
+
+  Each concept is shown twice: enlarged (to judge the idea) and at the real
+  HUD footprint of 24.6 x 17.3 px (to judge whether it survives shipping).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500&family=Hanken+Grotesk:wght@500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cc-bg: #262624; --cc-panel: #1e1e1c; --cc-card: #30302d;
+    --cc-line: #3a3a36; --cc-text: #e7e4d9; --cc-text-2: #b1ada0;
+    --cc-muted: #7c776b; --clawd: #e17956;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 32px 96px; background: #161615; color: var(--cc-text);
+    font-family: "Hanken Grotesk", system-ui, sans-serif; font-weight: 500;
+  }
+  h1 { font-family: Newsreader, serif; font-weight: 500; font-size: 34px; margin: 0 0 10px; }
+  h2 {
+    font-family: Newsreader, serif; font-weight: 500; font-size: 22px;
+    margin: 56px 0 6px; padding-top: 26px; border-top: 1px solid var(--cc-line);
+  }
+  .lede, .sub { color: var(--cc-text-2); font-size: 14px; line-height: 1.55; max-width: 74ch; margin: 0 0 6px; }
+  .lede code, .sub code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--clawd); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 18px; margin-top: 24px; }
+  .card {
+    background: var(--cc-panel); border: 1px solid var(--cc-line); border-radius: 12px;
+    padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .card h3 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+  .card h3 .id { color: var(--cc-muted); font-family: "JetBrains Mono", monospace; font-weight: 400; margin-right: 6px; }
+  .note { font-size: 11.5px; line-height: 1.5; color: var(--cc-muted); margin: 0; }
+  .badge {
+    font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; float: right;
+  }
+  .safe { background: #24402c; color: #86c99a; }
+  .breaks { background: #45262a; color: #e5848a; }
+  .nudge { background: #43391f; color: #dcbc6a; }
+
+  /* Enlarged stage */
+  .stage {
+    background: var(--cc-bg); border-radius: 8px; height: 168px;
+    display: grid; place-items: center; overflow: hidden; perspective: 620px;
+  }
+  /* HUD-footprint reality check: a real Classic-ish row card */
+  .hud {
+    background: #000; border-radius: 8px; padding: 8px 9px; width: 148px;
+    align-self: center; font-size: 8px;
+  }
+  .hud .hd { display: flex; align-items: center; gap: 5px; min-height: 16px; }
+  .hud .hd .ttl { font-family: Newsreader, serif; font-size: 11px; flex: 1; text-align: center; }
+  .hud .row { display: flex; justify-content: space-between; font-size: 8px; color: var(--cc-text-2); margin-top: 4px; }
+  .hud .row b { color: #fff; font-weight: 600; }
+  .hud .bar { height: 2px; border-radius: 1px; background: #2a2a28; margin-top: 2px; }
+  .hud .bar i { display: block; height: 100%; border-radius: 1px; background: #3f7fbf; }
+
+  .clawd { color: var(--clawd); display: inline-block; line-height: 0; }
+  .clawd svg { overflow: visible; }
+
+  /* ---- idle eye blink, shared by every concept ---- */
+  @keyframes cv-blink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
+  .eyes { transform-origin: 50px 12px; animation: cv-blink 4.6s infinite; }
+
+  /* ---- C band: motion ---- */
+  @keyframes cv-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  .m-breathe .g-all { transform-origin: 50px 64px; animation: cv-breathe 3.2s ease-in-out infinite; }
+
+  @keyframes cv-hop {
+    0%,58%,100% { transform: translateY(0) scale(1, 1); }
+    64%         { transform: translateY(0) scale(1.14, .84); }
+    78%         { transform: translateY(-16px) scale(.93, 1.1); }
+    92%         { transform: translateY(0) scale(1.08, .92); }
+  }
+  .m-hop .g-all { transform-origin: 50px 64.8px; animation: cv-hop 2.1s cubic-bezier(.3,.7,.4,1) infinite; }
+
+  @keyframes cv-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  .m-bob .g-all { animation: cv-bob 1.5s ease-in-out infinite; }
+  @keyframes cv-bobshadow { 0%,100% { transform: scaleX(1); opacity: .5; } 50% { transform: scaleX(.78); opacity: .28; } }
+  .m-bob .shadow { transform-origin: 50px 50%; animation: cv-bobshadow 1.5s ease-in-out infinite; }
+
+  /* ---- D band: true volumetric slices ---- */
+  .slab { transform-style: preserve-3d; position: relative; }
+  .slab .sl { position: absolute; inset: 0; }
+  .slab .sl:not(.face) svg .eyes { display: none; }   /* only the front face has eyes */
+  @keyframes cv-turntable {
+    0%   { transform: rotateX(-10deg) rotateY(-32deg); }
+    50%  { transform: rotateX(-10deg) rotateY( 32deg); }
+    100% { transform: rotateX(-10deg) rotateY(-32deg); }
+  }
+  .d-turn .slab { animation: cv-turntable 5.4s ease-in-out infinite; }
+  @keyframes cv-flip { 0%,100% { transform: rotateY(-28deg); } 50% { transform: rotateY(28deg); } }
+  .d-flip .clawd { animation: cv-flip 4s ease-in-out infinite; transform-style: preserve-3d; }
+
+  .tiltwrap { transform-style: preserve-3d; transition: transform .18s ease-out; }
+</style>
+
+<h1>Clawd — 3D &amp; animation concepts</h1>
+<p class="lede">
+  Every sprite here is generated from the locked geometry (<code>viewBox 0 0 100 70</code>,
+  body <code>#e17956</code>, arm reach 17u, eyes <code>#111</code>). Nothing is redrawn by eye.
+  Depth is added behind or on top of that silhouette.
+</p>
+<p class="lede">
+  <b>Left render = enlarged to judge the idea. Right render = the real HUD footprint
+  (24.6 × 17.3 px).</b> A concept that only works enlarged is not a concept — it is a poster.
+</p>
+
+<h2>A · Depth <span style="font-size:13px;color:var(--cc-muted)">— extrusion behind the locked outline</span></h2>
+<p class="sub">Front-on silhouette untouched. A darker copy of the exact same rects is offset behind the sprite, so Clawd reads as a solid block instead of a decal.</p>
+<div class="grid" id="band-a"></div>
+
+<h2>B · Light &amp; material <span style="font-size:13px;color:var(--cc-muted)">— shading inside the outline</span></h2>
+<p class="sub">A unified light source across the whole sprite (<code>gradientUnits="userSpaceOnUse"</code>), so arms, body and legs are lit as one object rather than seven independent rectangles.</p>
+<div class="grid" id="band-b"></div>
+
+<h2>C · Motion <span style="font-size:13px;color:var(--cc-muted)">— transform/opacity only</span></h2>
+<p class="sub">All of these are pure <code>transform</code>/<code>opacity</code> — required, since the transparent WebView2 window never repaints a moving background. At rest each returns to the exact locked pose.</p>
+<div class="grid" id="band-c"></div>
+
+<h2>D · True volume <span style="font-size:13px;color:var(--cc-muted)">— real rotation</span></h2>
+<p class="sub">The sprite is stacked N times along Z in CSS 3D, so the object is a genuine extrusion of the locked silhouette. Dead-on it is pixel-identical to the shipped sprite; rotated, it is real geometry — not a fake.</p>
+<div class="grid" id="band-d"></div>
+
+<script>
+// ---------------------------------------------------------------------------
+// LOCKED geometry. Inner edges are the overlapped values (per-part groups need
+// them or the joins reveal an anti-alias seam); the outer silhouette is exact.
+// ---------------------------------------------------------------------------
+const BODY  = [15.8, 0, 84.2, 47.6];
+const ARM_L = [-1.2, 16.9, 19.0, 35.8], ARM_R = [81.0, 16.9, 101.2, 35.8];
+const LEGS  = [[15.8,42.0,25.5,64.8],[33.4,42.0,43.1,64.8],[56.9,42.0,66.6,64.8],[74.5,42.0,84.2,64.8]];
+const EYES  = [[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+const SOLIDS = [BODY, ARM_L, ARM_R, ...LEGS];
+
+let uid = 0;
+const rect = (a, dx = 0, dy = 0, extra = "") =>
+  `<rect x="${(a[0]+dx).toFixed(2)}" y="${(a[1]+dy).toFixed(2)}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"${extra}/>`;
+
+// Hard-edged bevel: a light strip along the top/left of each block and a dark
+// strip along the bottom/right. Reads as chiselled pixel-art volume.
+function bevel(t) {
+  const L = SOLIDS.map(a => rect([a[0], a[1], a[2], a[1] + t])).join("")
+          + SOLIDS.map(a => rect([a[0], a[1], a[0] + t, a[3]])).join("");
+  const D = SOLIDS.map(a => rect([a[0], a[3] - t, a[2], a[3]])).join("")
+          + SOLIDS.map(a => rect([a[2] - t, a[1], a[2], a[3]])).join("");
+  return `<g fill="#fff" opacity=".26">${L}</g><g fill="#000" opacity=".26">${D}</g>`;
+}
+
+/**
+ * Build one Clawd SVG from the locked rects.
+ * @param px    render scale (1.45 = the real HUD size)
+ * @param o.depth   extrusion offset in viewBox units (copy drawn behind)
+ * @param o.shade   'flat'|'grad'|'gloss'|'clay'|'metal'|'glass'|'rim'|'voxel'
+ * @param o.shadow  draw a contact ellipse under the feet
+ * @param o.eyes    render the eye group (false for interior 3D slices)
+ * @param o.fill    override body paint (used by the Z-slices)
+ */
+function sprite(px, o = {}) {
+  const id = "g" + (uid++);
+  const w = (17 * px).toFixed(1), h = (11.9 * px).toFixed(1);
+  let defs = "", paint = o.fill || "currentColor", over = "";
+
+  if (o.shade === "grad" || o.shade === "voxel") {
+    defs = `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="10" y1="-6" x2="92" y2="66">
+      <stop offset="0" stop-color="#fff" stop-opacity=".34"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".34"/></linearGradient>`;
+    over = `<g fill="url(#${id})">${SOLIDS.map(a => rect(a)).join("")}</g>`;
+    if (o.shade === "voxel") over += bevel(3.4);
+  } else if (o.shade === "gloss") {
+    defs = `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="-4" x2="0" y2="66">
+      <stop offset="0" stop-color="#fff" stop-opacity=".58"/><stop offset=".42" stop-color="#fff" stop-opacity=".04"/>
+      <stop offset=".52" stop-color="#000" stop-opacity=".06"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></linearGradient>`;
+    over = `<g fill="url(#${id})">${SOLIDS.map(a => rect(a)).join("")}</g>`
+         + `<rect x="21" y="3" width="20" height="7" fill="#fff" opacity=".5"/>`;
+  } else if (o.shade === "clay") {
+    defs = `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="34" cy="8" r="86">
+      <stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".55" stop-color="#fff" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".3"/></radialGradient>`;
+    over = `<g fill="url(#${id})">${SOLIDS.map(a => rect(a, 0, 0, ' rx="3.2"')).join("")}</g>`;
+    paint = o.fill || "currentColor";
+  } else if (o.shade === "metal") {
+    defs = `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="64">
+      <stop offset="0" stop-color="#000" stop-opacity=".26"/><stop offset=".18" stop-color="#fff" stop-opacity=".5"/>
+      <stop offset=".38" stop-color="#000" stop-opacity=".2"/><stop offset=".6" stop-color="#fff" stop-opacity=".3"/>
+      <stop offset=".8" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity=".18"/></linearGradient>`;
+    over = `<g fill="url(#${id})">${SOLIDS.map(a => rect(a)).join("")}</g>`;
+  } else if (o.shade === "glass") {
+    defs = `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="8" y1="0" x2="94" y2="64">
+      <stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity=".06"/></linearGradient>`;
+    over = `<g fill="url(#${id})">${SOLIDS.map(a => rect(a)).join("")}</g>` + bevel(2.2);
+  } else if (o.shade === "rim") {
+    over = `<g fill="#000" opacity=".42">${SOLIDS.map(a => rect(a)).join("")}</g>`
+         + `<g fill="${o.rim || '#ffd7c2'}" opacity=".95">`
+         + SOLIDS.map(a => rect([a[2] - 3.2, a[1], a[2], a[3]])).join("")
+         + SOLIDS.map(a => rect([a[0], a[1], a[2], a[1] + 3.2])).join("") + `</g>`;
+  }
+
+  const back = o.depth
+    ? `<g fill="#000" opacity=".42">${SOLIDS.map(a => rect(a, o.depth, o.depth)).join("")}</g>`
+    : "";
+  const shadow = o.shadow
+    ? `<ellipse class="shadow" cx="50" cy="68.5" rx="34" ry="3.4" fill="#000" opacity=".5"/>` : "";
+  const eyes = o.eyes === false ? ""
+    : `<g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(a => rect(a)).join("")}</g></g>`;
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">`
+    + (defs ? `<defs>${defs}</defs>` : "") + shadow + back
+    + `<g class="g-all"><g fill="${paint}">${SOLIDS.map(a => rect(a)).join("")}</g>${over}${eyes}</g></svg>`;
+}
+
+// A genuine extrusion: N copies of the exact silhouette stacked along Z.
+function slab(px, slices, o = {}) {
+  const w = 17 * px, h = 11.9 * px, step = (o.step || 2.4);
+  let out = "";
+  for (let i = slices - 1; i >= 0; i--) {
+    const front = i === 0;
+    // Back slices darken with depth so the extruded sides read as shaded sides.
+    const k = 1 - (i / slices) * 0.62;
+    const col = front ? "#e17956" : `rgb(${Math.round(225*k)},${Math.round(121*k)},${Math.round(86*k)})`;
+    out += `<div class="sl${front ? " face" : ""}" style="transform:translateZ(${-i*step}px)">`
+         + `<span class="clawd">${sprite(px, { eyes: front, fill: col })}</span></div>`;
+  }
+  return `<div class="slab" style="width:${w}px;height:${h}px">${out}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+const HUD_PX = 1.45, BIG_PX = 9.5;
+
+function hudCard(inner) {
+  return `<div class="hud">
+    <div class="hd">${inner}<span class="ttl">Usage</span></div>
+    <div class="row"><span>Current</span><b>94%</b></div><div class="bar"><i style="width:94%;background:#e5484d"></i></div>
+    <div class="row"><span>Weekly</span><b>82%</b></div><div class="bar"><i style="width:82%;background:#f59e0b"></i></div>
+    <div class="row"><span>Fable</span><b>18%</b></div><div class="bar"><i style="width:18%"></i></div>
+  </div>`;
+}
+
+function card(c) {
+  const big = c.big ? c.big(BIG_PX) : `<span class="clawd">${sprite(BIG_PX, c.o)}</span>`;
+  const small = c.small ? c.small(HUD_PX) : `<span class="clawd">${sprite(HUD_PX, c.o)}</span>`;
+  return `<div class="card ${c.cls || ""}">
+      <h3><span class="id">${c.id}</span>${c.name}<span class="badge ${c.lock}">${
+        c.lock === "safe" ? "silhouette safe" : c.lock === "nudge" ? "lock nudge" : "breaks lock"}</span></h3>
+      <div class="stage">${big}</div>
+      ${hudCard(small)}
+      <p class="note">${c.note}</p>
+    </div>`;
+}
+
+const BANDS = {
+  "band-a": [
+    { id: "A1", name: "Flat (today)", lock: "safe", o: {},
+      note: "The shipped sprite, for comparison. Zero depth cues — reads as a sticker." },
+    { id: "A2", name: "Drop extrude", lock: "safe", o: { depth: 4 },
+      note: "One dark copy offset 4u down-right. Cheapest possible volume; still legible at 24.6px." },
+    { id: "A3", name: "Deep extrude", lock: "safe", o: { depth: 9 },
+      note: "Same trick pushed to 9u. Chunky and toy-like enlarged, but at HUD size the offset copy starts to muddy the outline." },
+    { id: "A4", name: "Voxel bevel", lock: "safe", o: { depth: 4, shade: "voxel" },
+      note: "Extrude plus a hard-edged bevel on every block. Each rect reads as its own cube — closest to the pixel-art origin." },
+    { id: "A5", name: "Extrude + contact shadow", lock: "safe", o: { depth: 4, shadow: true, shade: "grad" },
+      note: "Adds a ground ellipse so Clawd sits on the card instead of floating. Sells depth more cheaply than any shading." },
+  ],
+  "band-b": [
+    { id: "B1", name: "Soft gradient", lock: "safe", o: { shade: "grad" },
+      note: "Single diagonal light across all seven rects. Subtlest option — survives HUD size better than anything else here." },
+    { id: "B2", name: "Glossy plastic", lock: "safe", o: { shade: "gloss" },
+      note: "Vertical falloff plus a specular patch. Very 'app icon'. The highlight is ~1px in the HUD, so it flattens out." },
+    { id: "B3", name: "Clay / soft body", lock: "nudge", o: { shade: "clay" },
+      note: "Rounded 3.2u corners on the shading layer. Warm and friendly, but rounding is a departure from the locked hard rects." },
+    { id: "B4", name: "Brushed metal", lock: "safe", o: { shade: "metal" },
+      note: "Banded gradient. Reads as machined at scale; at HUD size the bands alias into noise. Probably a poster, not a skin." },
+    { id: "B5", name: "Frosted glass", lock: "safe", o: { shade: "glass", depth: 3 },
+      note: "Bright diagonal wash plus thin bevel. Wants a busy background behind it — the HUD's flat black gives it nothing to refract." },
+    { id: "B6", name: "Rim light", lock: "safe", o: { shade: "rim" },
+      note: "Body dropped into shadow, hot edge on top/right only. Highest contrast at tiny sizes — the one shading idea that gets *better* small." },
+  ],
+  "band-c": [
+    { id: "C1", name: "Breathe", lock: "safe", cls: "m-breathe", o: { shade: "grad", depth: 3 },
+      note: "4.5% scale pulse from the feet, 3.2s. The idle state — signals 'alive' without competing with the numbers." },
+    { id: "C2", name: "Hop + squash", lock: "safe", cls: "m-hop", o: { depth: 4, shadow: true },
+      note: "Anticipate, launch, stretch, land. Classic squash-and-stretch; good candidate for a limit-reset celebration." },
+    { id: "C3", name: "Bob + shadow", lock: "safe", cls: "m-bob", o: { shade: "grad", shadow: true },
+      note: "The existing working-bob, but the contact shadow shrinks as Clawd rises. Depth from the shadow alone — no shading needed." },
+    { id: "C4", name: "Pointer parallax", lock: "safe", cls: "tilt-flat", o: { depth: 5, shade: "grad" },
+      note: "Hover the stage: the extrusion offset tracks your cursor, so Clawd appears to turn toward you. Front face never distorts." },
+  ],
+  "band-d": [
+    { id: "D1", name: "Turntable extrusion", lock: "safe", cls: "d-turn",
+      big: (px) => slab(px, 12, { step: 2.6 }), small: (px) => slab(px, 8, { step: 0.7 }),
+      note: "12 Z-stacked copies of the locked silhouette, rotating ±32°. Real volume, and dead-on it is pixel-identical to the sprite. My pick." },
+    { id: "D2", name: "Extrusion + pointer tilt", lock: "safe", cls: "tilt-slab",
+      big: (px) => slab(px, 12, { step: 2.6 }), small: (px) => slab(px, 8, { step: 0.7 }),
+      note: "Same volume, driven by the cursor instead of a loop. Idle it rests dead-on (= locked sprite); it only becomes 3D when you look at it." },
+    { id: "D3", name: "Flat card flip", lock: "breaks", cls: "d-flip", o: { shade: "grad" },
+      note: "Rotating the flat sprite in perspective. Cheapest true 3D, but Clawd is paper-thin edge-on — the silhouette shears at every frame." },
+    { id: "D4", name: "Thin slab", lock: "safe", cls: "d-turn",
+      big: (px) => slab(px, 5, { step: 2.0 }), small: (px) => slab(px, 4, { step: 0.6 }),
+      note: "Only 5 slices — a shallow relief rather than a solid block. A quarter of D1's DOM nodes, most of the effect." },
+  ],
+};
+
+for (const [id, list] of Object.entries(BANDS)) {
+  document.getElementById(id).innerHTML = list.map(card).join("");
+}
+
+// Pointer-driven cards (C4, D2): map cursor position over the stage to a tilt.
+document.querySelectorAll(".tilt-flat .stage, .tilt-slab .stage").forEach((stage) => {
+  const isSlab = stage.closest(".tilt-slab");
+  const target = isSlab ? stage.querySelector(".slab") : stage.querySelector(".clawd");
+  if (isSlab) target.style.animation = "none";
+  stage.addEventListener("pointermove", (e) => {
+    const r = stage.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
+    target.style.transform = isSlab
+      ? `rotateY(${nx * 46}deg) rotateX(${-ny * 26}deg)`
+      : `translate(${nx * 9}px, ${ny * 6}px)`;
+  });
+  stage.addEventListener("pointerleave", () => { target.style.transform = ""; });
+});
+</script>

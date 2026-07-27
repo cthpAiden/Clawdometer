@@ -1,0 +1,753 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Clawd 3D — 50 animations</title>
+<!--
+  GENERATED. Source of truth is the workflow result; regenerate rather than
+  hand-editing keyframes.
+
+  Model: the LOCKED Clawd silhouette stacked along Z inside preserve-3d — a real
+  extrusion, T5 depth (51% ratio). Flank shading is the LOCKED warm-shadow set:
+  plateau curve, amt .58, tau 6, back bounce .18, tint #7d3320. Front slice stays
+  exactly #e17956, so dead-on every animation resolves to the approved sprite.
+
+  Depth is visible ONLY while rotateY or rotateX is non-zero. Every animation here
+  was audited against that floor (>=14deg on at least one of those two axes).
+  Keyframes were normalised to a single canonical transform function list —
+  CSS only interpolates transforms componentwise when the lists match, otherwise
+  it falls back to matrix decomposition and quietly takes a different path.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500&family=Hanken+Grotesk:wght@500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --cc-bg:#262624; --cc-panel:#1e1e1c; --cc-line:#3a3a36;
+          --cc-text:#e7e4d9; --cc-text-2:#b1ada0; --cc-muted:#7c776b; --clawd:#e17956; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:40px 32px 120px; background:#161615; color:var(--cc-text);
+         font-family:"Hanken Grotesk",system-ui,sans-serif; font-weight:500; }
+  h1 { font-family:Newsreader,serif; font-weight:500; font-size:34px; margin:0 0 10px; }
+  h2 { font-family:Newsreader,serif; font-weight:500; font-size:22px; margin:52px 0 6px;
+       padding-top:26px; border-top:1px solid var(--cc-line); scroll-margin-top:70px; }
+  h2 .cnt { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--clawd);
+            background:#2a1d17; border-radius:5px; padding:2px 7px; margin-left:8px; vertical-align:3px; }
+  h2 .hint { font-size:13px; color:var(--cc-muted); font-family:"Hanken Grotesk",sans-serif; margin-left:8px; }
+  .lede { color:var(--cc-text-2); font-size:14px; line-height:1.55; max-width:80ch; margin:0 0 8px; }
+  code,.mono { font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--clawd); }
+
+  .bar { position:sticky; top:0; z-index:20; background:#161615ee; backdrop-filter:blur(8px);
+         border-bottom:1px solid var(--cc-line); margin:20px -32px 0; padding:12px 32px;
+         display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .bar a, .bar button { font-family:inherit; font-size:12px; font-weight:600; color:var(--cc-text-2);
+         background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:999px;
+         padding:6px 13px; text-decoration:none; cursor:pointer; }
+  .bar a:hover, .bar button:hover { color:var(--cc-text); border-color:#55554e; }
+  .bar .sp { flex:1; }
+  .bar label { font-size:12px; color:var(--cc-muted); display:flex; align-items:center; gap:7px; }
+  .bar input[type=range] { accent-color:var(--clawd); width:120px; }
+
+  table.picks { border-collapse:collapse; margin-top:14px; font-size:13px; width:100%; max-width:1000px; }
+  table.picks td { border-top:1px solid var(--cc-line); padding:9px 12px 9px 0; vertical-align:top;
+                   color:var(--cc-text-2); line-height:1.5; }
+  table.picks td.tg { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--clawd);
+                      text-transform:uppercase; white-space:nowrap; width:92px; }
+  table.picks b { color:var(--cc-text); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(272px,1fr)); gap:18px; margin-top:22px; }
+  .card { background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:12px;
+          padding:14px; display:flex; flex-direction:column; gap:9px; }
+  .card.is-pick { border-color:#3f6b4c; }
+  .card h3 { margin:0; font-size:13px; font-weight:800; display:flex; align-items:baseline; gap:7px; }
+  .card h3 .n { color:var(--cc-muted); font-family:"JetBrains Mono",monospace; font-weight:400; font-size:11px; }
+  .card h3 .sp { flex:1; }
+  .tag { font-size:9px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+         padding:2px 6px; border-radius:4px; background:#2c2c29; color:var(--cc-muted); }
+  .tag.pick { background:#24402c; color:#86c99a; }
+  .tag.fix { background:#43391f; color:#dcbc6a; }
+
+  .stage { background:var(--cc-bg); border-radius:8px; height:186px; display:grid; place-items:center;
+           overflow:hidden; perspective:640px; }
+  .foot { display:flex; gap:10px; align-items:center; }
+  .hud { background:#000; border-radius:7px; padding:7px 8px; width:140px; flex:none; }
+  .hud .hd { display:flex; align-items:center; gap:5px; min-height:20px; }
+  .hud .hd .ttl { font-family:Newsreader,serif; font-size:10px; flex:1; text-align:center; color:var(--cc-text); }
+  .hud .row { display:flex; justify-content:space-between; font-size:7.5px; color:var(--cc-text-2); margin-top:3px; }
+  .hud .row b { color:#fff; font-weight:600; }
+  .hud .bb { height:2px; border-radius:1px; background:#2a2a28; margin-top:2px; }
+  .hud .bb i { display:block; height:100%; border-radius:1px; }
+
+  .meta { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--cc-muted); line-height:1.65; }
+  .meta b { color:var(--cc-text-2); font-weight:400; }
+  .scores { display:flex; gap:6px; }
+  .pip { flex:1; height:4px; border-radius:2px; background:#2c2c29; overflow:hidden; }
+  .pip i { display:block; height:100%; background:var(--clawd); }
+  .note { font-size:11.5px; line-height:1.5; color:var(--cc-muted); margin:0; }
+  details { font-size:11px; color:var(--cc-muted); }
+  details summary { cursor:pointer; color:var(--cc-text-2); font-size:10.5px; }
+  details ul { margin:6px 0 0; padding-left:16px; line-height:1.55; }
+  details li { margin-bottom:5px; }
+
+  .clawd { color:var(--clawd); display:inline-block; line-height:0; }
+  .clawd svg { overflow:visible; }
+  @keyframes cv-blink { 0%,92%,100%{transform:scaleY(1);} 96%{transform:scaleY(.12);} }
+  .eyes { transform-origin:50px 12px; animation:cv-blink 4.6s infinite; }
+  .slab { transform-style:preserve-3d; position:relative; will-change:transform; }
+  .slab .sl { position:absolute; inset:0; }
+  body.paused .slab, body.paused .eyes { animation-play-state:paused !important; }
+
+  .drop { max-width:80ch; font-size:12px; color:var(--cc-muted); line-height:1.6; }
+  .drop li { margin-bottom:6px; }
+
+@keyframes kf-id-weight-shift {
+  0%,14% { transform:rotateY(-21deg) rotateX(0deg) rotateZ(-5deg) translateX(-3%) translateY(0%); }
+  26% { transform:rotateY(-8deg) rotateX(3deg) rotateZ(-2deg) translateX(-1%) translateY(1.5%); }
+  34% { transform:rotateY(7deg) rotateX(3deg) rotateZ(2deg) translateX(1%) translateY(1.5%); }
+  46%,64% { transform:rotateY(22deg) rotateX(0deg) rotateZ(5deg) translateX(3%) translateY(0%); }
+  76% { transform:rotateY(9deg) rotateX(3deg) rotateZ(2deg) translateX(0%) translateY(1.5%); }
+  84% { transform:rotateY(-8deg) rotateX(3deg) rotateZ(-2deg) translateX(0%) translateY(1.5%); }
+  96%,100% { transform:rotateY(-21deg) rotateX(0deg) rotateZ(-5deg) translateX(-3%) translateY(0%); }
+}
+@keyframes kf-ch-nod-off {
+  0% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg) translateY(0px); }
+  18% { transform:rotateY(-5deg) rotateX(-9deg) rotateZ(3deg) translateY(1px); }
+  38% { transform:rotateY(-12deg) rotateX(-22deg) rotateZ(7deg) translateY(2px); }
+  56% { transform:rotateY(-16deg) rotateX(-34deg) rotateZ(10deg) translateY(4px); }
+  61% { transform:rotateY(-17deg) rotateX(-36deg) rotateZ(11deg) translateY(5px); }
+  67% { transform:rotateY(14deg) rotateX(21deg) rotateZ(-4deg) translateY(-5px); }
+  75% { transform:rotateY(-8deg) rotateX(-7deg) rotateZ(2deg) translateY(0px); }
+  84% { transform:rotateY(4deg) rotateX(4deg) rotateZ(-1deg) translateY(0px); }
+  92%,100% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg) translateY(0px); }
+}
+@keyframes kf-id-eavesdrop {
+  0%,34% { transform:rotateY(0deg) rotateX(0deg) translateX(0%) scale(1); }
+  44% { transform:rotateY(26deg) rotateX(-3deg) translateX(3%) scale(1.02); }
+  51% { transform:rotateY(33deg) rotateX(-5deg) translateX(4%) scale(1.03); }
+  68% { transform:rotateY(30deg) rotateX(-4deg) translateX(4%) scale(1.03); }
+  78% { transform:rotateY(19deg) rotateX(3deg) translateX(2%) scale(1.01); }
+  90%,100% { transform:rotateY(0deg) rotateX(0deg) translateX(0%) scale(1); }
+}
+@keyframes kf-ch-bashful {
+  0%,10% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
+  22% { transform:rotateY(-74deg) rotateX(-13deg) translateY(3px) scale(.93); }
+  40% { transform:rotateY(-77deg) rotateX(-14deg) translateY(3px) scale(.93); }
+  50% { transform:rotateY(-36deg) rotateX(-4deg) translateY(0px) scale(.97); }
+  57% { transform:rotateY(-38deg) rotateX(-4deg) translateY(0px) scale(.97); }
+  63% { transform:rotateY(-75deg) rotateX(-13deg) translateY(3px) scale(.93); }
+  80% { transform:rotateY(-73deg) rotateX(-13deg) translateY(3px) scale(.93); }
+  94%,100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
+}
+@keyframes kf-id-room-scan {
+  0%,8% { transform:rotateY(0deg) rotateX(0deg); }
+  20% { transform:rotateY(-31deg) rotateX(4deg); }
+  38% { transform:rotateY(-27deg) rotateX(5deg); }
+  50% { transform:rotateY(0deg) rotateX(0deg); }
+  62% { transform:rotateY(27deg) rotateX(5deg); }
+  80% { transform:rotateY(23deg) rotateX(4deg); }
+  94%,100% { transform:rotateY(0deg) rotateX(0deg); }
+}
+@keyframes kf-id-tidal-breath {
+  0% { transform:rotateY(0deg) rotateX(0deg) scale(1); }
+  15% { transform:rotateY(-9deg) rotateX(-11deg) scale(1.035); }
+  30% { transform:rotateY(-17deg) rotateX(-6deg) scale(1.02); }
+  45% { transform:rotateY(-6deg) rotateX(2deg) scale(0.995); }
+  58% { transform:rotateY(8deg) rotateX(-10deg) scale(1.03); }
+  72% { transform:rotateY(16deg) rotateX(-5deg) scale(1.015); }
+  88% { transform:rotateY(5deg) rotateX(2deg) scale(0.995); }
+  100% { transform:rotateY(0deg) rotateX(0deg) scale(1); }
+}
+@keyframes kf-mc-surveillance-pan {
+  0%,7% { transform:rotateY(-52deg) rotateX(-7deg); }
+  46% { transform:rotateY(52deg) rotateX(-7deg); }
+  52% { transform:rotateY(52deg) rotateX(-13deg); }
+  60% { transform:rotateY(52deg) rotateX(-13deg); }
+  66% { transform:rotateY(-52deg) rotateX(-7deg); }
+  100% { transform:rotateY(-52deg) rotateX(-7deg); }
+}
+@keyframes kf-ph-pendulum-hang {
+  0%,100% { transform:rotateY(0deg) rotateZ(-16deg) translateY(-3px); }
+  12% { transform:rotateY(17deg) rotateZ(-11deg) translateY(-1px); }
+  25% { transform:rotateY(26deg) rotateZ(0deg) translateY(0px); }
+  38% { transform:rotateY(16deg) rotateZ(11deg) translateY(-1px); }
+  50% { transform:rotateY(0deg) rotateZ(16deg) translateY(-3px); }
+  62% { transform:rotateY(-16deg) rotateZ(11deg) translateY(-1px); }
+  75% { transform:rotateY(-26deg) rotateZ(0deg) translateY(0px); }
+  88% { transform:rotateY(-16deg) rotateZ(-11deg) translateY(-1px); }
+}
+@keyframes kf-id-driftwood {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0%); }
+  9% { transform:rotateY(19deg) rotateX(-7deg) translateY(-1.5%); }
+  22% { transform:rotateY(23deg) rotateX(4deg) translateY(-2%); }
+  34% { transform:rotateY(21deg) rotateX(9deg) translateY(-1%); }
+  50% { transform:rotateY(0deg) rotateX(-4deg) translateY(1%); }
+  58% { transform:rotateY(-14deg) rotateX(-9deg) translateY(1.5%); }
+  70% { transform:rotateY(-23deg) rotateX(-2deg) translateY(1%); }
+  84% { transform:rotateY(-20deg) rotateX(7deg) translateY(-0.5%); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0%); }
+}
+@keyframes kf-wk-carriage-return {
+  0%,8% { transform:rotateY(-30deg) rotateX(2deg); }
+  22%,30% { transform:rotateY(-15deg) rotateX(3deg); }
+  44%,52% { transform:rotateY(1deg) rotateX(5deg); }
+  66%,74% { transform:rotateY(17deg) rotateX(8deg); }
+  88% { transform:rotateY(31deg) rotateX(11deg); }
+  100% { transform:rotateY(-30deg) rotateX(2deg); }
+}
+@keyframes kf-wk-trudge {
+  0% { transform:rotateY(-27deg) rotateX(9deg) rotateZ(-3deg) translateY(2px); }
+  16% { transform:rotateY(-22deg) rotateX(2deg) rotateZ(-2deg) translateY(-4px); }
+  32% { transform:rotateY(-5deg) rotateX(0deg) rotateZ(0deg) translateY(-2px); }
+  50% { transform:rotateY(27deg) rotateX(9deg) rotateZ(3deg) translateY(2px); }
+  66% { transform:rotateY(22deg) rotateX(2deg) rotateZ(2deg) translateY(-4px); }
+  82% { transform:rotateY(5deg) rotateX(0deg) rotateZ(0deg) translateY(-2px); }
+  100% { transform:rotateY(-27deg) rotateX(9deg) rotateZ(-3deg) translateY(2px); }
+}
+@keyframes kf-wk-pickaxe-swing {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  18% { transform:rotateY(30deg) rotateX(-18deg) translateY(-3px); }
+  30% { transform:rotateY(34deg) rotateX(-20deg) translateY(-4px); }
+  44% { transform:rotateY(-16deg) rotateX(24deg) translateY(2px); }
+  50% { transform:rotateY(-20deg) rotateX(26deg) translateY(3px); }
+  58% { transform:rotateY(-12deg) rotateX(14deg) translateY(0px); }
+  74% { transform:rotateY(-4deg) rotateX(4deg) translateY(0px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-wk-shelf-stack {
+  0%,10% { transform:rotateY(-52deg) rotateX(20deg) translateY(2px); }
+  22% { transform:rotateY(-56deg) rotateX(22deg) translateY(4px); }
+  34% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  46%,62% { transform:rotateY(48deg) rotateX(-16deg) translateY(-3px); }
+  70% { transform:rotateY(44deg) rotateX(-11deg) translateY(-1px); }
+  88% { transform:rotateY(-20deg) rotateX(8deg) translateY(0px); }
+  100% { transform:rotateY(-52deg) rotateX(20deg) translateY(2px); }
+}
+@keyframes kf-ch-sniff-about {
+  0%,12% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  26% { transform:rotateY(-30deg) rotateX(-17deg) translateY(2px); }
+  38% { transform:rotateY(-27deg) rotateX(-16deg) translateY(2px); }
+  54% { transform:rotateY(26deg) rotateX(-20deg) translateY(3px); }
+  66% { transform:rotateY(29deg) rotateX(-18deg) translateY(3px); }
+  84% { transform:rotateY(-14deg) rotateX(-8deg) translateY(1px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-wk-heave-ho {
+  0% { transform:rotateY(-26deg) rotateX(-14deg) translateY(-3px); }
+  10% { transform:rotateY(-28deg) rotateX(-15deg) translateY(-3px); }
+  28% { transform:rotateY(12deg) rotateX(18deg) translateY(3px); }
+  40% { transform:rotateY(2deg) rotateX(5deg) translateY(0px); }
+  50% { transform:rotateY(26deg) rotateX(-14deg) translateY(-3px); }
+  60% { transform:rotateY(28deg) rotateX(-15deg) translateY(-3px); }
+  78% { transform:rotateY(-12deg) rotateX(18deg) translateY(3px); }
+  90% { transform:rotateY(-2deg) rotateX(5deg) translateY(0px); }
+  100% { transform:rotateY(-26deg) rotateX(-14deg) translateY(-3px); }
+}
+@keyframes kf-mc-ratchet-step {
+  0%,32% { transform:rotateY(0deg) rotateX(0deg); }
+  40% { transform:rotateY(46deg) rotateX(-8deg); }
+  47% { transform:rotateY(30deg) rotateX(6deg); }
+  52%,82% { transform:rotateY(38deg) rotateX(0deg); }
+  90% { transform:rotateY(-10deg) rotateX(-8deg); }
+  97% { transform:rotateY(6deg) rotateX(4deg); }
+  100% { transform:rotateY(0deg) rotateX(0deg); }
+}
+@keyframes kf-wk-knead {
+  0%,10% { transform:rotateY(-24deg) rotateX(-8deg) translateY(-3px); }
+  26% { transform:rotateY(-13deg) rotateX(20deg) translateY(2px); }
+  40% { transform:rotateY(-10deg) rotateX(16deg) translateY(2px); }
+  50%,60% { transform:rotateY(24deg) rotateX(-8deg) translateY(-3px); }
+  76% { transform:rotateY(13deg) rotateX(20deg) translateY(2px); }
+  90% { transform:rotateY(10deg) rotateX(16deg) translateY(2px); }
+  100% { transform:rotateY(-24deg) rotateX(-8deg) translateY(-3px); }
+}
+@keyframes kf-mc-turret-index {
+  0% { transform:rotateY(0deg); }
+  12.5% { transform:rotateY(-36deg); }
+  25% { transform:rotateY(-72deg); }
+  37.5% { transform:rotateY(-36deg); }
+  50% { transform:rotateY(0deg); }
+  62.5% { transform:rotateY(36deg); }
+  75% { transform:rotateY(72deg); }
+  87.5% { transform:rotateY(36deg); }
+  100% { transform:rotateY(0deg); }
+}
+@keyframes kf-ch-something-out-there {
+  0%,26% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg); }
+  32% { transform:rotateY(-41deg) rotateX(4deg) rotateZ(-11deg); }
+  54% { transform:rotateY(-42deg) rotateX(4deg) rotateZ(-11deg); }
+  60% { transform:rotateY(37deg) rotateX(6deg) rotateZ(10deg); }
+  80% { transform:rotateY(38deg) rotateX(6deg) rotateZ(10deg); }
+  88% { transform:rotateY(-9deg) rotateX(1deg) rotateZ(-2deg); }
+  96%,100% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg); }
+}
+@keyframes kf-ph-topple-catch {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateX(0px) translateY(0px); }
+  12% { transform:rotateY(0deg) rotateX(-7deg) translateX(0px) translateY(0px); }
+  32% { transform:rotateY(-6deg) rotateX(28deg) translateX(0px) translateY(1px); }
+  44% { transform:rotateY(-18deg) rotateX(38deg) translateX(0px) translateY(3px); }
+  56% { transform:rotateY(26deg) rotateX(16deg) translateX(5px) translateY(1px); }
+  70% { transform:rotateY(-13deg) rotateX(-11deg) translateX(2px) translateY(0px); }
+  84% { transform:rotateY(7deg) rotateX(6deg) translateX(0px) translateY(0px); }
+  93% { transform:rotateY(-3deg) rotateX(-3deg) translateX(0px) translateY(0px); }
+  100% { transform:rotateY(0) rotateX(0deg) translateX(0px) translateY(0px); }
+}
+@keyframes kf-al-nervous-scan {
+  0%,10% { transform:rotateY(0deg) rotateX(0deg); }
+  18%,30% { transform:rotateY(-46deg) rotateX(-5deg); }
+  36%,46% { transform:rotateY(0deg) rotateX(0deg); }
+  52%,64% { transform:rotateY(44deg) rotateX(-5deg); }
+  70% { transform:rotateY(0deg) rotateX(7deg); }
+  78% { transform:rotateY(-9deg) rotateX(2deg); }
+  86%,100% { transform:rotateY(0deg) rotateX(0deg); }
+}
+@keyframes kf-al-warning-shake {
+  0% { transform:rotateY(0deg) rotateX(0deg); }
+  8% { transform:rotateY(0deg) rotateX(12deg); }
+  20% { transform:rotateY(-30deg) rotateX(12deg); }
+  34% { transform:rotateY(26deg) rotateX(12deg); }
+  48% { transform:rotateY(-20deg) rotateX(11deg); }
+  60% { transform:rotateY(13deg) rotateX(9deg); }
+  70% { transform:rotateY(0deg) rotateX(6deg); }
+  80%,100% { transform:rotateY(0deg) rotateX(0deg); }
+}
+@keyframes kf-mc-signal-glitch {
+  0% { transform:rotateY(0deg) rotateZ(0deg) translateX(0px); }
+  6% { transform:rotateY(-42deg) rotateZ(0deg) translateX(-3px); opacity:0.55; }
+  17% { transform:rotateY(34deg) rotateZ(-5deg) translateX(0px); }
+  28% { transform:rotateY(-20deg) rotateZ(0deg) translateX(0px); opacity:0.35; }
+  39% { transform:rotateY(48deg) rotateZ(0deg) translateX(2px); opacity:1; }
+  50% { transform:rotateY(-24deg) rotateZ(0deg) translateX(0px); }
+  60%,100% { transform:rotateY(0deg) rotateZ(0deg) translateX(0px); }
+}
+@keyframes kf-al-shiver {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  14% { transform:rotateY(-24deg) rotateX(6deg) translateY(-1px); }
+  36% { transform:rotateY(22deg) rotateX(-6deg) translateY(1px); }
+  58% { transform:rotateY(-20deg) rotateX(5deg) translateY(-1px); }
+  76% { transform:rotateY(11deg) rotateX(-3deg) translateY(0px); }
+  88%,100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-al-double-take {
+  0%,14% { transform:rotateY(0deg) rotateX(0deg); }
+  26%,40% { transform:rotateY(-36deg) rotateX(-4deg); }
+  52% { transform:rotateY(40deg) rotateX(11deg); }
+  62% { transform:rotateY(-14deg) rotateX(6deg); }
+  72%,88% { transform:rotateY(6deg) rotateX(9deg); }
+  100% { transform:rotateY(0deg) rotateX(0deg); }
+}
+@keyframes kf-rx-cursor-dodge {
+  0% { transform:rotateY(0deg) rotateZ(0deg) translateX(0px); }
+  9% { transform:rotateY(52deg) rotateZ(7deg) translateX(13px); }
+  16% { transform:rotateY(46deg) rotateZ(5deg) translateX(15px); }
+  46% { transform:rotateY(44deg) rotateZ(4deg) translateX(15px); }
+  62% { transform:rotateY(58deg) rotateZ(6deg) translateX(12px); }
+  80% { transform:rotateY(22deg) rotateZ(2deg) translateX(5px); }
+  92% { transform:rotateY(6deg) rotateZ(0deg) translateX(1px); }
+  100% { transform:rotateY(0deg) rotateZ(0deg) translateX(0px); }
+}
+@keyframes kf-rx-poke-flinch {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateZ(0px) scale(1); }
+  13% { transform:rotateY(-20deg) rotateX(32deg) translateZ(-16px) scale(.94); }
+  36% { transform:rotateY(-18deg) rotateX(29deg) translateZ(-14px) scale(.95); }
+  60% { transform:rotateY(12deg) rotateX(-16deg) translateZ(0px) scale(1.03); }
+  82% { transform:rotateY(-6deg) rotateX(8deg) translateZ(0px) scale(1); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateZ(0px) scale(1); }
+}
+@keyframes kf-rx-eye-track {
+  0%,14% { transform:rotateY(-34deg) rotateX(-4deg); }
+  20%,38% { transform:rotateY(12deg) rotateX(-10deg); }
+  44%,52% { transform:rotateY(44deg) rotateX(-3deg); }
+  58%,74% { transform:rotateY(0deg) rotateX(0deg); }
+  80%,92% { transform:rotateY(-20deg) rotateX(9deg); }
+  100% { transform:rotateY(-34deg) rotateX(-4deg); }
+}
+@keyframes kf-mc-scan-lock {
+  0% { transform:rotateY(0deg) rotateX(0deg); }
+  8%,22% { transform:rotateY(-34deg) rotateX(-20deg); }
+  30%,44% { transform:rotateY(0deg) rotateX(-20deg); }
+  52%,66% { transform:rotateY(34deg) rotateX(-20deg); }
+  74%,88% { transform:rotateY(0deg) rotateX(12deg); }
+  100% { transform:rotateY(0deg) rotateX(0deg); }
+}
+@keyframes kf-st-flip-stick {
+  0% { transform:rotateY(0deg) rotateX(360deg) translateY(0%) scaleX(1) scaleY(1); }
+  8% { transform:rotateY(0deg) rotateX(360deg) translateY(7%) scaleX(1.12) scaleY(0.8); }
+  20% { transform:rotateY(-26deg) rotateX(300deg) translateY(-18%) scaleX(0.94) scaleY(1.08); }
+  45% { transform:rotateY(-42deg) rotateX(196deg) translateY(-32%) scaleX(1) scaleY(1); }
+  70% { transform:rotateY(-20deg) rotateX(96deg) translateY(-12%) scaleX(1) scaleY(1); }
+  88% { transform:rotateY(0deg) rotateX(14deg) translateY(5%) scaleX(1.14) scaleY(0.82); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0%) scaleX(1) scaleY(1); }
+}
+@keyframes kf-rx-bar-watch {
+  0%,15% { transform:rotateY(0deg) rotateX(0deg) translateX(0px); }
+  23%,44% { transform:rotateY(-38deg) rotateX(-19deg) translateX(3px); }
+  50%,64% { transform:rotateY(-46deg) rotateX(-23deg) translateX(4px); }
+  74%,100% { transform:rotateY(0deg) rotateX(0deg) translateX(0px); }
+}
+@keyframes kf-ph-roly-poly {
+  0% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg) translateY(0px); }
+  6% { transform:rotateY(-12deg) rotateX(-24deg) rotateZ(10deg) translateY(2px); }
+  19% { transform:rotateY(9deg) rotateX(19deg) rotateZ(-8deg) translateY(-2px); }
+  31% { transform:rotateY(-7deg) rotateX(-14deg) rotateZ(6deg) translateY(0px); }
+  42% { transform:rotateY(5deg) rotateX(9deg) rotateZ(-4deg) translateY(0px); }
+  52% { transform:rotateY(0deg) rotateX(-6deg) rotateZ(3deg) translateY(0px); }
+  61% { transform:rotateY(0deg) rotateX(3deg) rotateZ(-1deg) translateY(0px); }
+  68% { transform:rotateY(0deg) rotateX(-1deg) rotateZ(0deg) translateY(0px); }
+  76%,100% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg) translateY(0px); }
+}
+@keyframes kf-ce-take-a-bow {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  10% { transform:rotateY(0deg) rotateX(14deg) translateY(-2px); }
+  26% { transform:rotateY(0deg) rotateX(-52deg) translateY(3px); }
+  40% { transform:rotateY(0deg) rotateX(-50deg) translateY(3px); }
+  54% { transform:rotateY(-44deg) rotateX(-6deg) translateY(0px); }
+  64% { transform:rotateY(-44deg) rotateX(-6deg) translateY(0px); }
+  78% { transform:rotateY(46deg) rotateX(-4deg) translateY(0px); }
+  88% { transform:rotateY(46deg) rotateX(-4deg) translateY(0px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-al-cower {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
+  10% { transform:rotateY(26deg) rotateX(-34deg) translateY(3px) scale(.92); }
+  24% { transform:rotateY(6deg) rotateX(-30deg) translateY(3px) scale(.92); }
+  34% { transform:rotateY(28deg) rotateX(-32deg) translateY(3px) scale(.92); }
+  44% { transform:rotateY(7deg) rotateX(-29deg) translateY(3px) scale(.92); }
+  54% { transform:rotateY(27deg) rotateX(-31deg) translateY(3px) scale(.92); }
+  70% { transform:rotateY(-9deg) rotateX(-8deg) translateY(0px) scale(1); }
+  86% { transform:rotateY(5deg) rotateX(3deg) translateY(0px) scale(1); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
+}
+@keyframes kf-al-flinch {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  8%,22% { transform:rotateY(-30deg) rotateX(-26deg) translateY(2px); }
+  40% { transform:rotateY(14deg) rotateX(8deg) translateY(0px); }
+  58% { transform:rotateY(-8deg) rotateX(-4deg) translateY(0px); }
+  76% { transform:rotateY(4deg) rotateX(2deg) translateY(0px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-ce-fist-pump {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  16% { transform:rotateY(-30deg) rotateX(14deg) translateY(3px); }
+  34% { transform:rotateY(-36deg) rotateX(-34deg) translateY(-8px); }
+  44% { transform:rotateY(-36deg) rotateX(-26deg) translateY(0px); }
+  60% { transform:rotateY(-36deg) rotateX(-26deg) translateY(0px); }
+  78% { transform:rotateY(34deg) rotateX(-36deg) translateY(-8px); }
+  88% { transform:rotateY(34deg) rotateX(-26deg) translateY(0px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-ce-shimmy {
+  0% { transform:rotateY(0deg) rotateZ(0deg) translateX(0px); }
+  17% { transform:rotateY(-44deg) rotateZ(5deg) translateX(-5px); }
+  26% { transform:rotateY(-44deg) rotateZ(5deg) translateX(-5px); }
+  44% { transform:rotateY(44deg) rotateZ(-5deg) translateX(5px); }
+  53% { transform:rotateY(44deg) rotateZ(-5deg) translateX(5px); }
+  70% { transform:rotateY(-46deg) rotateZ(6deg) translateX(-6px); }
+  85% { transform:rotateY(46deg) rotateZ(-6deg) translateX(6px); }
+  100% { transform:rotateY(0deg) rotateZ(0deg) translateX(0px); }
+}
+@keyframes kf-ce-cape-turn {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  8% { transform:rotateY(-22deg) rotateX(0deg) translateY(0px); }
+  30% { transform:rotateY(112deg) rotateX(-4deg) translateY(0px); }
+  44% { transform:rotateY(146deg) rotateX(6deg) translateY(-2px); }
+  64% { transform:rotateY(146deg) rotateX(6deg) translateY(-2px); }
+  84% { transform:rotateY(-20deg) rotateX(0deg) translateY(0px); }
+  92% { transform:rotateY(10deg) rotateX(0deg) translateY(0px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-rx-tally-nod {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+  20% { transform:rotateY(7deg) rotateX(-28deg) translateY(2px); }
+  32% { transform:rotateY(7deg) rotateX(-26deg) translateY(2px); }
+  52% { transform:rotateY(-12deg) rotateX(12deg) translateY(-2px); }
+  70% { transform:rotateY(9deg) rotateX(-22deg) translateY(1px); }
+  86% { transform:rotateY(3deg) rotateX(-8deg) translateY(0px); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px); }
+}
+@keyframes kf-ce-victory-spin {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scaleY(1); }
+  8% { transform:rotateY(-34deg) rotateX(-6deg) translateY(4px) scaleY(0.86); }
+  15% { transform:rotateY(-40deg) rotateX(-6deg) translateY(4px) scaleY(0.86); }
+  34% { transform:rotateY(120deg) rotateX(-8deg) translateY(-10px) scaleY(1.06); }
+  55% { transform:rotateY(258deg) rotateX(5deg) translateY(-11px) scaleY(1.02); }
+  74% { transform:rotateY(368deg) rotateX(0deg) translateY(0px) scaleY(0.88); }
+  86% { transform:rotateY(351deg) rotateX(0deg) translateY(-3px) scaleY(1.04); }
+  94% { transform:rotateY(363deg) rotateX(0deg) translateY(0px) scaleY(0.97); }
+  100% { transform:rotateY(360deg) rotateX(0deg) translateY(0px) scaleY(1); }
+}
+@keyframes kf-ph-windup-snap {
+  0% { transform:rotateY(0deg); }
+  28% { transform:rotateY(-38deg); }
+  42%,56% { transform:rotateY(-54deg); }
+  64% { transform:rotateY(44deg); }
+  74% { transform:rotateY(-20deg); }
+  83% { transform:rotateY(10deg); }
+  91% { transform:rotateY(-4deg); }
+  100% { transform:rotateY(0); }
+}
+@keyframes kf-rx-wake-perk {
+  0% { transform:rotateY(-72deg) rotateX(-15deg) translateY(3px) scale(.97); }
+  10% { transform:rotateY(-68deg) rotateX(-17deg) translateY(4px) scale(.97); }
+  34% { transform:rotateY(-24deg) rotateX(6deg) translateY(-3px) scale(1.03); }
+  48% { transform:rotateY(16deg) rotateX(9deg) translateY(-4px) scale(1.02); }
+  64% { transform:rotateY(-9deg) rotateX(2deg) translateY(0px) scale(1); }
+  80% { transform:rotateY(5deg) rotateX(-2deg) translateY(0px) scale(1); }
+  92% { transform:rotateY(-2deg) rotateX(0deg) translateY(0px) scale(1); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); }
+}
+@keyframes kf-mc-power-cycle {
+  0% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg); }
+  13% { transform:rotateY(-8deg) rotateX(-22deg) rotateZ(5deg); opacity:0.75; }
+  28% { transform:rotateY(-15deg) rotateX(-34deg) rotateZ(9deg); opacity:0.45; }
+  42% { transform:rotateY(-15deg) rotateX(-34deg) rotateZ(9deg); opacity:0.45; }
+  50% { transform:rotateY(0deg) rotateX(16deg) rotateZ(0deg); opacity:1; }
+  60% { transform:rotateY(-26deg) rotateX(0deg) rotateZ(0deg); }
+  70% { transform:rotateY(26deg) rotateX(0deg) rotateZ(0deg); }
+  80% { transform:rotateY(-9deg) rotateX(0deg) rotateZ(0deg); }
+  90%,100% { transform:rotateY(0deg) rotateX(0deg) rotateZ(0deg); }
+}
+@keyframes kf-tr-tumble-land {
+  0% { transform:rotateY(0deg) rotateX(-168deg) translateY(-64px) scale(.84); opacity:0; }
+  10% { transform:rotateY(0deg) rotateX(-126deg) translateY(-46px) scale(.88); opacity:1; }
+  40% { transform:rotateY(0deg) rotateX(-38deg) translateY(-8px) scale(1); }
+  52%,64% { transform:rotateY(-7deg) rotateX(26deg) translateY(0px) scale(1); }
+  80% { transform:rotateY(4deg) rotateX(-14deg) translateY(-9px) scale(1); }
+  92% { transform:rotateY(0deg) rotateX(5deg) translateY(0px) scale(1); }
+  100% { transform:rotateY(0) rotateX(0deg) translateY(0px) scale(1); }
+}
+@keyframes kf-tr-duck-out {
+  0% { transform:rotateY(0deg) rotateX(0deg) translateY(0px) scale(1); opacity:1; }
+  6% { transform:rotateY(7deg) rotateX(-26deg) translateY(-8px) scale(1); }
+  20% { transform:rotateY(-30deg) rotateX(66deg) translateY(30px) scale(.82); opacity:0.5; }
+  30%,46% { transform:rotateY(-38deg) rotateX(84deg) translateY(48px) scale(.7); opacity:0; }
+  62% { transform:rotateY(-22deg) rotateX(54deg) translateY(20px) scale(.9); opacity:1; }
+  78% { transform:rotateY(6deg) rotateX(-30deg) translateY(-10px) scale(1); }
+  90% { transform:rotateY(-3deg) rotateX(12deg) translateY(0px) scale(1); }
+  100% { transform:rotateY(0) rotateX(0deg) translateY(0px) scale(1); }
+}
+@keyframes kf-ph-heavy-shunt {
+  0% { transform:rotateY(0deg) translateX(0px); }
+  9% { transform:rotateY(27deg) translateX(2px); }
+  28% { transform:rotateY(9deg) translateX(17px); }
+  37% { transform:rotateY(-38deg) translateX(22px); }
+  47% { transform:rotateY(20deg) translateX(22px); }
+  56% { transform:rotateY(-10deg) translateX(21px); }
+  72% { transform:rotateY(-16deg) translateX(11px); }
+  90% { transform:rotateY(9deg) translateX(1px); }
+  100% { transform:rotateY(0) translateX(0px); }
+}
+@keyframes kf-st-corkscrew-dive {
+  0% { transform:rotateY(360deg) rotateX(0deg) translateX(0%) translateY(0%); }
+  8% { transform:rotateY(392deg) rotateX(-18deg) translateX(5%) translateY(-14%); }
+  14% { transform:rotateY(392deg) rotateX(-18deg) translateX(5%) translateY(-14%); }
+  36% { transform:rotateY(268deg) rotateX(24deg) translateX(-8%) translateY(16%); }
+  48% { transform:rotateY(262deg) rotateX(24deg) translateX(-8%) translateY(18%); }
+  70% { transform:rotateY(120deg) rotateX(-16deg) translateX(8%) translateY(2%); }
+  88% { transform:rotateY(34deg) rotateX(-8deg) translateX(2%) translateY(-6%); }
+  96% { transform:rotateY(-8deg) rotateX(3deg) translateX(0%) translateY(1%); }
+  100% { transform:rotateY(0deg) rotateX(0deg) translateX(0%) translateY(0%); }
+}
+@keyframes kf-tr-deal-in {
+  0% { transform:rotateY(88deg) rotateZ(-7deg) translateX(46px) scale(.94); opacity:0; }
+  14% { transform:rotateY(78deg) rotateZ(-5deg) translateX(34px) scale(.96); opacity:1; }
+  40% { transform:rotateY(34deg) rotateZ(-2deg) translateX(13px) scale(1); }
+  64% { transform:rotateY(-17deg) rotateZ(2deg) translateX(0px) scale(1); }
+  80% { transform:rotateY(9deg) rotateZ(0deg) translateX(0px) scale(1); }
+  92% { transform:rotateY(-4deg) rotateZ(0deg) translateX(0px) scale(1); }
+  100% { transform:rotateY(0) rotateZ(0deg) translateX(0px) scale(1); }
+}
+@keyframes kf-tr-spin-off {
+  0%,16% { transform:rotateY(0deg) translateX(0px) translateY(0px) scale(1); opacity:1; }
+  28% { transform:rotateY(27deg) translateX(4px) translateY(-2px) scale(1.04); opacity:1; }
+  44% { transform:rotateY(-86deg) translateX(-4px) translateY(-4px) scale(.97); }
+  66% { transform:rotateY(-212deg) translateX(-16px) translateY(-12px) scale(.72); opacity:0.85; }
+  88% { transform:rotateY(-330deg) translateX(-30px) translateY(-26px) scale(.24); opacity:0; }
+  100% { transform:rotateY(0) translateX(0px) translateY(0px) scale(1); opacity:0; }
+}
+@keyframes kf-tr-unfold {
+  0% { transform:rotateY(-92deg) rotateX(-76deg) scale(.88); opacity:0; }
+  10% { transform:rotateY(-92deg) rotateX(-64deg) scale(.9); opacity:1; }
+  32%,46% { transform:rotateY(-89deg) rotateX(0deg) scale(1); }
+  70% { transform:rotateY(-24deg) rotateX(0deg) scale(1); }
+  84% { transform:rotateY(13deg) rotateX(0deg) scale(1); }
+  100% { transform:rotateY(0) rotateX(0deg) scale(1); }
+}
+
+.a-id-weight-shift .slab { animation: kf-id-weight-shift 11s cubic-bezier(.37,0,.32,1) infinite both; }
+.a-ch-nod-off .slab { animation: kf-ch-nod-off 7.5s cubic-bezier(.5,0,.3,1) infinite both; }
+.a-id-eavesdrop .slab { animation: kf-id-eavesdrop 13s cubic-bezier(.6,0,.3,1) infinite both; }
+.a-ch-bashful .slab { animation: kf-ch-bashful 6.4s cubic-bezier(.4,0,.3,1) infinite both; }
+.a-id-room-scan .slab { animation: kf-id-room-scan 16s cubic-bezier(.45,0,.55,1) infinite both; }
+.a-id-tidal-breath .slab { animation: kf-id-tidal-breath 7.5s cubic-bezier(.42,0,.58,1) infinite both; }
+.a-mc-surveillance-pan .slab { animation: kf-mc-surveillance-pan 7s linear infinite both; }
+.a-ph-pendulum-hang .slab { animation: kf-ph-pendulum-hang 3.4s cubic-bezier(.37,0,.63,1) infinite both; }
+.a-id-driftwood .slab { animation: kf-id-driftwood 18s linear infinite both; }
+.a-wk-carriage-return .slab { animation: kf-wk-carriage-return 2.4s cubic-bezier(.9,0,.1,1) infinite both; }
+.a-wk-trudge .slab { animation: kf-wk-trudge 1.7s cubic-bezier(.55,0,.45,1) infinite both; }
+.a-wk-pickaxe-swing .slab { animation: kf-wk-pickaxe-swing 1.5s cubic-bezier(.62,0,.24,1) infinite both; }
+.a-wk-shelf-stack .slab { animation: kf-wk-shelf-stack 3.2s cubic-bezier(.5,0,.2,1) infinite both; }
+.a-ch-sniff-about .slab { animation: kf-ch-sniff-about 2.6s cubic-bezier(.25,.9,.3,1) infinite both; }
+.a-wk-heave-ho .slab { animation: kf-wk-heave-ho 1.9s cubic-bezier(.45,0,.25,1) infinite both; }
+.a-mc-ratchet-step .slab { animation: kf-mc-ratchet-step 1.1s cubic-bezier(.85,0,.15,1) infinite both; }
+.a-wk-knead .slab { animation: kf-wk-knead 0.9s cubic-bezier(.42,0,.28,1) infinite both; }
+.a-mc-turret-index .slab { animation: kf-mc-turret-index 4s steps(1, end) infinite both; }
+.a-ch-something-out-there .slab { animation: kf-ch-something-out-there 5.2s cubic-bezier(.2,.9,.25,1) infinite both; }
+.a-ph-topple-catch .slab { animation: kf-ph-topple-catch 1.5s cubic-bezier(.5,0,.3,1) infinite both; }
+.a-al-nervous-scan .slab { animation: kf-al-nervous-scan 3.6s cubic-bezier(.6,0,.15,1) infinite both; }
+.a-al-warning-shake .slab { animation: kf-al-warning-shake 1.4s cubic-bezier(.4,0,.2,1) infinite both; }
+.a-mc-signal-glitch .slab { animation: kf-mc-signal-glitch 2.6s steps(1, end) infinite both; }
+.a-al-shiver .slab { animation: kf-al-shiver 0.42s linear infinite both; }
+.a-al-double-take .slab { animation: kf-al-double-take 1.5s cubic-bezier(.7,0,.2,1) infinite both; }
+.a-rx-cursor-dodge .slab { animation: kf-rx-cursor-dodge 1.5s cubic-bezier(.16,.9,.3,1) infinite both; }
+.a-rx-poke-flinch .slab { animation: kf-rx-poke-flinch 0.62s linear infinite both; }
+.a-rx-eye-track .slab { animation: kf-rx-eye-track 6.4s cubic-bezier(.2,.9,.25,1) infinite both; }
+.a-mc-scan-lock .slab { animation: kf-mc-scan-lock 1.8s cubic-bezier(.4,0,0,1) infinite both; }
+.a-st-flip-stick .slab { animation: kf-st-flip-stick 1.35s cubic-bezier(0.4,0,0.3,1) infinite both; }
+.a-rx-bar-watch .slab { animation: kf-rx-bar-watch 5.2s cubic-bezier(.45,0,.2,1) infinite both; }
+.a-ph-roly-poly .slab { animation: kf-ph-roly-poly 3.6s cubic-bezier(.3,0,.35,1) infinite both; }
+.a-ce-take-a-bow .slab { animation: kf-ce-take-a-bow 2.3s cubic-bezier(.45,.05,.3,1) infinite both; }
+.a-al-cower .slab { animation: kf-al-cower 1.9s cubic-bezier(.2,.9,.3,1) infinite both; }
+.a-al-flinch .slab { animation: kf-al-flinch 0.72s cubic-bezier(.15,.9,.25,1) infinite both; }
+.a-ce-fist-pump .slab { animation: kf-ce-fist-pump 1.6s cubic-bezier(.2,.85,.25,1) infinite both; }
+.a-ce-shimmy .slab { animation: kf-ce-shimmy 1.8s cubic-bezier(.5,0,.5,1) infinite both; }
+.a-ce-cape-turn .slab { animation: kf-ce-cape-turn 2.6s cubic-bezier(.55,0,.35,1) infinite both; }
+.a-rx-tally-nod .slab { animation: kf-rx-tally-nod 0.9s cubic-bezier(.36,0,.2,1) infinite both; }
+.a-ce-victory-spin .slab { animation: kf-ce-victory-spin 1.45s cubic-bezier(.34,0,.2,1) infinite both; }
+.a-ph-windup-snap .slab { animation: kf-ph-windup-snap 1.9s cubic-bezier(.45,0,.25,1) infinite both; }
+.a-rx-wake-perk .slab { animation: kf-rx-wake-perk 1.05s cubic-bezier(.4,0,.25,1) infinite both; }
+.a-mc-power-cycle .slab { animation: kf-mc-power-cycle 2.6s cubic-bezier(.3,0,.2,1) infinite both; }
+.a-tr-tumble-land .slab { animation: kf-tr-tumble-land 1.05s cubic-bezier(.35,.05,.3,1) infinite both; }
+.a-tr-duck-out .slab { animation: kf-tr-duck-out 1.5s cubic-bezier(.4,0,.35,1) infinite both; }
+.a-ph-heavy-shunt .slab { animation: kf-ph-heavy-shunt 2.2s cubic-bezier(.4,0,.3,1) infinite both; }
+.a-st-corkscrew-dive .slab { animation: kf-st-corkscrew-dive 1.5s cubic-bezier(0.5,0,0.35,1) infinite both; }
+.a-tr-deal-in .slab { animation: kf-tr-deal-in 0.72s cubic-bezier(.25,.85,.35,1) infinite both; }
+.a-tr-spin-off .slab { animation: kf-tr-spin-off 0.9s cubic-bezier(.5,-0.2,.75,.3) infinite both; }
+.a-tr-unfold .slab { animation: kf-tr-unfold 1.1s cubic-bezier(.32,1.02,.4,1) infinite both; }
+</style>
+
+<h1>Clawd 3D — 50 animations</h1>
+<p class="lede">
+  All 50 run on the same model: the locked silhouette stacked along Z (T5, 51% depth) with the
+  locked warm-shadow flanks. Only the animation differs. Dead-on, every one of them resolves to the
+  approved sprite.
+</p>
+<p class="lede">
+  Designed by 10 parallel lenses, then each batch audited adversarially — true peak rotation
+  recomputed from the keyframes rather than trusted, illegal properties rejected, cross-lens
+  duplicates dropped. <b>13</b> had wrongly-declared peaks; <b>20</b> had inconsistent
+  transform function lists across their own keyframes and were normalised, without which the browser
+  falls back to matrix decomposition and animates a different path than the one authored.
+</p>
+
+<div class="bar">
+  <a href="#s-idle">Idle</a><a href="#s-working">Working</a><a href="#s-alert">Alert</a>
+  <a href="#s-reactive">Reactive</a><a href="#s-event">Event</a><a href="#s-transition">Transition</a>
+  <span class="sp"></span>
+  <label>speed <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1"><b class="mono" id="speed-v">1.00×</b></label>
+  <button id="pause">Pause all</button>
+</div>
+
+<h2 style="border:0;padding-top:22px">Shipping picks</h2>
+<p class="lede">One per state — what I would actually wire up.</p>
+<table class="picks"><tr><td class="tg">idle</td><td><b>Weight shift</b><span class="mono"> id-weight-shift</span></td><td>An asymmetric hip-transfer that sags through square-on never resolves into a symmetric cycle, so it survives the multi-minute stretches where every other idle starts to look like a loop.</td></tr><tr><td class="tg">working</td><td><b>Carriage return</b><span class="mono"> wk-carriage-return</span></td><td>It is the only work loop whose motion literally maps to what the HUD is reporting - a head stepping along a line of type and whipping back - so the animation reads as the job rather than as decoration.</td></tr><tr><td class="tg">alert</td><td><b>Something out there</b><span class="mono"> ch-something-out-there</span></td><td>Four of its five seconds are frozen holds, so it grabs attention with one 79-degree cross-flick instead of nagging, which is exactly what a persistent warning state needs.</td></tr><tr><td class="tg">reactive</td><td><b>Eyes on you</b><span class="mono"> rx-eye-track</span></td><td>Yaw and pitch follow the real pointer with a 180ms damp, so it is genuinely responsive rather than a canned reply, and it degrades gracefully to its scripted version when the pointer leaves.</td></tr><tr><td class="tg">event</td><td><b>Take a bow</b><span class="mono"> ce-take-a-bow</span></td><td>Task completion is the event that actually fires most often, and the bow is the rare celebration that earns its full depth read (top face, then each side) from a clear motive rather than a spin.</td></tr><tr><td class="tg">transition</td><td><b>Perk up</b><span class="mono"> rx-wake-perk</span></td><td>Window focus is the most-fired transition in the app, and this one both justifies the biggest depth read in the pool (10) and lands in a pose the resting idle can start from cleanly.</td></tr></table>
+
+<h2 id="s-idle">Idle <span class="cnt">9</span><span class="hint">— always on, must not steal attention from the numbers</span></h2><div class="grid" data-trigger="idle"></div><h2 id="s-working">Working <span class="cnt">9</span><span class="hint">— while Claude is generating</span></h2><div class="grid" data-trigger="working"></div><h2 id="s-alert">Alert <span class="cnt">6</span><span class="hint">— usage crossing 75% / 90%</span></h2><div class="grid" data-trigger="alert"></div><h2 id="s-reactive">Reactive <span class="cnt">8</span><span class="hint">— responds to the user or to changing data</span></h2><div class="grid" data-trigger="reactive"></div><h2 id="s-event">Event <span class="cnt">9</span><span class="hint">— one-shot reward and milestone beats</span></h2><div class="grid" data-trigger="event"></div><h2 id="s-transition">Transition <span class="cnt">9</span><span class="hint">— enter, exit, skin swap</span></h2><div class="grid" data-trigger="transition"></div>
+
+<h2>Dropped in curation</h2>
+<ul class="drop"><li><span class="mono">id-nodding-off</span> — Duplicate of ch-nod-off (same doze-and-catch gesture, same motivation 9). Kept the CHARACTER version: deeper pitch (36 vs 25), a 7.5s loop instead of 12s, and a 0.45s snap-back that sells mass better.</li><li><span class="mono">ch-double-take</span> — Duplicate of al-double-take (identical look-away-then-whip-back beat). Kept the ALERT version: higher depth (9 vs 8), HUD-safe, and tied to a concrete trigger (a refresh landing a worse number) rather than a vague return-to-machine.</li><li><span class="mono">ch-puffed-up</span> — Duplicate of ce-take-a-bow (both are &#x27;present each side on a milestone&#x27; showcases). Take-a-bow wins on every axis: motivation 9 vs 4, depth 9 vs 7, and half the runtime.</li><li><span class="mono">st-coin-settle</span> — Duplicate of ce-victory-spin in the spin-and-settle family, and the weaker read: motivation 5 vs 7, 720 degrees of yaw with no character motive behind it. One airborne revolution per set is enough.</li><li><span class="mono">ce-backflip</span> — Third full-rotation flip alongside tr-tumble-land (168 pitch, motivation 8) and st-flip-stick (360 pitch, motivation 8), and the lowest-motivated of the three at 6. Its axis coverage is already provided by both survivors.</li><li><span class="mono">st-victory-roll</span> — Weakest celebration in the set (motivation 6, depth 5) and redundant with ce-shimmy/ce-fist-pump as the small-win beat. An aileron roll is a camera move, not a character choice.</li><li><span class="mono">st-sentry-sweep</span> — Duplicate of al-nervous-scan (both are held-pose scanning loops for an unacknowledged alert). Nervous-scan is the better version: motivation 8 vs 6, and its anxiety motive beats a 360-degree compass sweep that reads as a turntable with stops.</li><li><span class="mono">ph-gyro-precess</span> — Lowest motivation in the entire pool (2) and the closest thing to a bare turntable; the working pool already has nine better-motivated loops across three tempos.</li><li><span class="mono">st-grand-reveal</span> — Showroom piece: motivation 3, 4.2s of self-presentation for a first-launch beat that tr-unfold and tr-deal-in already cover more cheaply. Rule 3 explicitly disfavours this trade.</li><li><span class="mono">tr-swap-flip</span> — Lowest-motivated transition (3) and a direct duplicate of tr-tumble-land / st-corkscrew-dive as the cover-the-skin-swap move; a card turning over adds no read the tumble does not.</li></ul>
+
+<script>
+const ANIMS = [{"id": "id-weight-shift", "name": "Weight shift", "trigger": "idle", "durationSec": 11, "easing": "cubic-bezier(.37,0,.32,1)", "loop": true, "note": "Reads as a creature standing around long enough to get bored of one hip and transfer onto the other, sagging briefly as it passes through square-on; good for long uninterrupted idle stretches where a symmetric loop would look mechanical.", "lens": "id", "depthScore": 8, "motivationScore": 9, "hudReadable": true, "issues": ["BROKEN INTERPOLATION: the transform function lists are inconsistent between keyframes. 0% is [rotateY, rotateZ, translateX], 26% is [rotateY, rotateX, rotateZ, translateX, translateY], 76%/84% are [rotateY, rotateX, rotateZ, translateY] with no translateX, 96% drops translateY. Because the common prefix diverges at position 2 (rotateZ vs rotateX), no browser can pad with identity functions - it falls back to matrix decomposition interpolation for every one of those segments. On a preserve-3d slab that produces a shortest-path decomposed arc that will not match the intended pose path, and the translateX component snaps in and out of existence between 64% and 76%. Fixed below by giving every keyframe the identical five-function list in the identical order.", "The dead-on approved sprite pose is never actually a keyframe - the loop only passes through yaw~0 transiently at ~30% and ~80% while still carrying rotateX(3deg) and translateY(1.5%). It satisfies rule 3 by a hair, not by design.", "rotateZ(+/-5deg) plus translateX(+/-3%) are pure in-plane passengers; at 24.6x17.3px the roll is under half a pixel of silhouette change on the arms and is effectively invisible."], "repaired": false, "truePeakYaw": 22.0, "truePeakPitch": 3.0, "displayOrder": 1}, {"id": "ch-nod-off", "name": "Nodding off", "trigger": "idle", "durationSec": 7.5, "easing": "cubic-bezier(.5,0,.3,1)", "loop": true, "note": "Reads as Clawd dozing off and catching itself with a guilty jolt \u2014 the long droop sells the top of the slab, the 0.45s snap back sells the mass; fire it as the long-idle state after a few minutes of no activity.", "lens": "ch", "depthScore": 8, "motivationScore": 9, "hudReadable": true, "issues": ["Verified peaks match declarations (true |rotateY| max 17deg at 61%, true |rotateX| max 36deg at 61%) - passes the 14deg depth floor on pitch comfortably.", "The droop occupies 0-61% (4.6s) of continuous slow drift, which is the weakest kind of parallax; only the 0.45s jolt at 61-67% (57deg of pitch, 31deg of yaw) actually sells the slab. Acceptable because the slowness is the gag, but the first 4.6s is near-dead screen time in a HUD.", "Yaw never exceeds 17deg, so the side faces barely swing into view - this animation reveals the TOP of the slab, not its side depth. Fine, but it is doing less volume work than the yaw-led entries."], "repaired": false, "truePeakYaw": 17.0, "truePeakPitch": 36.0, "displayOrder": 2}, {"id": "id-eavesdrop", "name": "Eavesdrop", "trigger": "idle", "durationSec": 13, "easing": "cubic-bezier(.6,0,.3,1)", "loop": true, "note": "A third of the cycle is dead still, then one slow lean toward the usage numbers as if reading them over your shoulder, so the single turn out of stillness carries all the parallax; best on the skins where Clawd sits beside the percentage column.", "lens": "id", "depthScore": 9, "motivationScore": 8, "hudReadable": true, "issues": ["The turn out of stillness is slower than the note implies: 34%-44% is 1.3s for 26deg (~20deg/s), and the full push to 33deg takes 2.2s. It reads as a lean, not as the sharp velocity contrast that maximises parallax - which is correct for the idle lens but means the note oversells it.", "68%-78%-90% returns 33deg to zero over 2.9s with no accent, so the exit is limper than the entry; the return is the half a viewer's eye will most often catch mid-glance.", "scale(1.03) plus translateX(4%) at full yaw will, at 24.6px, mostly read as the sprite sliding right rather than leaning in - the lean is legible only in the gallery view.", "Grammar overlaps with id-room-scan (turn, hold, return); distinct enough on still-fraction and directionality, but the batch has two survey animations and two float animations, so it delivers about four genuinely distinct characters rather than six."], "repaired": false, "truePeakYaw": 33.0, "truePeakPitch": 5.0, "displayOrder": 3}, {"id": "ch-bashful", "name": "Bashful", "trigger": "idle", "durationSec": 6.4, "easing": "cubic-bezier(.4,0,.3,1)", "loop": true, "note": "Reads as Clawd hiding its face, risking one peek and immediately regretting it \u2014 the near-profile hold parks the slab edge-on so the full 51% depth is on screen for over a second; use it as the shy idle mood.", "lens": "ch", "depthScore": 8, "motivationScore": 8, "hudReadable": true, "issues": ["Peaks verified: 77deg yaw, 14deg pitch. Legal, and the near-profile hold does park the 51% depth slab edge-on for ~1.1s.", "Spends 22-80% of the cycle (3.7s of 6.4s) with yaw between -36 and -77deg, i.e. more than half the loop facing away. At 24.6px wide the silhouette collapses to a narrow bar for most of the loop - the character is unrecognisable for the majority of its own animation. It resolves to rest at 94-100% so rule 3 passes, but the rest pose is only ~0.7s of a 6.4s cycle.", "The 'peek' beat only comes back to -36deg, which is still three-quarters turned away. It reads as a shoulder shrug, not as looking at the user; pushing that beat to roughly -12deg would make the peek land without hurting the depth story.", "Distinct from everything else in the batch - no other entry holds a sustained profile."], "repaired": false, "truePeakYaw": 77.0, "truePeakPitch": 14.0, "displayOrder": 4}, {"id": "id-room-scan", "name": "Room scan", "trigger": "idle", "durationSec": 16, "easing": "cubic-bezier(.45,0,.55,1)", "loop": true, "note": "Reads as Clawd slowly checking one side of the desk, holding on it, then the other, with the long stationary holds making each turn feel like a decision; the default resting loop when nothing at all is happening.", "lens": "id", "depthScore": 8, "motivationScore": 7, "hudReadable": true, "issues": ["Shares the same underlying grammar as id-eavesdrop (turn out, hold, return to dead-on); this one is bilateral with a shorter pause, eavesdrop is unilateral with a longer one, so they are distinct but the batch is thinner than six ideas suggests.", "Pitch never exceeds 5deg, so all depth is carried by yaw alone; the top/bottom extruded faces are never shown anywhere in this animation.", "The 20%-38% and 62%-80% segments are labelled as holds but actually drift 4deg over ~2.9s, which at 24.6px is indistinguishable from a true hold - the drift buys nothing and could be a flat hold selector instead."], "repaired": false, "truePeakYaw": 31.0, "truePeakPitch": 5.0, "displayOrder": 5}, {"id": "id-tidal-breath", "name": "Tidal breath", "trigger": "idle", "durationSec": 7.5, "easing": "cubic-bezier(.42,0,.58,1)", "loop": true, "note": "Reads as slow breathing where each inhale lifts the chest and rolls the body a little off-axis, so the volume is revealed by the breath itself rather than by a separate turn; use as the calmest baseline idle when the HUD sits over other work.", "lens": "id", "depthScore": 5, "motivationScore": 7, "hudReadable": true, "issues": ["Substantially overlapping with id-driftwood: both are continuous, hold-free, left-then-right yaw sways with pitch running out of phase. The differentiators are scale-breathing vs translateY-float and a 2.4x speed difference - that is close to the same gesture at a different amplitude and tempo.", "Zero holds anywhere. Per rule 4 this is the weakest possible way to sell volume: constant angular velocity means no contrast, and 7.5s across 8 keyframes gives roughly 1s per beat with only 8-13deg of change per beat.", "Peak yaw of 17deg clears the 14deg bar by 3deg only; at HUD size the individual beats read as a shimmer rather than a turn, even though the full 33deg sweep reads.", "scale(1.035) at 15% while the body is at rotateX(-11deg) will read at HUD size as the sprite growing, not as a chest inflating - the breath is being sold by scale, which is an in-plane transform and contributes nothing to parallax."], "repaired": false, "truePeakYaw": 17.0, "truePeakPitch": 11.0, "displayOrder": 6}, {"id": "mc-surveillance-pan", "name": "Surveillance pan", "trigger": "idle", "durationSec": 7, "easing": "linear", "loop": true, "note": "A ceiling-mounted PTZ camera: dead-constant crawl across the room, a downward check at the limit, then a whip-fast slew home \u2014 the slew is the moment the slab reads solid, and it costs nothing in attention the rest of the time.", "lens": "mc", "depthScore": 6, "motivationScore": 6, "hudReadable": true, "issues": ["True peaks: yaw 52, pitch 13. Declared values correct. Depth requirement passed on yaw.", "The pitch component is only 6deg of travel (-7 to -13) \u2014 completely invisible at 24.6x17.3px. It is decoration that costs a keyframe and buys nothing at HUD size; the animation is effectively pure yaw.", "Rest compliance is marginal. It crosses yaw 0 at ~26.5% while travelling at ~32deg/s and never lingers there, and pitch is never 0 (always -7 or -13). The approved dead-on sprite is a single passing frame, not a pose.", "34% of the cycle (2.4s) is a dead hold at yaw -52. For an idle-trigger animation that means the HUD spends most of its life showing Clawd three-quarters turned away. Acceptable as a camera conceit, wrong-headed as a default resting state.", "Slowest-reading item in the batch: 3.2s of constant-velocity crawl is exactly the 'slow continuous sweep' that HARD RULE 4 warns scores worse than a fast turn out of stillness. Only the 0.42s slew earns its depth score."], "repaired": false, "truePeakYaw": 52.0, "truePeakPitch": 13.0, "displayOrder": 7}, {"id": "ph-pendulum-hang", "name": "Pendulum hang", "trigger": "idle", "durationSec": 3.4, "easing": "cubic-bezier(.37,0,.63,1)", "loop": true, "note": "Reads as Clawd dangling from an invisible string \u2014 the twist peaks a quarter-cycle after the swing does, which is the lag that makes it feel hung rather than waved; use as the resting idle.", "lens": "ph", "depthScore": 6, "motivationScore": 6, "hudReadable": true, "issues": ["True peak yaw is 26deg (declared value correct) and pitch is 0 \u2014 depth is carried entirely by yaw, so the reveal is single-axis and never shows over the top or under the feet.", "No holds anywhere: eight evenly-spaced keyframes on a symmetric sinusoid with a smooth in-out ease means constant angular velocity change and zero stillness-to-motion contrast. Per rule 4 this is the weakest way to sell volume; a 0.4s hang at each rotateZ extreme would double the read.", "rotateZ(\u00b116deg) is the loudest part of the motion and it is a pure in-plane transform \u2014 at a glance the eye reads the Z tilt first and the yaw second, so a flat sticker swinging would look nearly identical.", "Yaw and swing are locked to the same frequency at a fixed 90deg phase offset for every cycle, so the 'lag' never varies and the loop reads mechanical rather than hung after two or three repeats."], "repaired": false, "truePeakYaw": 26.0, "truePeakPitch": 0.0, "displayOrder": 8}, {"id": "id-driftwood", "name": "Driftwood", "trigger": "idle", "durationSec": 18, "easing": "linear", "loop": true, "note": "Yaw and pitch run on different periods so the pose never repeats within a swing and the slab reads as floating in water rather than orbiting on a turntable; the one continuous-motion idle, for when the HUD is the only thing on screen.", "lens": "id", "depthScore": 4, "motivationScore": 3, "hudReadable": true, "issues": ["THE NOTE'S CENTRAL CLAIM IS FALSE. Yaw and pitch do not run on different periods. Yaw (0,16,22,16,0,-16,-22,-16,0) is odd-symmetric about 50%; pitch (0,8,6,-3,-9,-3,6,8,0) is even-symmetric about 50%. That is a 1:1 frequency ratio at a quarter-cycle phase offset - the textbook definition of a conical precession. Combined with linear easing and perfectly uniform 12.5% keyframe spacing, this is a turntable with a wobble, which is exactly the showroom demo the brief says to avoid.", "linear easing plus even spacing means constant angular velocity for the entire 18s. Rule 4 says velocity contrast is what sells volume; this animation has none, anywhere.", "Overlaps with id-tidal-breath as the batch's second hold-free continuous sway.", "Fix supplied: pitch re-phased so it no longer tracks yaw at a fixed quarter offset, and keyframe spacing made deliberately uneven (9%, 13%, 12%, 16%, 8%, 12%, 14%, 16%) so that even under linear easing the slab accelerates and dwells. Recommend also changing easing from linear to cubic-bezier(.5,0,.5,1)."], "repaired": true, "truePeakYaw": 23.0, "truePeakPitch": 9.0, "displayOrder": 9}, {"id": "wk-carriage-return", "name": "Carriage return", "trigger": "working", "durationSec": 2.4, "easing": "cubic-bezier(.9,0,.1,1)", "loop": true, "note": "Reads as a head stepping along a line of type, hunching further as it goes, then whipping back for the next line; fire while streaming long prose.", "lens": "wk", "depthScore": 8, "motivationScore": 9, "hudReadable": true, "issues": ["Verified: true peak yaw 31, pitch 11; passes through yaw 1 at 44-52%; every selector and unit is legal. Depth rule satisfied on yaw alone.", "Pitch never reaches 14deg, so the entire volume read depends on one axis - if the yaw is ever damped this animation goes flat with no fallback.", "Individual steps are only 15-16deg of yaw. That is above the ~10deg legibility floor but marginal at 24.6px wide; the only unmistakable event at HUD size is the 61deg return whip at 88%->100%.", "No hold at 88% before the whip - the rightmost step is reached and instantly reversed, so the end of the line reads as a bounce rather than a stop-then-snap. Holding 88%,94% would sharpen the strongest moment in the batch.", "Cleanest concept here: stepped holds plus one fast return is exactly the velocity-contrast profile the brief asks for, and it is the only entry with no translate passenger."], "repaired": false, "truePeakYaw": 31.0, "truePeakPitch": 11.0, "displayOrder": 10}, {"id": "wk-trudge", "name": "Trudge", "trigger": "working", "durationSec": 1.7, "easing": "cubic-bezier(.55,0,.45,1)", "loop": true, "note": "Reads as a laboured walk under a load, sagging and leaning forward on each footfall; the general-purpose walk cycle for steady background work.", "lens": "wk", "depthScore": 6, "motivationScore": 9, "hudReadable": true, "issues": ["Verified: true peak yaw 27, pitch 9, rotateZ 3; all functions legal, near-rest at 32% and 82%. Depth rule met on yaw only.", "Continuous oscillation with no hold at any pose - the profile the brief explicitly calls the weakest volume reveal. Every segment moves at a similar rate, so there is no velocity contrast anywhere in 1.7s.", "Pitch tops out at 9deg and rotateZ at 3deg; both are below what registers at 24.6x17.3px, so they contribute nothing at HUD size and the motion collapses to a plain yaw sway there.", "translateY swings -4px to +2px. On a 17.3px-tall render that is a ~35% vertical hop every half step - it will read as a springy bounce, contradicting the 'laboured walk under a load' intent. The bob needs to scale with render size or shrink to ~1px.", "Shares the mirrored two-beat yaw skeleton with wk-heave-ho and wk-knead; the rotateZ lean and bob are the only differentiators, and both are sub-threshold at HUD size, so in the HUD it is close to indistinguishable from heave-ho."], "repaired": false, "truePeakYaw": 27.0, "truePeakPitch": 9.0, "displayOrder": 11}, {"id": "wk-pickaxe-swing", "name": "Pickaxe swing", "trigger": "working", "durationSec": 1.5, "easing": "cubic-bezier(.62,0,.24,1)", "loop": true, "note": "Reads as a heavy two-handed swing into hard ground, the wind-up hold making the strike land; fire on long grinding jobs where a slow deliberate beat suits a multi-minute wait.", "lens": "wk", "depthScore": 8, "motivationScore": 9, "hudReadable": true, "issues": ["Declared peaks verified correct (yaw 34, pitch 26) and all transforms/units parse; no rule violations.", "The 18%->30% 'wind-up hold' is not a hold, it drifts 30->34deg yaw; a true frozen pose there would buy more parallax contrast on the strike.", "58%->100% is 42% of the cycle spent settling below 14deg on both axes - nearly half the loop is flat sticker, and the strike-to-strike cadence loses its beat on repeat.", "translateY spans -4px to +3px. Transform px do not scale with render size: 7px of travel on a 17.3px-tall HUD render is ~40% of the mascot's height, a violent hop that will read very differently (and may clip) versus the gallery. Tie the bob to the render scale or cut it to ~1px."], "repaired": false, "truePeakYaw": 34.0, "truePeakPitch": 26.0, "displayOrder": 12}, {"id": "wk-shelf-stack", "name": "Shelf stacking", "trigger": "working", "durationSec": 3.2, "easing": "cubic-bezier(.5,0,.2,1)", "loop": true, "note": "Reads as stooping to fetch something low on the left and reaching to set it high on the right; the long holds at each end suit slow file-by-file work where progress is chunky.", "lens": "wk", "depthScore": 9, "motivationScore": 8, "hudReadable": true, "issues": ["Verified: true peak yaw 56, pitch 22; hits exact rotateY(0) rotateX(0) at 34%; comma-list selectors and units all valid.", "Best depth in the batch - genuine holds at both extremes plus a ~380ms sweep through dead-on. No structural fault.", "At 56deg yaw the slab is heavily foreshortened for ~40% of the cycle; the approved dead-on sprite is visible for only a single instant per 3.2s, which is thin if this is the dominant working state.", "70%->88% travels 64deg yaw in 576ms with no hold at the top of the reach, so the 'set it on the shelf' moment has no landing beat.", "translateY 4px on a 17.3px HUD render is a large uncommanded vertical jump; scale it or drop it."], "repaired": false, "truePeakYaw": 56.0, "truePeakPitch": 22.0, "displayOrder": 13}, {"id": "ch-sniff-about", "name": "Sniffing about", "trigger": "working", "durationSec": 2.6, "easing": "cubic-bezier(.25,.9,.3,1)", "loop": true, "note": "Reads as a nose-down animal casting around for a scent, uneven dart amplitudes and micro-pauses keeping it from looking metronomic \u2014 run it while a task is actively churning.", "lens": "ch", "depthScore": 6, "motivationScore": 8, "hudReadable": false, "issues": ["HUD READABILITY FAILURE: 11 keyframes and five direction reversals crammed into 2.6s. Beat lengths are 0.21s, 0.16s, 0.21s, 0.16s, 0.21s, 0.21s, 0.26s, 0.21s - nine of eleven beats sit under the ~0.3s floor. At 24.6x17.3px this is not sniffing, it is a vibrating smear.", "Worse, it is bound to the 'working' trigger, so this frantic loop plays continuously for the whole duration of a task. A 2.6s head-shake on repeat is visual noise the user cannot dismiss.", "The micro-pause pairs (8/14, 22/28, 36/44, 54/62) are only 0.16-0.21s apart and change yaw by 2-3deg - they are below perceptual threshold at HUD size and do nothing except add keyframes.", "Peaks verified: 38deg yaw, 20deg pitch, both legal, and the constant nose-down pitch is a genuinely good motivated choice. Repair keeps the nose-down casting but cuts to two darts with real holds so every beat clears 0.3s."], "repaired": true, "truePeakYaw": 30.0, "truePeakPitch": 20.0, "displayOrder": 14}, {"id": "wk-heave-ho", "name": "Heave ho", "trigger": "working", "durationSec": 1.9, "easing": "cubic-bezier(.45,0,.25,1)", "loop": true, "note": "Reads as hand-over-hand rope hauling with each pull dragged across the opposite shoulder; the default sustained-effort loop when no more specific work state applies.", "lens": "wk", "depthScore": 7, "motivationScore": 8, "hudReadable": true, "issues": ["Verified: true peak yaw 28, true peak pitch 18, both legal; passes near rest at 40% and 90%; all units present.", "Structurally it is the same primitive as wk-knead and wk-trudge - a mirrored two-beat left/right yaw alternation with a forward pitch drop. Three of six entries share that skeleton; only the tempo and the extremity holds separate them.", "Every transit is a smooth arc of similar speed (roughly 18% of cycle each), so despite the holds at 0-10% and 50-60% the angular velocity never spikes - the volume reveal is merely adequate, not punchy.", "translateY +-3px is ~35% of HUD height peak-to-peak, an unintended bounce at 24.6x17.3."], "repaired": false, "truePeakYaw": 28.0, "truePeakPitch": 18.0, "displayOrder": 15}, {"id": "mc-ratchet-step", "name": "Ratchet step", "trigger": "working", "durationSec": 1.1, "easing": "cubic-bezier(.85,0,.15,1)", "loop": true, "note": "A two-position ratchet that slams between stops in under 90ms and visibly bounces off the mechanical limit before settling \u2014 the fastest angular velocity in the set, and the strongest volume read at HUD size.", "lens": "mc", "depthScore": 9, "motivationScore": 7, "hudReadable": true, "issues": ["True peak yaw 36, pitch 7 (declared correct). Yaw clears the floor; pitch at 7deg is decorative and invisible at HUD size.", "REST VIOLATION IN SPIRIT. The two detents are -30 and +30 and the slam between them takes 88ms, so yaw 0 exists only as a ~2-frame transit. Across the whole loop the approved dead-on silhouette is never actually presented \u2014 the mascot permanently lives at 30deg turned. HARD RULE 3 is satisfied only by the letter ('passes through'). Repaired in fixedKeyframes by re-indexing the two stops to 0deg and 38deg, which keeps the two-position ratchet character while giving the front pose a real 0.35s hold.", "The mechanical-limit bounce is only 9deg of travel (36->27, then -36->-27) over 66ms. That is invisible at 24.6x17.3px \u2014 the feature the note sells as the signature detail does not exist at HUD size. Fixed version widens the bounce to ~16deg and gives it 7% of the cycle.", "Distinct from mc-turret-index (two stops with overshoot vs five symmetric detents, 1.1s vs 4s, eased slam vs hard cut). Not a duplicate.", "Highest angular velocity in the set and the claim in the note holds up \u2014 66deg in 88ms out of a 0.35s hold is the strongest volume read here."], "repaired": true, "truePeakYaw": 46.0, "truePeakPitch": 8.0, "displayOrder": 16}, {"id": "wk-knead", "name": "Kneading", "trigger": "working", "durationSec": 0.9, "easing": "cubic-bezier(.42,0,.28,1)", "loop": true, "note": "Reads as kneading dough, body weight dropping diagonally onto alternating sides; the fastest loop in the set, for bursty high-throughput output.", "lens": "wk", "depthScore": 6, "motivationScore": 7, "hudReadable": false, "issues": ["Depth rule passes (true peak yaw 21, pitch 17) and all syntax is legal, but this is the weakest entry.", "HUD FAIL: at 0.9s the sub-beats are 97-126ms each. The 26%/76% micro-bounces are ~10deg corrections lasting ~110ms - completely invisible at 24.6x17.3px, and the pitch flutter will read as jitter, not effort.", "No hold anywhere in the cycle. Per the contrast rule this is the exact profile that reads least solid: constant motion, no stillness to contrast against.", "Substantially duplicates wk-heave-ho - same mirrored yaw alternation with forward pitch drop through centre, just smaller and faster. It survives only because the tempo differs.", "Reads as a generic weight-shifting sway rather than kneading; without a held press at the bottom there is nothing being pushed against.", "fixedKeyframes rebuild it around a held press and a hard snap across to the other side, which both distinguishes it from heave-ho and creates a real velocity spike. It still wants ~1.2-1.3s rather than 0.9s to be safely legible at HUD size."], "repaired": true, "truePeakYaw": 24.0, "truePeakPitch": 20.0, "displayOrder": 17}, {"id": "mc-turret-index", "name": "Turret index", "trigger": "working", "durationSec": 4, "easing": "steps(1, end)", "loop": true, "note": "Reads as a turret clicking through fixed detents with zero in-between motion \u2014 every pose is a dead-still 3D view, so the volume registers as a series of stills rather than a sweep; run it while a long job grinds.", "lens": "mc", "depthScore": 7, "motivationScore": 5, "hudReadable": true, "issues": ["True peak yaw is 72deg (declared value correct); depth requirement passed comfortably.", "steps(1,end) means every pose change is instantaneous, so there is ZERO angular motion anywhere in the animation. Motion parallax is a velocity cue and this has none \u2014 the volume read comes only from comparing successive stills, which is weaker than the note claims. It works, but it is not the strongest depth read in the set despite the largest amplitude.", "Structurally this is a symmetric out-and-back yaw sweep quantised into detents: 0,-36,-72,-36,0,+36,+72,+36,0. That is a turntable with a shutter over it. It is the least motivated item in the batch and sits closest to the showroom-spin failure mode.", "Zero pitch content anywhere \u2014 the whole set leans hard on yaw; this one contributes nothing on the X axis.", "Gesture family overlaps mc-scan-lock (stepped yaw indexing with hard holds). Not a duplicate \u2014 no pitch, loops, hard-cut timing \u2014 but the two should not ship adjacent in a gallery."], "repaired": false, "truePeakYaw": 72.0, "truePeakPitch": 0.0, "displayOrder": 18}, {"id": "ch-something-out-there", "name": "Something out there", "trigger": "alert", "durationSec": 5.2, "easing": "cubic-bezier(.2,.9,.25,1)", "loop": true, "note": "Reads as a dog cocking its head at a noise offscreen then whipping to the other side \u2014 nearly four of the five seconds are dead-frozen holds, so the 79-degree cross-flick between them is the hardest parallax hit in the set; use it for warnings that want to be noticed without flashing.", "lens": "ch", "depthScore": 9, "motivationScore": 9, "hudReadable": true, "issues": ["Peaks verified: 42deg yaw, 6deg pitch. Pitch is below the 14deg floor on its own but yaw carries rule 1 comfortably, and the declared peaks are honest.", "Best rhythm in the batch: 1.35s dead-still opening, 0.31s turn, 1.14s freeze, then 79deg of yaw plus a 21deg rotateZ flip in 0.31s, then another 1.04s freeze. That is the contrast effect the brief asks for, and every beat clears the 0.3s readability floor.", "DUPLICATE risk with ch-puffed-up - same rest/left-hold/cross-flick/right-hold/return skeleton at near-identical amplitude (42 vs 48deg). The rotateZ head-cock and the much longer freezes make this the version worth keeping; fix the collision on ch-puffed-up, not here.", "rotateZ is in-plane and contributes zero depth, so the head-cock is decoration riding on the yaw - correct usage, but do not count it toward volume."], "repaired": false, "truePeakYaw": 42.0, "truePeakPitch": 6.0, "displayOrder": 19}, {"id": "ph-topple-catch", "name": "Topple catch", "trigger": "alert", "durationSec": 1.5, "easing": "cubic-bezier(.5,0,.3,1)", "loop": false, "note": "A top-heavy slab tips past its balance point and saves itself with a sideways stagger \u2014 fire on a limit warning or any state change that should look like a stumble.", "lens": "ph", "depthScore": 9, "motivationScore": 9, "hudReadable": true, "issues": ["Transform lists are not uniform across keyframes (32% has no translate, 44% has only translateY, 56% has only translateX, 68% has translateX(0px), 100% has only rotateY) \u2014 the browser cannot do component-wise interpolation and falls back to matrix decomposition for the whole animation, which can bend the intended arc between 44% and 56% where pitch, yaw and translate all swap at once.", "The settle from 80% onward is \u00b17deg to \u00b13deg, roughly 0.15s per beat \u2014 below both the 10deg travel floor and the 0.3s beat floor, so at 24.6x17.3px the last 0.3s is invisible and only inflates the perceived duration.", "translateY(3px) at the tip point is doing almost nothing next to 38deg of pitch; either drop it or make it large enough to read as a drop.", "Shares a shape with ph-roly-poly (pitch-led knock followed by an alternating-sign decay). Not a duplicate \u2014 different trigger, one-shot vs loop, plus the lateral stagger \u2014 but the two will look related back to back in a gallery."], "repaired": true, "truePeakYaw": 26.0, "truePeakPitch": 38.0, "displayOrder": 20}, {"id": "al-nervous-scan", "name": "Nervous scan", "trigger": "alert", "durationSec": 3.6, "easing": "cubic-bezier(.6,0,.15,1)", "loop": true, "note": "Reads as checking both exits \u2014 hard snaps to a held over-the-shoulder look on each side with a small anxious dip on the way back; loop as the low-intensity 75% state where a constant shake would nag.", "lens": "al", "depthScore": 9, "motivationScore": 8, "hudReadable": true, "issues": ["The 78% beat (rotateY -9deg / rotateX 2deg) is below the ~10deg HUD threshold; the 'small anxious dip' will be invisible at 24.6x17.3px and only exists in the gallery view.", "The -46/+44 pair is close to mirror-symmetric with equal 432ms holds on each side, which is the one thing in this batch that edges toward asset-viewer territory. Break the symmetry (shorter hold on the second side, or a different pitch on the return) or it reads as a metronome rather than as anxiety.", "3.6s per cycle is slow for a lens whose theme is escalating tension - as the 75% state it is fine, but it must not be the animation still playing at 90%.", "Declared peaks (46 yaw / 7 pitch) verified. Loop seam is clean: 0% and 100% are both rotateY(0deg)."], "repaired": false, "truePeakYaw": 46.0, "truePeakPitch": 7.0, "displayOrder": 21}, {"id": "al-warning-shake", "name": "Hard no", "trigger": "alert", "durationSec": 1.4, "easing": "cubic-bezier(.4,0,.2,1)", "loop": true, "note": "Reads as a stern, chin-down \"don't\" \u2014 three decaying refusals followed by a long dead-on stare; loop it while usage sits between 75% and 90%.", "lens": "al", "depthScore": 8, "motivationScore": 8, "hudReadable": true, "issues": ["LOOP SEAM POP: 100% is rotateY(0deg) rotateX(0deg) but 0% is rotateY(0deg) rotateX(12deg). On an infinite loop the 100%->0% handoff is instantaneous, so the slab snaps 12 degrees of pitch every 1.4s. At HUD size that is a visible tick right in the middle of the 'calm stare' beat, which is exactly where it is most noticeable. This is the defect the fixedKeyframes repair.", "The note claims 'three decaying refusals'; there are four swings (-30, 28, -24, 20) and the decay is only 33% over four beats, which will not read as decay at all - it reads as a flat shake that suddenly stops.", "Alternating-yaw oscillation is the same transform signature as al-shiver. It is saved from being a duplicate by the sustained chin-down pitch offset and the 300ms dead-on rest, but the two should never fire in the same session state."], "repaired": true, "truePeakYaw": 30.0, "truePeakPitch": 12.0, "displayOrder": 22}, {"id": "mc-signal-glitch", "name": "Signal glitch", "trigger": "alert", "durationSec": 2.6, "easing": "steps(1, end)", "loop": true, "note": "Corrupted-frame stutter: seven hard-cut orientations inside 0.6s then two seconds of unnerving stillness, so it repeats as a twitch rather than a dance \u2014 fire it while a limit is blown.", "lens": "mc", "depthScore": 6, "motivationScore": 7, "hudReadable": false, "issues": ["True peak yaw 48 (declared correct). Legal functions only \u2014 translateX/rotateZ are permitted passengers and units are present throughout.", "FAILS HUD READABILITY AS WRITTEN. Seven orientations inside 0.6s is ~85ms per pose \u2014 roughly 5 frames at 60Hz \u2014 which is under the ~0.3s/beat legibility floor called out in check 6. At 24.6x17.3px this reads as undifferentiated flicker noise, not as a solid object being knocked through orientations. Repaired in fixedKeyframes by stretching the burst to ~1.5s at ~0.29s per pose and dropping from seven poses to six.", "With steps(1,end) there is no interpolated motion at all, so the depth cue is pose-comparison only \u2014 and pose-comparison needs each pose to be resolvable, which the original timing denies it. The fix is what makes the depth score defensible.", "The 3px/2px translateX offsets are sub-pixel-ish relative to a 24px sprite and will not register in the HUD; harmless, but do not count on them for the glitch read.", "opacity 0.3 on a transparent WebView2 window makes the mascot nearly disappear for one beat \u2014 verify against the actual HUD background before shipping, since there is no compositing floor to hold it up."], "repaired": true, "truePeakYaw": 48.0, "truePeakPitch": 0.0, "displayOrder": 23}, {"id": "al-shiver", "name": "Shiver", "trigger": "alert", "durationSec": 0.42, "easing": "linear", "loop": true, "note": "Reads as a body-wide rattle of nerves \u2014 small travel at high angular velocity, which is exactly the condition that makes the slab's depth flicker into view; loop it past 90% as the sustained panic state.", "lens": "al", "depthScore": 5, "motivationScore": 6, "hudReadable": false, "issues": ["TIMING FAILURE: 0.42s across six keyframes puts every beat at 63-75ms, roughly 4 frames. That is 4x faster than the ~0.3s/beat legibility floor. At 24.6x17.3px a 37-degree yaw reversal every 70ms does not resolve as rotation - the slab aliases into a smear and the depth 'flickers' rather than reads. The note treats that flicker as the feature; it is the failure.", "NO CONTRAST: there is no hold anywhere in the cycle. 85% -> 100% -> 0% passes through rest in 63ms, so the rest pose is never perceived. Rule 4 is a contrast effect and this animation has zero contrast - it is a continuous 2.4Hz buzz, which is precisely the 'annoying' failure mode the lens brief warns against for a sustained 90% state.", "translateY(+/-1px) is a sub-pixel gesture at HUD scale - it does literally nothing except make the transform lists longer.", "Gesture overlaps al-warning-shake (alternating yaw with counter-pitch). It survives as a distinct character beat only because of the vertical bob and the frequency; if only one of the two ships, ship the shake.", "fixedKeyframes drop the oscillation from five swings to three (doubling each beat to ~90ms) and buy a ~50ms rest at the end so the buzz has an edge to contrast against. This is a patch, not a cure - the real fix is raising durationSec to ~0.6s, which keyframes cannot express."], "repaired": true, "truePeakYaw": 24.0, "truePeakPitch": 6.0, "displayOrder": 24}, {"id": "al-double-take", "name": "Double take", "trigger": "reactive", "durationSec": 1.5, "easing": "cubic-bezier(.7,0,.2,1)", "loop": false, "note": "Reads as \"wait \u2014 what did that say?\": a casual look away, then a whipped return that leans in and stares; fire when a refresh lands a worse number than the last one.", "lens": "al", "depthScore": 9, "motivationScore": 9, "hudReadable": true, "issues": ["The 40%->52% return crosses 76 degrees of yaw in 180ms. That is the intended whip and it is the strongest parallax moment in the batch, but it is one frame-rate hiccup away from reading as a teleport.", "Shares vocabulary with al-nervous-scan: both are hold-at-a-yaw-extreme, cross-to-the-other-side motions. Rhythm and payload differ enough (one-shot whip-and-lean vs. looped symmetric scan) that it is not a duplicate, but do not ship a third animation in this family.", "The 72%-88% hold is only 6deg of yaw off dead-on; at HUD size the 'stares you down' beat will read as a plain rest, so the character payoff lives entirely in the whip.", "Declared peaks (40 yaw / 11 pitch) verified correct. Ends at exactly rotateY(0deg), no residual."], "repaired": false, "truePeakYaw": 40.0, "truePeakPitch": 11.0, "displayOrder": 25}, {"id": "rx-cursor-dodge", "name": "Give it room", "trigger": "reactive", "durationSec": 1.5, "easing": "cubic-bezier(.16,.9,.3,1)", "loop": false, "note": "Reads as scooting sideways out of the cursor's way while keeping its face on it, twitching once more mid-hold before creeping back \u2014 live, it fires when the pointer crosses inside ~40px and the translate/yaw signs flip to move away from the approach side.", "lens": "rx", "depthScore": 8, "motivationScore": 9, "hudReadable": true, "issues": ["Real peaks confirmed: yaw 58 at 62%, pitch 0 everywhere. Clears the floor on yaw alone; rotateZ(7deg) and translateX are legal passengers since yaw carries the depth.", "Ends at exactly rotateY(0deg), no residual translateX or rotateZ - one-shot rule satisfied.", "Zero pitch across the whole animation means the top face never shows; the volume read depends entirely on the side face, which is the weaker cue on a wide flat-top slab. A few degrees of rotateX on the dodge would cost nothing.", "The 0% -> 9% snap is 52deg in 0.135s - deliberately fast, and it is redeemed by the 0.45s hold that follows, but it is right at the edge of motion-blurring into nothing at HUD size. The hold is what makes this legible; do not shorten it.", "translateX(15px) on a 24.6px-wide render is 60% of the sprite width - Clawd will leave its own footprint entirely and may clip the HUD bounds. Verify clipping at real scale or cut it to ~6px.", "16% -> 46% is a 2deg drift rather than a true hold; make the values identical so the browser does not ease through it."], "repaired": false, "truePeakYaw": 58.0, "truePeakPitch": 0.0, "displayOrder": 26}, {"id": "rx-poke-flinch", "name": "Poke flinch", "trigger": "reactive", "durationSec": 0.62, "easing": "linear", "loop": false, "note": "Reads as a whole-body startle \u2014 it throws its weight backward off the touch and jitters back to attention \u2014 fire once on mousedown anywhere on the HUD, never queued more than one deep.", "lens": "rx", "depthScore": 8, "motivationScore": 9, "hudReadable": false, "issues": ["Real peaks confirmed: pitch 30 at 8%, yaw 18 at 8% - depth floor cleared on both axes.", "HUD READABILITY FAILURE: 0.62s across 7 keyframes gives beats of 0.05s-0.11s. The strike itself is 50ms (about 3 frames) and there is no hold at the extreme, so at 24.6x17.3px the whole gesture collapses into a single smear. Rule 4 rewards fast turns OUT OF stillness and INTO a hold - this has neither.", "The 62% (-6/+4) and 80% (+3/-2) settle beats are 2-6deg: invisible at any size, pure keyframe noise.", "Function lists are inconsistent (translateZ/scale present at 0-26%, dropped from 44% on), which forces matrix interpolation mid-animation; harmless here but sloppy - keep the list identical until the final frame.", "Rhythm is a damped pitch oscillation with a counter-yaw wobble, which is the same rhythmic skeleton as rx-tally-nod; sign and the translateZ/scale punch keep it from being a hard duplicate, but only just.", "Fix supplied: hold the recoil pose 0.14s and cut the two sub-6deg tail beats. Recommend also raising durationSec to ~0.8s - the fix cannot change that field."], "repaired": true, "truePeakYaw": 20.0, "truePeakPitch": 32.0, "displayOrder": 27}, {"id": "rx-eye-track", "name": "Eyes on you", "trigger": "reactive", "durationSec": 6.4, "easing": "cubic-bezier(.2,.9,.25,1)", "loop": true, "note": "Reads as a creature locking onto something, holding, then snapping its aim somewhere new \u2014 live, yaw maps to pointer X and pitch to pointer Y with a ~180ms damped follow, and the canned version is what plays when the pointer is off-window.", "lens": "rx", "depthScore": 9, "motivationScore": 8, "hudReadable": true, "issues": ["Declared peaks check out (real max |rotateY| = 44 at 44%-52%, real max |rotateX| = 10 at 20%-38%); passes the 14deg depth floor on yaw comfortably.", "Rest is satisfied (58%-74% sits at yaw 0 / pitch 0 for ~1.0s) and 100% matches 0%, so the loop seams cleanly.", "Pitch never exceeds 10deg, so all volume reading comes from yaw alone - the top face of the slab is never shown; a single deeper pitch dip on one of the four aim poses would add a second axis of parallax for free.", "The 80%-92% pose (-20 yaw / +9 pitch) is the weakest beat: 9deg of pitch is under the visibility floor at HUD size, so live it reads as a yaw-only move with a wasted pitch component."], "repaired": false, "truePeakYaw": 44.0, "truePeakPitch": 10.0, "displayOrder": 28}, {"id": "mc-scan-lock", "name": "Scan and lock", "trigger": "reactive", "durationSec": 1.8, "easing": "cubic-bezier(.4,0,0,1)", "loop": false, "note": "Head-down search across three indexed stations, then a hard snap upright onto the viewer \u2014 fire on pointer-enter so the payoff is Clawd acquiring you as the target.", "lens": "mc", "depthScore": 9, "motivationScore": 8, "hudReadable": true, "issues": ["True peaks: yaw 34, pitch 20. Declared correct. Both axes clear the 14deg floor independently, which no other item in the batch achieves.", "One-shot terminates at exactly rotateY(0deg) with no residual transform \u2014 compliant. The 88%->100% step drops rotateX from 12deg to 0 via prefix-padding (rotateY is a prefix of rotateY rotateX), so it interpolates componentwise rather than falling back to matrix decomposition. Correct by accident or design, but correct.", "Closest thing to a duplicate in the batch: the -34/0/+34 indexed yaw stations with hard holds is the same underlying gesture as mc-turret-index's detent sweep, at half the amplitude. It survives only because the constant -20deg pitch and the terminal snap-up change the read from 'slideshow' to 'head-down search then lock'. Do not weaken either of those or it collapses into turret-index.", "Station transits are ~0.14s each, under the 0.3s/beat floor in isolation, but each station is held 0.25s afterwards so the effective beat is ~0.39s \u2014 this is the snap-out-of-stillness pattern HARD RULE 4 explicitly wants. Passes.", "Minor: the -20deg pitch persists across all three stations, so the first 88% of the animation never shows the approved dead-on sprite. Fine for a one-shot with a resolving payoff; would be a defect if looped."], "repaired": false, "truePeakYaw": 34.0, "truePeakPitch": 20.0, "displayOrder": 29}, {"id": "st-flip-stick", "name": "Flip and stick", "trigger": "reactive", "durationSec": 1.35, "easing": "cubic-bezier(0.4,0,0.3,1)", "loop": false, "note": "Reads as a gymnast squatting, throwing a twisting front flip and sticking the landing; fire when the user clicks or pokes the mascot.", "lens": "st", "depthScore": 9, "motivationScore": 8, "hudReadable": true, "issues": ["Strongest entry. True peaks: |rotateX| 360deg, |rotateY| 42deg (at 45%) - declared values correct. scaleX/scaleY are on the allowed list, ends at full identity, rule 3 clean.", "The squash anticipation at 8% (scaleX 1.12 / scaleY 0.8 held from an identical 0% pose) and the landing squash at 88% are what make this read as a creature rather than an asset viewer. This is the one animation in the batch where the rotation is a by-product of an action.", "Watch the two edge-on crossings (rotateX passes 270deg near 12-18% and 90deg near 68-72%). At 24.6x17.3px with a 51% depth ratio the figure collapses to a ~12px orange bar for a couple of frames each time. It is brief enough to read as a flip rather than a dropout, but do not slow this animation down - stretching it past ~1.8s would turn those crossings into visible disappearances.", "Note text says 'front flip' but rotateX decreases from 360 to 0, which tumbles the other way. Cosmetic, but the note and the motion disagree."], "repaired": false, "truePeakYaw": 42.0, "truePeakPitch": 360.0, "displayOrder": 30}, {"id": "rx-bar-watch", "name": "Bar watch", "trigger": "reactive", "durationSec": 5.2, "easing": "cubic-bezier(.45,0,.2,1)", "loop": true, "note": "Reads as Clawd craning down to squint at one bar, leaning in for a second look, then straightening up \u2014 live, the yaw sign and magnitude point at whichever usage bar is currently tallest and the loop only runs while that bar is above ~60%.", "lens": "rx", "depthScore": 8, "motivationScore": 8, "hudReadable": true, "issues": ["Real peaks confirmed: yaw 46 and pitch 23 at 50%-64%. Both axes clear the floor - this is the only entry in the batch driving real two-axis parallax.", "Rest is satisfied twice (0%-15% and 74%-100%, the latter a 1.35s dead-on hold), and the big 38deg/19deg move happens in 0.42s, which is the right velocity contrast.", "The 'second look' beat (44% -> 50%, 8deg yaw and 4deg pitch) is under the visibility floor and will not read at HUD size; either deepen it to a straighten-then-relean (e.g. back toward -20 before going to -50) or delete it and extend the hold.", "translateX(3px)/(4px) is a passenger of 3-4px on a 24.6px-wide render - about 15% of the sprite width, which is more visible than intended and may read as drift rather than lean. Verify at HUD scale.", "Live gating on 'tallest bar above ~60%' means the loop can start mid-gesture when a bar crosses the threshold; make sure it starts at the 0% rest pose or the first frame pops."], "repaired": false, "truePeakYaw": 46.0, "truePeakPitch": 23.0, "displayOrder": 31}, {"id": "ph-roly-poly", "name": "Roly-poly", "trigger": "reactive", "durationSec": 3.6, "easing": "cubic-bezier(.3,0,.35,1)", "loop": true, "note": "A weighted round-bottomed toy knocked over and rocking itself flat again, with a long dead pause before the next nudge \u2014 pitch-led so you see over the top and under the feet.", "lens": "ph", "depthScore": 7, "motivationScore": 8, "hudReadable": true, "issues": ["True peak yaw is 12deg, under the 14deg floor \u2014 the animation only clears rule 1 because rotateX reaches 24deg. All the depth is on pitch; if the HUD ever clamps perspective on X this becomes a flat sticker.", "Everything from 42% onward is under 10deg of travel (9, 6, 3, 1 deg) \u2014 four keyframes that are sub-perceptual at 24.6x17.3px. At HUD size the animation is one knock, one counter-rock, then 2.1s of nothing.", "Transform lists change length mid-animation (rotateY dropped at 52%, rotateZ dropped at 68%), forcing matrix-decomposition interpolation for the whole run.", "Trigger is 'reactive' but the keyframes describe a self-contained knock-and-settle on an infinite loop \u2014 as a loop the 'nudge' at 6% arrives from nowhere every 3.6s with no cause, which undercuts the weighted-toy read.", "Same family as ph-topple-catch: pitch-led impulse into an alternating-sign decay. Distinguished mainly by amplitude and the rotateZ rock, which is the 'same gesture at a different amplitude' pattern the brief warns about."], "repaired": false, "truePeakYaw": 12.0, "truePeakPitch": 24.0, "displayOrder": 32}, {"id": "ce-take-a-bow", "name": "Take a bow", "trigger": "event", "durationSec": 2.3, "easing": "cubic-bezier(.45,.05,.3,1)", "loop": false, "note": "Reads as a stage bow that shows the top of the slab, then acknowledges each side of the room with a held pose, so fire it when a long-running task finally completes.", "lens": "ce", "depthScore": 9, "motivationScore": 9, "hudReadable": true, "issues": ["Strongest of the batch: two axes, three real holds, and the pitch peak (52deg) exposes the top rim of the extrusion, which nothing else here does. No rule violations.", "The 64%->78% beat crosses 90deg of yaw in 0.32s straight out of a hold and straight into another hold, which is the only place the timing is tight; it survives but it is the weakest beat.", "Declared peaks (46/52) verified correct."], "repaired": false, "truePeakYaw": 46.0, "truePeakPitch": 52.0, "displayOrder": 33}, {"id": "al-cower", "name": "Cower", "trigger": "event", "durationSec": 1.9, "easing": "cubic-bezier(.2,.9,.3,1)", "loop": false, "note": "Reads as shrinking away from something overhead \u2014 it drops, tips its top away, trembles in place, then unfolds and peeks back; fire once at the 90% crossing as the hardest escalation beat.", "lens": "al", "depthScore": 9, "motivationScore": 9, "hudReadable": true, "issues": ["The 10%-54% tremble swings yaw between 13 and 24 degrees - only ~11 degrees of travel per beat, which sits right on the HUD invisibility threshold. At 24.6x17.3px the animation collapses to drop-hold-recover and the trembling, the entire emotional payload, disappears. fixedKeyframes widen the swings to ~20 degrees while leaving the pitch hold and the recovery untouched.", "The note says it 'tips its top away'; rotateX(-34deg) tips the top TOWARD the viewer (positive rotateX sends the top away). The motion still reads as a duck, but the prose and the transform disagree - fix the note, not the angle.", "Strongest sustained depth in the batch: pitch is held near -30deg for 44% of the cycle, so the slab's horizontal face is visible the whole time the tremble plays. That is what makes the tremble worth fixing rather than cutting.", "Declared peaks (24 yaw / 34 pitch) verified. Ends at exactly rotateY(0deg) with scale and translateY resolved back to identity via prefix padding."], "repaired": true, "truePeakYaw": 28.0, "truePeakPitch": 34.0, "displayOrder": 34}, {"id": "al-flinch", "name": "Flinch", "trigger": "event", "durationSec": 0.72, "easing": "cubic-bezier(.15,.9,.25,1)", "loop": false, "note": "Reads as Clawd getting slapped by bad news \u2014 it jerks its whole body back and half-turns away, freezes, then wobbles upright; fire once the instant usage crosses 75%.", "lens": "al", "depthScore": 9, "motivationScore": 9, "hudReadable": true, "issues": ["Peak is reached at 8% of 0.72s = ~58ms (~3.5 frames at 60fps); the snap itself is below the ~0.3s/beat legibility floor and will read as a jump-cut rather than a turn. It survives only because 8%->22% holds the -30/-26 pose for ~100ms, which is the frame that actually sells the volume.", "The 76% settle beat (rotateY 4deg / rotateX 2deg) is under 10deg of travel and is invisible at 24.6x17.3px - it costs a keyframe and buys nothing at HUD size.", "Transform lists are ragged (4 functions at 8%, 3 at 40%, 2 at 58%, 1 at 100%). Each shorter list is a strict prefix of the longer one so CSS pads with identity and interpolates componentwise - legal, but one stray reorder would silently drop it to matrix interpolation.", "Declared peakYaw 30 / peakPitch 26 verified against the keyframes - correct."], "repaired": false, "truePeakYaw": 30.0, "truePeakPitch": 26.0, "displayOrder": 35}, {"id": "ce-fist-pump", "name": "Fist pump", "trigger": "event", "durationSec": 1.6, "easing": "cubic-bezier(.2,.85,.25,1)", "loop": false, "note": "Reads as two sharp \"yes!\" pumps thrown to alternating sides with a hop under each, so fire it the instant something unblocks or a build goes green.", "lens": "ce", "depthScore": 7, "motivationScore": 9, "hudReadable": false, "issues": ["Beats land every 12% of a 1.6s run = 0.192s, below the ~0.3s legibility floor at HUD size.", "The first pump has no hold at its peak - 34% goes straight into the 46% wind-up for the second - so the two pumps smear into a single shake. Only the second pump gets a hold (70-84%), and the animation is built entirely around that contrast beat existing twice.", "Peak amplitude (34 yaw / 34 pitch) is the lowest in the batch; combined with the fastest beats, it is the most likely of the six to vanish at 24.6x17.3px.", "Declared peaks (34/34) verified correct. Concept is the best-motivated in the batch - the failure is purely timing."], "repaired": true, "truePeakYaw": 36.0, "truePeakPitch": 36.0, "displayOrder": 36}, {"id": "ce-shimmy", "name": "Shimmy", "trigger": "event", "durationSec": 1.8, "easing": "cubic-bezier(.5,0,.5,1)", "loop": false, "note": "Reads as a hip-swivel dance beat that freezes on a cocked final pose, so fire it on smaller or repeat good news where a full revolution would be overkill.", "lens": "ce", "depthScore": 7, "motivationScore": 8, "hudReadable": false, "issues": ["Six direction reversals at 12% intervals of a 1.8s run = 0.216s per beat, each covering ~78deg of yaw. That is under the ~0.3s legibility floor; at 24.6x17.3px this reads as jitter, not a dance.", "No pose is held until 76-88%. The whole thing is a continuous zig-zag, which is the weakest possible way to sell parallax - the contrast rule wants stillness to punch out of.", "The note claims it 'freezes on a cocked final pose', but 100% returns to rotateY(0deg); the freeze is at 88% and then abandoned. The prose oversells what the keyframes do.", "Declared peaks (46/0) verified correct."], "repaired": true, "truePeakYaw": 46.0, "truePeakPitch": 0.0, "displayOrder": 37}, {"id": "ce-cape-turn", "name": "Cape turn", "trigger": "event", "durationSec": 2.6, "easing": "cubic-bezier(.55,0,.35,1)", "loop": false, "note": "Reads as Clawd deliberately turning its back on you to pose, holding there long enough that the slab's volume is unmistakable, then whipping around to face front, so fire it on rare milestones where the slower beat is affordable.", "lens": "ce", "depthScore": 6, "motivationScore": 8, "hudReadable": true, "issues": ["rotateY(180deg) is a ZERO-parallax pose. The slab is dead-on to camera again, just reversed - no side rim, no foreshortening, exactly as flat as rest. The animation spends its single longest hold (48%->70%, 0.57s, 22% of the run) on the one pose in its range that reveals no depth at all. This is the batch's worst decision.", "Clawd's silhouette is laterally symmetric, so the 180deg 'back' pose is near-indistinguishable from the 0deg front pose at 24.6x17.3px. The 'turns its back on you' read does not land; a viewer sees it sweep out and sweep back with a dead pause in the middle.", "2.6s is the longest in the batch and the 0->6% anticipation is only 16deg over 0.156s - too small and too fast to register at HUD size.", "Declared peaks (180/6) verified correct.", "Fix stops the turn at 146deg so the held pose is a three-quarter back view with the extrusion's side rim visible, and widens the anticipation."], "repaired": true, "truePeakYaw": 146.0, "truePeakPitch": 6.0, "displayOrder": 38}, {"id": "rx-tally-nod", "name": "Tally nod", "trigger": "event", "durationSec": 0.9, "easing": "cubic-bezier(.36,0,.2,1)", "loop": false, "note": "Reads as a heavy two-beat \"got it\" nod that shows the top of the slab on each dip \u2014 fire it the moment the usage refresher writes a new number, so the acknowledgement is the animation.", "lens": "rx", "depthScore": 6, "motivationScore": 8, "hudReadable": false, "issues": ["Real peaks confirmed: pitch 26 at 18%, yaw 10 at 36%. Passes the depth floor on pitch only - yaw never reaches 14deg, so all volume comes from the top-face reveal.", "HUD READABILITY FAILURE: 0.9s across 7 keyframes is ~0.16s per beat with zero holds. The nod dips and recovers before the eye resolves either extreme; at 24.6x17.3px this is a vertical shimmer, not a nod.", "The 72% (+6/-5) and 88% (-5/+2) beats are under 10deg of travel - invisible, and they eat the time budget that the two real dips need.", "Rhythmic duplicate risk with rx-poke-flinch: both are sub-1s one-shot damped pitch oscillations with alternating small yaw counter-rotation. Differentiate by giving this one a genuine hold at the bottom of the first dip (a nod pauses; a flinch does not).", "translateY of 1-2px on a 17.3px-tall render is near-invisible - it is not doing the work the keyframes imply.", "Fix supplied: two beats with a hold at the bottom of the first dip, sub-8deg noise removed, peak pitch raised to 28."], "repaired": true, "truePeakYaw": 12.0, "truePeakPitch": 28.0, "displayOrder": 39}, {"id": "ce-victory-spin", "name": "Victory spin", "trigger": "event", "durationSec": 1.45, "easing": "cubic-bezier(.34,0,.2,1)", "loop": false, "note": "Reads as a coiled jump-spin: Clawd squashes down, whips one full revolution in the air and lands with a bounce, so fire it on a usage-limit reset or the single biggest win of the session.", "lens": "ce", "depthScore": 9, "motivationScore": 7, "hudReadable": true, "issues": ["Terminal pose is rotateY(360deg), not the literal rotateY(0deg) the one-shot rule asks for. It is matrix-identical to identity so it renders correctly and I am not failing it, but anything that reads the computed final value or chains a follow-up animation off it will see 360, not 0.", "Near-clone of ce-backflip in rhythm and numbers: same squash anticipation (scaleY 0.86 vs 0.85), same held crouch, same airborne full revolution, same landing squash (0.88 in both) and same two-step overshoot settle (1.04 in both). Only the axis differs. As a pair these two burn two of six slots on one gesture.", "Yaw passes 90deg and 270deg where the slab is edge-on; at 24.6x17.3px those frames collapse to a sliver. Inherent to a spin and acceptable, but it means roughly a fifth of the run is an unreadable silhouette.", "Declared peakYaw/peakPitch (368/8) are correct - verified against the keyframes."], "repaired": false, "truePeakYaw": 368.0, "truePeakPitch": 8.0, "displayOrder": 40}, {"id": "ph-windup-snap", "name": "Wind-up snap", "trigger": "event", "durationSec": 1.9, "easing": "cubic-bezier(.45,0,.25,1)", "loop": false, "note": "Torsion loaded slowly against a spring, held at full tension, then released \u2014 the slow-then-violent contrast is what makes the extrusion read; fire on a completed task or a refresh landing.", "lens": "ph", "depthScore": 9, "motivationScore": 6, "hudReadable": true, "issues": ["Physics error: the spring releases from -54deg and overshoots to +58deg. A damped torsion spring cannot exceed its loaded amplitude on the first return \u2014 the slab visibly gains energy at the moment it should start losing it, which is exactly the beat the lens is supposed to sell. Fixed array pulls the first overshoot to 44deg and rescales the ringdown.", "The release is 112deg in 8% of 1.9s = 0.152s (~740 deg/s). That is at or past the point where WebView2 will show it as two poses and a smear; it is defensible as the deliberate contrast beat but it is the single riskiest timing in the batch.", "The tension hold is only 8% (0.152s) \u2014 too short to register as a hold at HUD size. Widening it to ~14% costs nothing and is where the whole gag lives.", "Motivation is mechanical rather than creaturely: it reads as a wound spring, not as Clawd doing something. Retiming it as a double-take (small counter-turn, hold, snap to look) would keep the physics and add a reason.", "Yaw-only, pitch 0 \u2014 like ph-heavy-shunt it is a single-axis ringdown ending at 0; the decay tails of the two will look near-identical once amplitude drops under ~20deg."], "repaired": true, "truePeakYaw": 54.0, "truePeakPitch": 0.0, "displayOrder": 41}, {"id": "rx-wake-perk", "name": "Perk up", "trigger": "transition", "durationSec": 1.05, "easing": "cubic-bezier(.4,0,.25,1)", "loop": false, "note": "Reads as something dozing side-on that sags once, then whips around and pops upright to face you \u2014 fire on window focus or on the first pointer entry after idle, and let the resting idle animation start from the pose it lands in.", "lens": "rx", "depthScore": 10, "motivationScore": 9, "hudReadable": true, "issues": ["Real peaks confirmed: yaw 72 at 0%, pitch 17 at 10%. Strongest depth reveal in the batch - it starts near profile, so the extrusion is the first thing on screen before the silhouette resolves.", "Ends at exactly rotateY(0deg) with no residual translate/scale - one-shot rule satisfied.", "The 88deg sweep from 10% to 48% takes 0.40s out of a 0.10s sag hold; that is the correct stillness-then-snap contrast.", "The 80% (+5/-2) and 92% (-2) settle beats are below the visibility floor and only exist to shape the curve - they are harmless here because the easing already decays, but they add nothing.", "Function lists shrink across the animation (translateY/scale dropped at 80%, everything but rotateY at 92-100%), forcing matrix interpolation on the tail; with the tail angles this small it will not visibly path-shortcut, but keep the list uniform to be safe.", "The note claims the idle should 'start from the pose it lands in' - it lands at dead-on 0, so any idle whose 0% is off-axis will pop. Worth stating explicitly in the handoff."], "repaired": false, "truePeakYaw": 72.0, "truePeakPitch": 17.0, "displayOrder": 42}, {"id": "mc-power-cycle", "name": "Power cycle", "trigger": "transition", "durationSec": 2.6, "easing": "cubic-bezier(.3,0,.2,1)", "loop": false, "note": "Servos lose power and the whole slab slumps forward off-axis, holds dead, then reboots upright and runs a quick left-right calibration before locking \u2014 use it on wake from sleep or when the refresher reconnects.", "lens": "mc", "depthScore": 8, "motivationScore": 9, "hudReadable": true, "issues": ["True peaks: pitch 34, yaw 26. Declared correct. Pitch is the primary axis here, which is the only item in the batch where that is true \u2014 good axis variety.", "One-shot ends at rotateY(0deg) with no residual transform. Compliant. Transform lists shorten from 3 functions to 2 to 1 across the animation, but each shorter list is a strict prefix of the longer one, so componentwise interpolation applies and no matrix fallback occurs. Legal.", "Best-motivated item in the set: the slump is a consequence of something happening to Clawd rather than a pose choice, and the 0.36s dead hold at pitch -34 is where the slab's depth actually reads.", "The closing calibration wobble (-26/+26/-9) runs at 0.26s per beat, marginally under the 0.3s floor, but each beat covers 52deg of travel so it reads fine at HUD size. Watch it if the duration is ever shortened.", "opacity 0.45 held for 0.36s on a transparent window will make the mascot look half-gone rather than half-lit; verify it does not read as a render bug on the real HUD background.", "0%->13% moves yaw only 8deg \u2014 that leading beat contributes nothing on its own and depends entirely on the pitch to sell the slump."], "repaired": false, "truePeakYaw": 26.0, "truePeakPitch": 34.0, "displayOrder": 43}, {"id": "tr-tumble-land", "name": "Tumble landing", "trigger": "transition", "durationSec": 1.05, "easing": "cubic-bezier(.35,.05,.3,1)", "loop": false, "note": "Reads as Clawd dropping in from above, going over its own head once and sticking the landing on its feet; fire when a newly picked skin takes over.", "lens": "tr", "depthScore": 8, "motivationScore": 8, "hudReadable": true, "issues": ["True peak pitch is 168deg at 0% and yaw is genuinely 0 everywhere - declarations are honest and the depth rule is cleared on pitch alone.", "Four-beat settle is over-subdivided: 82% (7deg) and 92% (-3deg) are invisible at 24.6x17.3px, and 92%->100% is a 3deg move in 0.084s. Those two frames add nothing but interpolation cost.", "Bounce is mirror-symmetric on a single axis, so the landing reads mechanical - a real creature would not rebound on a perfect vertical plane.", "cubic-bezier(.35,.05,.3,1) on all eight intervals means the tumble decelerates and re-accelerates at every keyframe, killing the one thing that sells volume (angular velocity contrast) during the 168deg fall.", "No hold at all in a 1.05s one-shot; the impact pose is passed through in 0.126s and never read.", "Opacity only reaches 1 at 12% where pitch is still -124deg, so the first thing the user sees is an upside-down back-facing blob, which at HUD size can read as a paint glitch rather than a tumble."], "repaired": true, "truePeakYaw": 7.0, "truePeakPitch": 168.0, "displayOrder": 44}, {"id": "tr-duck-out", "name": "Duck out", "trigger": "transition", "durationSec": 1.5, "easing": "cubic-bezier(.4,0,.35,1)", "loop": false, "note": "Reads as Clawd diving down and sideways out of frame, staying gone long enough to be missed, then popping back up chin-first; fire when the HUD hides for a fullscreen app and restores afterwards.", "lens": "tr", "depthScore": 7, "motivationScore": 8, "hudReadable": true, "issues": ["Peaks verify (pitch 84deg, yaw 38deg) and the 84deg pitch is the most honest depth moment here - top-down you see the top face of the 51% slab, which no other animation in the batch shows.", "The trigger does not match the shape: a fixed 1.5s one-shot cannot cover 'HUD hides for a fullscreen app and restores afterwards', because the hidden interval is unknown at authoring time. As written this is a peekaboo, not a hide/restore pair. Either re-label it or split it into two animations.", "0.36s of the 1.5s (34%-58%) is dead air at opacity 0 - 24% of the runtime showing nothing, which at HUD scale reads as the mascot having crashed rather than ducked.", "Only the exit is fast; the 7% anticipation (24deg in 0.105s) is a flicker at HUD size and the 94% frame (10deg over 0.09s) is invisible.", "cubic-bezier(.4,0,.35,1) applied to all eight intervals stalls the dive at each keyframe, so the 0->84deg pitch plunge loses the velocity contrast it depends on.", "rotateX is composed before rotateY here, which is the correct order for a pitch-led dive - worth noting because tr-unfold gets the same composition backwards."], "repaired": true, "truePeakYaw": 38.0, "truePeakPitch": 84.0, "displayOrder": 45}, {"id": "ph-heavy-shunt", "name": "Heavy shunt", "trigger": "transition", "durationSec": 2.2, "easing": "cubic-bezier(.4,0,.3,1)", "loop": false, "note": "Shoved sideways: the body trails the launch, whips past itself at the hard stop, rings down, then drifts home trailing the other way \u2014 use when a panel slides in or the HUD changes mode.", "lens": "ph", "depthScore": 8, "motivationScore": 7, "hudReadable": true, "issues": ["The ringdown envelope is not monotonic: after the -38deg whip the sequence is +20, -10, -16, +9. The -16deg at 72% is larger than the -10deg at 56% and the same sign, so the decay visibly re-energises mid-settle. The note rationalises it as return-trip drag, but a viewer reads it as a hiccup, not as new drag \u2014 either make the return slide start before the bump or keep the envelope shrinking.", "translateX(22px) is a hard-coded pixel value on an element that is 24.6px wide in the real HUD. If the transform is applied at HUD scale rather than in a larger local coordinate space, Clawd travels almost a full body width and will clip or leave the window. This needs verifying against the actual mascot box before shipping.", "Pitch is 0 \u2014 single-axis depth again, and it is the third yaw-only or yaw-dominant entry in a six-item physics set.", "Once amplitude drops under ~20deg the tail (-10, -16, +9, 0) is the same damped yaw ringdown as ph-windup-snap's tail; the two are separated only by their openings.", "Beats between 37% and 56% are ~0.2s each while swinging 58deg then 30deg \u2014 fast enough to read as a whip, which is correct here, but it leaves nothing held anywhere in the animation; a 0.2s freeze at the 22px hard stop would sell the mass far better than the extra ring."], "repaired": false, "truePeakYaw": 38.0, "truePeakPitch": 0.0, "displayOrder": 46}, {"id": "st-corkscrew-dive", "name": "Corkscrew dive", "trigger": "transition", "durationSec": 1.5, "easing": "cubic-bezier(0.5,0,0.35,1)", "loop": false, "note": "Reads as a wind-up, a nose-down spiral through the bottom of the widget and a climb back to level; use it to cover a panel or skin swap.", "lens": "st", "depthScore": 8, "motivationScore": 6, "hudReadable": true, "issues": ["Rules 1-3 all pass: true |rotateY| peak 386deg at 10%, true |rotateX| peak 22deg at 32%, ends at identity.", "DUPLICATE RISK with st-coin-settle. Stripped to its gross read at HUD size, both are 'wind-up, then one continuous decelerating yaw unwind to rest with a pitch passenger and a vertical bob'. The pitch sign alternation here is the only real differentiator and it is exactly the detail that vanishes at 24.6x17.3px. Three of the six entries in this batch (coin, corkscrew, reveal) are single-direction yaw spin-downs; that is too much of one idea.", "Muddled midsection: 32% to 52% covers 80deg of yaw while pitch reverses from +22 to +6 and translateX swings 8% - three axes changing simultaneously over 0.3s with no anchor pose. At small size this is mush.", "No hold anywhere, same rule 4 weakness as coin-settle.", "fixedKeyframes supplied: adds a real hold at the top of the wind-up and a second hold at the bottom of the dive, which both differentiates it from coin-settle and gives the spin something to snap out of."], "repaired": true, "truePeakYaw": 392.0, "truePeakPitch": 24.0, "displayOrder": 47}, {"id": "tr-deal-in", "name": "Dealt in", "trigger": "transition", "durationSec": 0.72, "easing": "cubic-bezier(.25,.85,.35,1)", "loop": false, "note": "Reads as Clawd being dealt onto the desk like a playing card that arrives edge-first and slaps flat; fire on first paint when the HUD window opens.", "lens": "tr", "depthScore": 8, "motivationScore": 5, "hudReadable": true, "issues": ["Declared peaks check out (true max |rotateY| = 88deg at 0%, no rotateX anywhere) and all functions/units are legal, so it clears the hard rules.", "No hold anywhere: the whole 0.72s is one continuous decelerating swing, which is the weakest way to sell parallax per rule 4 - the arriving edge-on pose is never held long enough to be seen as a slab.", "Last two beats are sub-readable at HUD size: 80% (9deg) and 92% (-4deg) are 4-9deg moves lasting 0.086s and 0.058s, i.e. under the ~10deg / ~0.3s legibility floor at 24.6x17.3px. They are wasted keyframes.", "One easing (cubic-bezier(.25,.85,.35,1)) is applied to every interval, so velocity flattens to near-zero at each of the 7 keyframes - the intended slap becomes a staircase of small decelerations unless per-keyframe animation-timing-function is set.", "92% -> 100% mixes a 4-function list with a bare rotateY(0), forcing matrix-decomposition interpolation instead of componentwise; harmless here but sloppy and it recurs across the batch.", "Character is an object, not a creature - the note itself says 'playing card'. Nothing in the motion is Clawd deciding to do something."], "repaired": false, "truePeakYaw": 88.0, "truePeakPitch": 0.0, "displayOrder": 48}, {"id": "tr-spin-off", "name": "Spin off", "trigger": "transition", "durationSec": 0.9, "easing": "cubic-bezier(.5,-0.2,.75,.3)", "loop": false, "note": "Reads as Clawd cocking the wrong way for a beat then whipping away over its own shoulder into the distance; fire as the outgoing half of a skin change or when the HUD is dismissed, and note the pose is re-armed at rest while invisible so the next entrance starts clean.", "lens": "tr", "depthScore": 7, "motivationScore": 5, "hudReadable": true, "issues": ["True peak yaw is 330deg (88% frame) and the 0%,16% rest hold plus the 0deg->-86deg whip in 0.144s is the strongest depth moment in the batch's exits.", "Most of the rotation is wasted: 244 of the 330 degrees happen between 66% and 88% while scale falls .72 -> .24 and opacity fades, i.e. the spectacle plays out on a ~6px sprite that nobody can resolve. Front-load the yaw while scale is still ~1.", "Ending is only nominally at rest - 88%->100% snaps -330deg/scale(.24)/translate(-30px,-26px) back to identity in 0.108s. It is masked because opacity is 0 at both ends, but it hard-requires animation-fill-mode: forwards; without it the element pops back to opacity 1 at rest and the exit visibly undoes itself.", "cubic-bezier(.5,-0.2,.75,.3) is applied per interval, so the negative-overshoot lead-in fires at every one of the six keyframes, not just the anticipation - the departure will judder rather than accelerate away smoothly.", "Character is thin: a 16% anticipation cock is the only motivated beat; after that it is a shrinking turntable spin, which is exactly the showroom move the brief warns against."], "repaired": false, "truePeakYaw": 330.0, "truePeakPitch": 0.0, "displayOrder": 49}, {"id": "tr-unfold", "name": "Unfold", "trigger": "transition", "durationSec": 1.1, "easing": "cubic-bezier(.32,1.02,.4,1)", "loop": false, "note": "Reads as a flat-packed panel hinging upright and then swinging around to face you, with a deliberate beat held fully side-on where the slab is at its thickest; use for a ceremonial first-run or after-update intro.", "lens": "tr", "depthScore": 9, "motivationScore": 4, "hudReadable": true, "issues": ["Transform-order bug: rotateX(-74deg) is composed AFTER rotateY(-92deg), so the pitch axis has already been swung ~90deg and the rotateX behaves as an in-plane roll, not a pitch. The declared 74deg of pitch contributes zero extra parallax and the 'hinging upright' read is not what renders. Depth rule survives on yaw alone.", "The 32%-46% hold at rotateY(-89deg) is the single best idea in the batch - 0.154s fully edge-on with a 51%-depth slab is a genuine volume reveal - but it is spent on a pose whose silhouette carries none of Clawd's identity, so half the runtime shows an anonymous block.", "93% (-5deg) is a sub-readable beat at HUD size and 93%->100% is a 5deg move in 0.077s; drop it or make it >=10deg.", "Single cubic-bezier(.32,1.02,.4,1) on all intervals applies its overshoot to every segment including the hold boundaries, so the 'held' pose will drift rather than sit still.", "Lowest motivation in the batch - the note openly describes it as a 'flat-packed panel', which is an asset-viewer unfold, not a creature doing anything.", "Shares its entire back half (yaw ~90 -> 0 with a damped -x/+y/0 overshoot) with tr-deal-in and tr-swap-flip; three of six animations in this batch resolve with the same settle signature."], "repaired": true, "truePeakYaw": 92.0, "truePeakPitch": 76.0, "displayOrder": 50}];
+
+// -------- LOCKED geometry ---------------------------------------------------
+const BODY=[15.8,0,84.2,47.6], ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,42.0,25.5,64.8],[33.4,42.0,43.1,64.8],[56.9,42.0,66.6,64.8],[74.5,42.0,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+const SOLIDS=[BODY,ARM_L,ARM_R,...LEGS];
+const rc=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+
+// -------- LOCKED warm-shadow shading (S5) -----------------------------------
+const BASE=[225,121,86], TINT=[125,51,32], SH={amt:.58, tau:6, bounce:.18};
+function shade(i,n){
+  if(i===0) return "#e17956";
+  const u=i/(n-1);
+  let t=SH.amt*(1-Math.exp(-SH.tau*u));
+  if(u>0.78) t=Math.max(0,t-((u-0.78)/0.22)*SH.bounce);   // bounce light on the far side
+  const c=BASE.map((v,k)=>Math.round(v+(TINT[k]-v)*t));
+  return `rgb(${c.join(",")})`;
+}
+function sprite(px,fill,eyes){
+  return `<svg width="${(17*px).toFixed(1)}" height="${(11.9*px).toFixed(1)}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">`
+    +`<g fill="${fill}">${SOLIDS.map(rc).join("")}</g>`
+    +(eyes?`<g class="eyes" fill="#111">${EYES.map(rc).join("")}</g>`:"")+`</svg>`;
+}
+// Depth held at the T5 ratio (51% of sprite width) whatever the slice count.
+function slab(px,n){
+  const w=17*px, depth=w*0.36, step=depth/(n-1);
+  let out="";
+  for(let i=n-1;i>=0;i--)
+    out+=`<div class="sl" style="transform:translateZ(${(-i*step).toFixed(2)}px)">`
+       + `<span class="clawd">${sprite(px,shade(i,n),i===0)}</span></div>`;
+  return `<div class="slab" style="width:${w}px;height:${11.9*px}px">${out}</div>`;
+}
+
+const BIG=7.4, HUD=1.45;      // HUD = the real 24.6 x 17.3px footprint
+const hudShell = inner => `<div class="hud"><div class="hd">${inner}<span class="ttl">Usage</span></div>
+  <div class="row"><span>Current</span><b>94%</b></div><div class="bb"><i style="width:94%;background:#e5484d"></i></div>
+  <div class="row"><span>Weekly</span><b>82%</b></div><div class="bb"><i style="width:82%;background:#f59e0b"></i></div>
+  <div class="row"><span>Fable</span><b>18%</b></div><div class="bb"><i style="width:18%;background:#3f7fbf"></i></div></div>`;
+
+const PICKS = new Set([...document.querySelectorAll("table.picks .mono")].map(e=>e.textContent.trim()));
+const esc = s => (s||"").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// Cards render immediately; the slabs (which are hundreds of nodes each) are
+// built only when scrolled into view, so 50 cards stay responsive.
+for (const g of document.querySelectorAll(".grid")) {
+  const t = g.dataset.trigger;
+  g.innerHTML = ANIMS.filter(a=>a.trigger===t).sort((x,y)=>x.displayOrder-y.displayOrder).map((a,i)=>{
+    const pick = PICKS.has(a.id);
+    return `<div class="card a-${a.id} ${pick?"is-pick":""}" data-id="${a.id}">
+      <h3><span class="n">${String(a.displayOrder).padStart(2,"0")}</span>${esc(a.name)}<span class="sp"></span>
+        ${pick?'<span class="tag pick">ship</span>':""}
+        ${a.repaired?'<span class="tag fix">repaired</span>':""}
+        <span class="tag">${a.loop?"loop":"one-shot"}</span></h3>
+      <div class="stage"></div>
+      <div class="foot">${hudShell("")}
+        <div class="meta"><b>${a.durationSec}s</b> · ${esc(a.easing)}<br>
+          yaw <b>${a.truePeakYaw}°</b> · pitch <b>${a.truePeakPitch}°</b><br>
+          <span style="opacity:.75">${a.hudReadable?"reads at HUD size":"too subtle at HUD size"}</span></div>
+      </div>
+      <div class="scores">
+        <span class="pip" title="depth ${a.depthScore}/10"><i style="width:${a.depthScore*10}%"></i></span>
+        <span class="pip" title="motivation ${a.motivationScore}/10"><i style="width:${a.motivationScore*10}%"></i></span>
+      </div>
+      <p class="note">${esc(a.note)}</p>
+      ${a.issues&&a.issues.length?`<details><summary>audit notes (${a.issues.length})</summary>
+        <ul>${a.issues.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:""}
+    </div>`;
+  }).join("");
+}
+
+const io = new IntersectionObserver((entries)=>{
+  for (const e of entries) {
+    if (!e.isIntersecting || e.target.dataset.built) continue;
+    e.target.dataset.built = "1";
+    e.target.querySelector(".stage").innerHTML = slab(BIG, 40);
+    e.target.querySelector(".hud .hd").insertAdjacentHTML("afterbegin", slab(HUD, 18));
+  }
+}, { rootMargin: "600px 0px" });
+document.querySelectorAll(".card").forEach(c=>io.observe(c));
+
+const speed=document.getElementById("speed"), sv=document.getElementById("speed-v");
+speed.addEventListener("input", ()=>{
+  sv.textContent = (+speed.value).toFixed(2)+"×";
+  document.querySelectorAll(".slab").forEach(s=>s.style.animationDuration="");
+  document.documentElement.style.setProperty("--sp", speed.value);
+  document.querySelectorAll(".card").forEach(c=>{
+    const a = ANIMS.find(x=>x.id===c.dataset.id); if(!a) return;
+    c.querySelectorAll(".slab").forEach(s=>s.style.animationDuration=(a.durationSec/+speed.value).toFixed(2)+"s");
+  });
+});
+const pause=document.getElementById("pause");
+pause.addEventListener("click", ()=>{
+  document.body.classList.toggle("paused");
+  pause.textContent = document.body.classList.contains("paused") ? "Play all" : "Pause all";
+});
+</script>

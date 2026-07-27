@@ -1,0 +1,267 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Clawd 3D — flank shading fix</title>
+<!--
+  Fixing the near-black back on the T5 model.
+  The old ramp was linear to 0.26 brightness, so the flank you see when the
+  model turns is a gradient dissolving into black. A real extruded solid shows
+  a FLAT side face at one steady tone, and shadow on an orange body shifts warm
+  (toward brown-red), it does not multiply toward black. Both are fixed here.
+  Geometry untouched — this file only changes slice COLOR.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500&family=Hanken+Grotesk:wght@500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --cc-bg:#262624; --cc-panel:#1e1e1c; --cc-line:#3a3a36;
+          --cc-text:#e7e4d9; --cc-text-2:#b1ada0; --cc-muted:#7c776b; --clawd:#e17956; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:40px 32px 96px; background:#161615; color:var(--cc-text);
+         font-family:"Hanken Grotesk",system-ui,sans-serif; font-weight:500; }
+  h1 { font-family:Newsreader,serif; font-weight:500; font-size:34px; margin:0 0 10px; }
+  h2 { font-family:Newsreader,serif; font-weight:500; font-size:22px; margin:52px 0 6px;
+       padding-top:26px; border-top:1px solid var(--cc-line); }
+  .lede,.sub { color:var(--cc-text-2); font-size:14px; line-height:1.55; max-width:78ch; margin:0 0 6px; }
+  code { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--clawd); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(268px,1fr)); gap:18px; margin-top:24px; }
+  .card { background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:12px;
+          padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .card.bad { border-color:#5a3236; }
+  .card.pick { border-color:#3f6b4c; }
+  .card h3 { margin:0; font-size:13px; font-weight:800; }
+  .card h3 .id { color:var(--cc-muted); font-family:"JetBrains Mono",monospace; font-weight:400; margin-right:6px; }
+  .tag { float:right; font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+         padding:2px 6px; border-radius:4px; }
+  .t-bad { background:#45262a; color:#e5848a; }
+  .t-ok  { background:#24402c; color:#86c99a; }
+  .t-mid { background:#43391f; color:#dcbc6a; }
+  .note { font-size:11.5px; line-height:1.5; color:var(--cc-muted); margin:0; }
+  .axis { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--cc-muted); }
+
+  /* Two stages per card: a held 3/4 angle (judge the flank) and the live turn. */
+  .stages { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stage { background:var(--cc-bg); border-radius:8px; height:150px; display:grid;
+           place-items:center; overflow:hidden; perspective:640px; }
+  .stage .cap { position:absolute; margin-top:-124px; font-size:9px; color:var(--cc-muted);
+                font-family:"JetBrains Mono",monospace; }
+  .held .slab { transform:rotateX(-8deg) rotateY(46deg); }
+  @keyframes cv-turn { 0%,100%{transform:rotateX(-8deg) rotateY(-40deg);}
+                       50%{transform:rotateX(-8deg) rotateY(40deg);} }
+  .live .slab { animation:cv-turn 5s ease-in-out infinite; }
+
+  /* The ramp itself, drawn as a strip: front slice at left, back slice at right. */
+  .ramp { display:flex; height:16px; border-radius:4px; overflow:hidden; }
+  .ramp i { flex:1; }
+
+  .clawd { color:var(--clawd); display:inline-block; line-height:0; }
+  .clawd svg { overflow:visible; }
+  .slab { transform-style:preserve-3d; position:relative; will-change:transform; }
+  .slab .sl { position:absolute; inset:0; }
+  @keyframes cv-blink { 0%,92%,100%{transform:scaleY(1);} 96%{transform:scaleY(.12);} }
+  .eyes { transform-origin:50px 12px; animation:cv-blink 4.6s infinite; }
+
+  .panel { background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:12px;
+           padding:18px 20px; display:grid; grid-template-columns:280px 1fr; gap:26px; margin-top:24px; }
+  .ctrl label { display:flex; justify-content:space-between; font-size:11.5px; color:var(--cc-text-2); margin-bottom:4px; }
+  .ctrl label b { font-family:"JetBrains Mono",monospace; color:var(--clawd); font-weight:400; }
+  .ctrl { margin-bottom:12px; }
+  .ctrl input[type=range] { width:100%; accent-color:var(--clawd); }
+  .ctrl select, .ctrl input[type=color] { width:100%; background:var(--cc-bg); color:var(--cc-text);
+         border:1px solid var(--cc-line); border-radius:6px; padding:5px; font-family:inherit; font-size:12px; }
+  .readout { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--cc-muted);
+             border-top:1px solid var(--cc-line); padding-top:10px; line-height:1.7; white-space:pre; }
+</style>
+
+<h1>Clawd 3D — flank shading fix</h1>
+<p class="lede">
+  Geometry is untouched. Only the per-slice colour changes. Front slice stays exactly
+  <code>#e17956</code> in every variant, so dead-on it is still the locked sprite.
+</p>
+<p class="lede">
+  Two problems with the old ramp. <b>One:</b> it is linear to 0.26 brightness, but the flank you see
+  when the model turns is the stacked edge of many slices at once — a linear ramp makes that flank a
+  gradient dissolving into black, when a real solid shows a <i>flat side face at one steady tone</i>.
+  <b>Two:</b> it multiplies toward black. Shadow on an orange body shifts <i>warm</i>, toward brown-red.
+  Multiplying to black drains the hue out of the whole side.
+</p>
+<p class="lede">
+  Each card shows a <b>held 3/4 angle</b> (judge the flank) and the <b>live turn</b>, plus the raw
+  ramp as a strip — front slice at the left edge, back slice at the right.
+</p>
+
+<h2>Shading models</h2>
+<div class="grid" id="models"></div>
+
+<h2>Live dial</h2>
+<div class="panel">
+  <div>
+    <div class="ctrl"><label>Ramp curve</label>
+      <select id="c-curve">
+        <option value="linear">linear — old behaviour</option>
+        <option value="floor">linear + floor clamp</option>
+        <option value="plateau" selected>plateau (exponential settle)</option>
+        <option value="plateau-bounce">plateau + back bounce</option>
+      </select></div>
+    <div class="ctrl"><label>Shadow amount <b id="v-amt">0.55</b></label>
+      <input type="range" id="c-amt" min="0" max="1" step="0.01" value="0.55"></div>
+    <div class="ctrl"><label>Settle speed <b id="v-tau">6.0</b></label>
+      <input type="range" id="c-tau" min="1" max="12" step="0.5" value="6"></div>
+    <div class="ctrl"><label>Floor (min brightness) <b id="v-floor">0.55</b></label>
+      <input type="range" id="c-floor" min="0" max="1" step="0.01" value="0.55"></div>
+    <div class="ctrl"><label>Back bounce <b id="v-bounce">0.18</b></label>
+      <input type="range" id="c-bounce" min="0" max="0.6" step="0.01" value="0.18"></div>
+    <div class="ctrl"><label>Shadow tint</label><input type="color" id="c-tint" value="#7d3320"></div>
+    <div class="ctrl"><label>Held angle (°) <b id="v-ang">46</b></label>
+      <input type="range" id="c-ang" min="0" max="90" value="46"></div>
+    <div class="readout" id="readout"></div>
+  </div>
+  <div>
+    <div class="stages">
+      <div class="stage held" id="live-held"></div>
+      <div class="stage live" id="live-turn"></div>
+    </div>
+    <div class="ramp" id="live-ramp" style="margin-top:12px"></div>
+    <p class="note" style="margin-top:10px">Left held at the chosen angle, right turning. Strip below is the ramp.</p>
+  </div>
+</div>
+
+<script>
+// -------- LOCKED geometry --------------------------------------------------
+const BODY=[15.8,0,84.2,47.6], ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,42.0,25.5,64.8],[33.4,42.0,43.1,64.8],[56.9,42.0,66.6,64.8],[74.5,42.0,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+const SOLIDS=[BODY,ARM_L,ARM_R,...LEGS];
+const rect=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+
+const BASE=[225,121,86];                       // #e17956, locked
+const hex2rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const rgb=c=>`rgb(${c.map(Math.round).join(",")})`;
+const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+
+/**
+ * How far slice i is pushed toward the shadow colour. 0 = untouched front face.
+ *  linear         old behaviour, straight to `amt` at the back
+ *  floor          linear but never past `1-floor` brightness equivalent
+ *  plateau        settles fast then holds — a flat side face, the physical one
+ *  plateau-bounce plateau, with the rearmost slices lifted by bounce light
+ */
+function ramp(i, n, o) {
+  const u = n<2 ? 0 : i/(n-1);
+  switch (o.curve) {
+    case "linear": return u*o.amt;
+    case "floor":  return Math.min(u*o.amt, 1-o.floor);
+    case "plateau":return o.amt*(1-Math.exp(-o.tau*u));
+    case "plateau-bounce": {
+      const t = o.amt*(1-Math.exp(-o.tau*u));
+      // Real objects catch bounce light on the far side; lift the last ~22%.
+      const lift = u>0.78 ? ((u-0.78)/0.22)*o.bounce : 0;
+      return Math.max(0, t-lift);
+    }
+  }
+  return 0;
+}
+const sliceColor=(i,n,o)=> i===0 ? "#e17956" : rgb(mix(BASE, o.tint, ramp(i,n,o)));
+
+function sprite(px, fill, withEyes) {
+  return `<svg width="${(17*px).toFixed(1)}" height="${(11.9*px).toFixed(1)}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">`
+    + `<g fill="${fill}">${SOLIDS.map(rect).join("")}</g>`
+    + (withEyes ? `<g class="eyes" fill="#111">${EYES.map(rect).join("")}</g>` : "") + `</svg>`;
+}
+function slab(px, n, step, o) {
+  let out="";
+  for (let i=n-1; i>=0; i--)
+    out += `<div class="sl" style="transform:translateZ(${(-i*step).toFixed(2)}px)">`
+         + `<span class="clawd">${sprite(px, sliceColor(i,n,o), i===0)}</span></div>`;
+  return `<div class="slab" style="width:${17*px}px;height:${11.9*px}px">${out}</div>`;
+}
+function rampStrip(n, o) {
+  let s=""; for (let i=0;i<n;i++) s+=`<i style="background:${sliceColor(i,n,o)}"></i>`;
+  return s;
+}
+
+const BIG=7.6, T5={ n:64, step:1.05 };          // T5 proportions, sized for a 2-up stage
+// NOTE the leading '#': hex2rgb slices from index 1. Without it the tint parses
+// as (211,50,0) — a hot red-orange, which makes the "shadow" brighter than the
+// body instead of darker.
+const TINT_WARM = hex2rgb("#7d3320"), TINT_BLACK = [0,0,0];
+
+const MODELS = [
+  { id:"S0", name:"Current — linear to black", tag:"t-bad", cls:"bad",
+    o:{ curve:"linear", amt:.74, tint:TINT_BLACK },
+    axis:"linear · amt .74 · tint #000",
+    note:"The problem. Back slice lands at rgb(58,31,22) — effectively black — and because the ramp never flattens, the turning flank is a gradient fading into a void instead of a side face." },
+  { id:"S1", name:"Linear, gentler", tag:"t-mid",
+    o:{ curve:"linear", amt:.38, tint:TINT_BLACK },
+    axis:"linear · amt .38 · tint #000",
+    note:"Just turning the number down. The back is no longer black, but the flank is still a gradient — it reads as a soft blur rather than a surface. Fixes the symptom, not the cause." },
+  { id:"S2", name:"Floor clamp", tag:"t-mid",
+    o:{ curve:"floor", amt:.9, floor:.55, tint:TINT_BLACK },
+    axis:"linear + floor .55 · tint #000",
+    note:"Darkens quickly then hard-stops at 55% brightness. The flank does flatten, but the clamp point is a visible edge — a band where the shading abruptly stops." },
+  { id:"S3", name:"Plateau", tag:"t-ok",
+    o:{ curve:"plateau", amt:.55, tau:6, tint:TINT_BLACK },
+    axis:"plateau · amt .55 · τ 6 · tint #000",
+    note:"Exponential settle: dark within a few slices, then steady. This is the fix for the flank — it now reads as one flat side face. Still slightly grey because the tint is black." },
+  { id:"S4", name:"Warm shadow", tag:"t-ok",
+    o:{ curve:"plateau", amt:.55, tau:6, tint:TINT_WARM },
+    axis:"plateau · amt .55 · τ 6 · tint #7d3320",
+    note:"Same curve, but shadow mixes toward a warm brown-red rather than black. The side keeps its hue and Clawd stays one material instead of an orange face glued to a grey block." },
+  { id:"S5", name:"Warm + back bounce", tag:"t-ok", cls:"pick",
+    o:{ curve:"plateau-bounce", amt:.58, tau:6, bounce:.18, tint:TINT_WARM },
+    axis:"plateau+bounce · amt .58 · τ 6 · bounce .18",
+    note:"Adds bounce light on the rearmost slices, the way a real object catches light off whatever is behind it. Stops the far edge from going dead and reads as the most solid of the set. My pick." },
+];
+
+document.getElementById("models").innerHTML = MODELS.map(m => `
+  <div class="card ${m.cls||""}">
+    <h3><span class="id">${m.id}</span>${m.name}<span class="tag ${m.tag}">${
+      m.tag==="t-bad"?"broken":m.tag==="t-mid"?"partial":"good"}</span></h3>
+    <div class="stages">
+      <div class="stage held">${slab(BIG,T5.n,T5.step,m.o)}<span class="cap">held 46°</span></div>
+      <div class="stage live">${slab(BIG,T5.n,T5.step,m.o)}<span class="cap">turning</span></div>
+    </div>
+    <div class="ramp">${rampStrip(T5.n, m.o)}</div>
+    <div class="axis">${m.axis}</div>
+    <p class="note">${m.note}</p>
+  </div>`).join("");
+
+// ------------------------------- live dial ---------------------------------
+const $=id=>document.getElementById(id);
+const IN={curve:$("c-curve"),amt:$("c-amt"),tau:$("c-tau"),floor:$("c-floor"),
+          bounce:$("c-bounce"),tint:$("c-tint"),ang:$("c-ang")};
+
+function draw() {
+  const o={ curve:IN.curve.value, amt:+IN.amt.value, tau:+IN.tau.value,
+            floor:+IN.floor.value, bounce:+IN.bounce.value, tint:hex2rgb(IN.tint.value) };
+  $("v-amt").textContent=o.amt.toFixed(2); $("v-tau").textContent=o.tau.toFixed(1);
+  $("v-floor").textContent=o.floor.toFixed(2); $("v-bounce").textContent=o.bounce.toFixed(2);
+  $("v-ang").textContent=IN.ang.value;
+
+  $("live-held").innerHTML=slab(BIG,T5.n,T5.step,o);
+  $("live-turn").innerHTML=slab(BIG,T5.n,T5.step,o);
+  $("live-held").querySelector(".slab").style.transform=`rotateX(-8deg) rotateY(${IN.ang.value}deg)`;
+  $("live-turn").querySelector(".slab").style.animation="cv-turn 5s ease-in-out infinite";
+  $("live-ramp").innerHTML=rampStrip(T5.n,o);
+
+  // Where the flat side face begins: the first slice whose colour is within 3
+  // RGB units of the back slice. Measured in colour, not in ramp units — a
+  // ramp can still be climbing numerically while being visually settled.
+  const t=i=>ramp(i,T5.n,o);
+  const back=mix(BASE,o.tint,t(T5.n-1));
+  const near=i=>mix(BASE,o.tint,t(i)).every((v,k)=>Math.abs(v-back[k])<=3);
+  let settle=T5.n-1;
+  for (let i=1;i<T5.n;i++) if (near(i)) { settle=i; break; }
+  const lum=(0.2126*back[0]+0.7152*back[1]+0.0722*back[2])/255;
+  $("readout").innerHTML =
+    `back slice   ${rgb(back)}\n`
+  + `back lum     ${(lum*100).toFixed(0)}%  ${lum<0.12?"— too dark":lum>0.55?"— too bright":"— readable"}\n`
+  + `flat from    slice ${settle} of ${T5.n}  ${
+       settle<T5.n*0.28 ? "— side face reads flat"
+     : settle<T5.n*0.55 ? "— mostly flat, slight falloff"
+     : "— still a gradient"}\n`
+  + `front slice  rgb(225,121,86) locked`;
+}
+Object.values(IN).forEach(el=>el.addEventListener("input",draw));
+draw();
+</script>

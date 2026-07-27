@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clawdometer · Usage Panel — 20 more (series Z)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --font-sans:"Hanken Grotesk",-apple-system,"Segoe UI",sans-serif;
+    --font-serif:"Newsreader",Georgia,serif;
+    --font-mono:"JetBrains Mono",ui-monospace,"Courier New",monospace;
+    --paper:#F0EEE6; --paper-2:#FAF9F5; --paper-3:#E7E1D3;
+    --ink:#141413; --ink-soft:#3D3B36; --muted:#6E6A60; --line:#E0DACB;
+    --clawd:#e17956;
+    /* Claude Code warm-charcoal dark (matches clawd-skins-orange.html) */
+    --cc-panel:#1e1e1c; --cc-card:#30302d; --cc-line:#3a3a36;
+    --red:#e5484d; --yel:#f59e0b; --blu:#3f7fbf;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font:14px/1.5 var(--font-sans)}
+  body{padding:40px 26px 96px}
+  header{max-width:1360px;margin:0 auto 30px}
+  h1{font-family:var(--font-serif);font-size:30px;font-weight:500;letter-spacing:-.2px}
+  h1 span{color:var(--muted);font-size:17px;font-weight:400}
+  .sub{color:var(--ink-soft);font-size:13.5px;margin-top:9px;max-width:940px;line-height:1.6}
+  .legend{color:var(--muted);font-size:12px;margin-top:11px}
+  .legend code{background:var(--paper-3);padding:1px 6px;border-radius:5px;color:var(--ink-soft);font-family:var(--font-mono);font-size:11px}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--clawd);vertical-align:-1px;margin-right:5px}
+  .band{max-width:1360px;margin:34px auto 16px;display:flex;align-items:center;gap:12px}
+  .band h2{font-family:var(--font-serif);font-weight:500;font-size:19px;white-space:nowrap}
+  .band .rule{flex:1;height:1px;background:var(--line)}
+  .band .tag{font:700 10px var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .grid{max-width:1360px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  figure.skin{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px;position:relative}
+  figure.skin figcaption{order:2;color:var(--ink-soft);font-size:12px;line-height:1.5}
+  figure.skin figcaption b{color:var(--ink);font-weight:700;font-size:13px}
+  .tiles{order:1;display:flex;align-items:flex-end;gap:16px;justify-content:center;background:#161615;border-radius:12px;padding:18px 12px;min-height:176px;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.05) 1px,transparent 0);background-size:14px 14px}
+  .tile{position:relative;overflow:hidden;border-radius:14px;flex:none;font-family:var(--font-sans);font-variant-numeric:tabular-nums;background:var(--cc-panel);box-shadow:0 6px 18px rgba(40,33,20,.16);border:1px solid rgba(20,20,19,.06);color:#e7e4d9}
+  .tile.full{width:200px;height:136px}
+  .tile.compact{width:120px;height:106px}
+  .in{position:absolute;inset:0;padding:10px 12px;display:flex;flex-direction:column}
+  .compact .in{padding:8px 9px}
+
+  /* mascot — LOCKED orange */
+  .clawd{display:inline-block;line-height:0;color:#e17956 !important}
+  .clawd svg{display:block;image-rendering:pixelated;overflow:visible}
+  .clawd .eyes{transform-box:fill-box;transform-origin:center;animation:gv-blink 4.6s infinite;animation-delay:calc(var(--bi,0)*0.31s)}
+  @keyframes gv-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+  .clawd .g-all,.clawd .g-eyes{transform-box:view-box}
+  body.working .clawd .g-all{transform-origin:50px 64.8px;animation:cv-bob .7s ease-in-out infinite;animation-delay:calc(var(--bi,0)*0.09s)}
+  body.working .clawd .g-eyes{animation:cv-scan 3.2s ease-in-out infinite;animation-delay:calc(var(--bi,0)*0.13s)}
+  @keyframes cv-bob{0%,100%{transform:translateY(0) scaleY(1)}35%{transform:translateY(-2.6px) scaleY(1.015)}70%{transform:translateY(.4px) scaleY(.975)}}
+  @keyframes cv-scan{0%,18%,100%{transform:translateX(0)}28%,46%{transform:translateX(-3.2px)}58%,80%{transform:translateX(3.2px)}}
+
+  /* shared header: mascot · centered serif Usage · reset */
+  .zhd{position:relative;display:flex;align-items:center;gap:6px;min-height:14px;margin-bottom:8px}
+  .compact .zhd{min-height:12px;margin-bottom:6px}
+  .ttl{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-family:var(--font-serif);font-weight:500;color:#f2f0e8;line-height:1;font-size:14px}
+  .compact .ttl{font-size:11px}
+  .rst-top{position:absolute;right:0;top:50%;transform:translateY(-50%);font-family:var(--font-sans);font-weight:500;color:#9a958b;line-height:1;white-space:nowrap;font-size:9px}
+  .compact .rst-top{font-size:8px}
+  .pct{font-weight:800;color:#f4f2ea;letter-spacing:-.3px;line-height:1}
+  .lbl{font-weight:600;color:#a9a59a}
+  .body{flex:1;position:relative}
+
+  /* build status */
+  .st{position:absolute;top:12px;right:12px;z-index:2;font:800 8px var(--font-sans);letter-spacing:1.1px;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:#7a5a2a;color:#fdf3e7}
+
+  /* ══════════════════ Z1 · Sextant ══════════════════ */
+  [data-skin="z1"] .arc{display:flex;justify-content:space-around;align-items:flex-end;flex:1;padding-bottom:2px}
+  [data-skin="z1"] .col{display:flex;flex-direction:column;align-items:center;gap:1px}
+  [data-skin="z1"] .gg{width:52px;height:auto;overflow:visible}
+  [data-skin="z1"] .gg .tk{fill:none;stroke:#2f2e2a;stroke-width:4;stroke-linecap:round}
+  [data-skin="z1"] .gg .fl{fill:none;stroke-width:4;stroke-linecap:round}
+  [data-skin="z1"] .gg .tick{stroke:#5b5a54;stroke-width:1}
+  [data-skin="z1"] .gv{font:800 11px var(--font-sans);color:#f4f2ea;margin-top:-2px}
+  [data-skin="z1"] .col .lbl{font-size:8px}
+  [data-skin="z1"] .compact .gg{width:33px}
+  [data-skin="z1"] .compact .gv{font-size:8px}
+  [data-skin="z1"] .compact .col .lbl{font-size:7px}
+
+  /* ══════════════════ Z2 · Escalator ══════════════════ */
+  [data-skin="z2"] .esc{display:flex;justify-content:space-around;align-items:flex-end;flex:1}
+  [data-skin="z2"] .col{display:flex;flex-direction:column;align-items:center;gap:3px}
+  [data-skin="z2"] .stair{display:flex;flex-direction:column-reverse;gap:2px;height:56px;justify-content:flex-start}
+  [data-skin="z2"] .stair i{width:14px;height:5px;border-radius:1px;background:#2c2b28;align-self:flex-start;position:relative;left:calc(var(--s)*2px)}
+  [data-skin="z2"] .stair i.on{background:var(--u)}
+  [data-skin="z2"] .col .lbl{font-size:8px}[data-skin="z2"] .col .pct{font-size:10px}
+  [data-skin="z2"] .compact .stair{height:40px}
+  [data-skin="z2"] .compact .stair i{width:10px;height:4px}
+  [data-skin="z2"] .compact .col .lbl{font-size:7px}[data-skin="z2"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z3 · Rain Gauge ══════════════════ */
+  [data-skin="z3"] .rg{display:flex;justify-content:space-around;align-items:flex-end;flex:1;padding-bottom:2px}
+  [data-skin="z3"] .col{display:flex;flex-direction:column;align-items:center;gap:4px}
+  [data-skin="z3"] .cyl{position:relative;width:16px;height:60px;border:1.5px solid #4a4842;border-top:none;border-radius:0 0 5px 5px;background:repeating-linear-gradient(to top,transparent 0 9px,#3a3a34 9px 10px);overflow:hidden}
+  [data-skin="z3"] .cyl .w{position:absolute;left:0;right:0;bottom:0;height:calc(var(--p)*1%);background:var(--u);opacity:.9}
+  [data-skin="z3"] .cyl .w::before{content:"";position:absolute;left:0;right:0;top:-2px;height:3px;border-radius:50%;background:#fff;opacity:.35}
+  [data-skin="z3"] .col .lbl{font-size:8px}[data-skin="z3"] .col .pct{font-size:10px}
+  [data-skin="z3"] .compact .cyl{height:42px;width:13px}
+  [data-skin="z3"] .compact .col .lbl{font-size:7px}[data-skin="z3"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z4 · Air Hockey ══════════════════ */
+  [data-skin="z4"] .rows{display:flex;flex-direction:column;gap:9px;flex:1;justify-content:center}
+  [data-skin="z4"] .r{display:flex;align-items:center;gap:7px}
+  [data-skin="z4"] .r .lbl{width:44px;font-size:8.5px}
+  [data-skin="z4"] .lane{flex:1;height:12px;border-radius:3px;background:#17302f;border:1px solid #2b4a49;position:relative;box-shadow:inset 0 0 6px rgba(90,220,210,.08)}
+  [data-skin="z4"] .lane::after{content:"";position:absolute;right:2px;top:1px;bottom:1px;width:2px;border-radius:2px;background:#5adcd2;opacity:.4}
+  [data-skin="z4"] .puck{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;background:var(--u);left:calc(var(--p)*1% - 4px);transform:translateY(-50%);box-shadow:0 0 6px var(--u)}
+  [data-skin="z4"] .r .pct{width:26px;text-align:right;font-size:10px}
+  [data-skin="z4"] .compact .r .lbl{width:12px;font-size:8px}
+  [data-skin="z4"] .compact .lane{height:9px}[data-skin="z4"] .compact .puck{width:7px;height:7px}
+  [data-skin="z4"] .compact .r .pct{width:24px;font-size:9px}
+
+  /* ══════════════════ Z5 · Slide Rule ══════════════════ */
+  [data-skin="z5"] .rows{display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center}
+  [data-skin="z5"] .r{display:flex;align-items:center;gap:7px}
+  [data-skin="z5"] .r .lbl{width:44px;font-size:8.5px}
+  [data-skin="z5"] .rule{flex:1;height:14px;border-radius:2px;background:linear-gradient(#ece7d8,#d8d2bf);position:relative;overflow:hidden;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+  [data-skin="z5"] .rule .ticks{position:absolute;inset:0;background:repeating-linear-gradient(90deg,#8a8470 0 1px,transparent 1px 10px)}
+  [data-skin="z5"] .cur{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--u);left:calc(var(--p)*1%);box-shadow:0 0 4px rgba(0,0,0,.5)}
+  [data-skin="z5"] .cur::after{content:"";position:absolute;left:-4px;right:-4px;top:0;bottom:0;background:var(--u);opacity:.18}
+  [data-skin="z5"] .r .pct{width:26px;text-align:right;font-size:10px}
+  [data-skin="z5"] .compact .r .lbl{width:12px;font-size:8px}
+  [data-skin="z5"] .compact .rule{height:11px}
+  [data-skin="z5"] .compact .r .pct{width:24px;font-size:9px}
+
+  /* ══════════════════ Z6 · Rolodex ══════════════════ */
+  [data-skin="z6"] .rolo{display:flex;justify-content:space-around;align-items:center;flex:1;position:relative}
+  [data-skin="z6"] .rolo::before{content:"";position:absolute;left:8%;right:8%;top:50%;height:2px;background:#4a4842;border-radius:2px}
+  [data-skin="z6"] .card{position:relative;width:52px;height:60px;border-radius:6px 6px 8px 8px;background:linear-gradient(#3a3a35,#2a2a26);border:1px solid #47463f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 4px 8px rgba(0,0,0,.35)}
+  [data-skin="z6"] .card::before{content:"";position:absolute;top:-5px;width:8px;height:8px;border-radius:50%;background:#191917;border:1.5px solid #4a4842}
+  [data-skin="z6"] .card .pct{font-size:17px;color:var(--u)}
+  [data-skin="z6"] .card .lbl{font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
+  [data-skin="z6"] .compact .card{width:32px;height:40px}
+  [data-skin="z6"] .compact .card .pct{font-size:12px}
+  [data-skin="z6"] .compact .card .lbl{font-size:6px}
+
+  /* ══════════════════ Z7 · Thermometer ══════════════════ */
+  [data-skin="z7"] .th{display:flex;justify-content:space-around;align-items:flex-end;flex:1}
+  [data-skin="z7"] .col{display:flex;flex-direction:column;align-items:center;gap:3px}
+  [data-skin="z7"] .therm{position:relative;width:10px;height:58px;border-radius:6px 6px 0 0;background:#2c2b28;border:1.5px solid #4a4842}
+  [data-skin="z7"] .therm .m{position:absolute;left:1px;right:1px;bottom:1px;border-radius:5px 5px 0 0;height:calc(6px + var(--p)*0.5%);background:var(--u)}
+  [data-skin="z7"] .therm::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:var(--u);border:1.5px solid #4a4842}
+  [data-skin="z7"] .col .lbl{font-size:8px;margin-bottom:5px}[data-skin="z7"] .col .pct{font-size:10px}
+  [data-skin="z7"] .compact .therm{height:40px}
+  [data-skin="z7"] .compact .col .lbl{font-size:7px}[data-skin="z7"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z8 · Baggage Carousel ══════════════════ */
+  [data-skin="z8"] .car{position:relative;flex:1;margin:2px 6px}
+  [data-skin="z8"] .belt{position:absolute;inset:6px 0;border-radius:50%;border:9px solid #26251f;background:#1a1a17;box-shadow:inset 0 0 0 1px #3a3a34}
+  [data-skin="z8"] .bag{position:absolute;width:20px;height:14px;border-radius:3px;background:var(--u);left:50%;top:50%;font:800 8px var(--font-sans);color:#141413;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.4)}
+  [data-skin="z8"] .compact .bag{width:15px;height:11px;font-size:7px}
+
+  /* ══════════════════ Z9 · Cash Drawer ══════════════════ */
+  [data-skin="z9"] .draw{display:flex;justify-content:space-around;align-items:flex-end;flex:1;padding-bottom:2px}
+  [data-skin="z9"] .col{display:flex;flex-direction:column;align-items:center;gap:4px}
+  [data-skin="z9"] .well{position:relative;width:22px;height:58px;border:1.5px solid #4a4842;border-radius:3px;background:#211f1b;display:flex;flex-direction:column-reverse;padding:2px;gap:2px;overflow:hidden}
+  [data-skin="z9"] .well i{height:4px;border-radius:2px;background:var(--u);opacity:.9;box-shadow:0 1px 0 rgba(0,0,0,.4)}
+  [data-skin="z9"] .col .lbl{font-size:8px}[data-skin="z9"] .col .pct{font-size:10px}
+  [data-skin="z9"] .compact .well{height:40px;width:18px}
+  [data-skin="z9"] .compact .col .lbl{font-size:7px}[data-skin="z9"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z10 · Cuckoo Clock ══════════════════ */
+  [data-skin="z10"] .ck{display:flex;justify-content:space-around;align-items:flex-start;flex:1}
+  [data-skin="z10"] .col{display:flex;flex-direction:column;align-items:center}
+  [data-skin="z10"] .chain{width:2px;background:repeating-linear-gradient(#8a8470 0 3px,transparent 3px 5px);height:calc(6px + var(--p)*0.44%)}
+  [data-skin="z10"] .wt{width:14px;height:18px;border-radius:4px 4px 7px 7px;background:linear-gradient(var(--u),#2a2a26);border:1px solid #4a4842}
+  [data-skin="z10"] .col .lbl{font-size:8px;margin-top:3px}[data-skin="z10"] .col .pct{font-size:10px}
+  [data-skin="z10"] .compact .chain{height:calc(4px + var(--p)*0.28%)}
+  [data-skin="z10"] .compact .wt{width:11px;height:14px}
+  [data-skin="z10"] .compact .col .lbl{font-size:7px}[data-skin="z10"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z11 · Reel-to-Reel ══════════════════ */
+  [data-skin="z11"] .rr{display:flex;justify-content:space-around;align-items:center;flex:1}
+  [data-skin="z11"] .col{display:flex;flex-direction:column;align-items:center;gap:3px}
+  [data-skin="z11"] .rwrap{position:relative;width:46px;height:46px}
+  /* wound tape pack: thick outer band = %, dark flange underneath */
+  [data-skin="z11"] .reel{position:absolute;inset:0;border-radius:50%;background:#201f1c;box-shadow:inset 0 0 0 1px #3a3a34}
+  [data-skin="z11"] .reel::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--u) calc(var(--p)*1%),#2c2b28 0);-webkit-mask:radial-gradient(circle,transparent 40%,#000 41% 96%,transparent 97%);mask:radial-gradient(circle,transparent 40%,#000 41% 96%,transparent 97%)}
+  /* three-hole reel hub in the middle */
+  [data-skin="z11"] .hub{position:absolute;left:50%;top:50%;width:34%;height:34%;transform:translate(-50%,-50%);border-radius:50%;background:#111}
+  [data-skin="z11"] .hub i{position:absolute;left:50%;top:50%;width:22%;height:22%;border-radius:50%;background:var(--u)}
+  [data-skin="z11"] .hub i:nth-child(1){transform:translate(-50%,-50%) translateY(-140%)}
+  [data-skin="z11"] .hub i:nth-child(2){transform:translate(-50%,-50%) translate(120%,90%)}
+  [data-skin="z11"] .hub i:nth-child(3){transform:translate(-50%,-50%) translate(-120%,90%)}
+  [data-skin="z11"] .col .lbl{font-size:8px}[data-skin="z11"] .col .pct{font-size:10px}
+  [data-skin="z11"] .compact .rwrap{width:30px;height:30px}
+  [data-skin="z11"] .compact .col .lbl{font-size:7px}
+
+  /* ══════════════════ Z12 · Xylophone ══════════════════ */
+  [data-skin="z12"] .xy{display:flex;flex-direction:column;gap:7px;flex:1;justify-content:center}
+  [data-skin="z12"] .r{display:flex;align-items:center;gap:7px}
+  [data-skin="z12"] .r .lbl{width:44px;font-size:8.5px}
+  [data-skin="z12"] .barw{flex:1;position:relative;height:12px}
+  [data-skin="z12"] .key{height:12px;border-radius:3px;width:calc(var(--p)*1%);background:linear-gradient(var(--u),color-mix(in srgb,var(--u) 65%,#000));box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+  [data-skin="z12"] .key::before,[data-skin="z12"] .key::after{content:"";position:absolute;width:4px;height:4px;border-radius:50%;background:#141413;top:4px}
+  [data-skin="z12"] .key::before{left:4px}[data-skin="z12"] .key::after{right:auto;left:calc(var(--p)*1% - 8px)}
+  [data-skin="z12"] .r .pct{width:26px;text-align:right;font-size:10px}
+  [data-skin="z12"] .compact .r .lbl{width:12px;font-size:8px}
+  [data-skin="z12"] .compact .key,[data-skin="z12"] .compact .barw{height:9px}
+  [data-skin="z12"] .compact .r .pct{width:24px;font-size:9px}
+
+  /* ══════════════════ Z13 · Dipstick ══════════════════ */
+  [data-skin="z13"] .dp{display:flex;justify-content:space-around;align-items:flex-start;flex:1}
+  [data-skin="z13"] .col{display:flex;flex-direction:column;align-items:center;gap:4px}
+  [data-skin="z13"] .stick{position:relative;width:7px;height:60px;border-radius:4px;background:#4a4842}
+  [data-skin="z13"] .stick .oil{position:absolute;left:0;right:0;bottom:0;height:calc(var(--p)*1%);border-radius:4px;background:var(--u)}
+  [data-skin="z13"] .stick .hi,[data-skin="z13"] .stick .lo{position:absolute;left:-4px;width:15px;height:1px;background:#7a766c}
+  [data-skin="z13"] .stick .hi{bottom:80%}[data-skin="z13"] .stick .lo{bottom:20%}
+  [data-skin="z13"] .col .lbl{font-size:8px}[data-skin="z13"] .col .pct{font-size:10px}
+  [data-skin="z13"] .compact .stick{height:42px}
+  [data-skin="z13"] .compact .col .lbl{font-size:7px}[data-skin="z13"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z14 · Fish Ladder ══════════════════ */
+  [data-skin="z14"] .fl{display:flex;justify-content:space-around;align-items:flex-end;flex:1}
+  [data-skin="z14"] .col{display:flex;flex-direction:column-reverse;align-items:center;gap:2px}
+  [data-skin="z14"] .pool{width:16px;height:9px;border-radius:2px;background:#233b52;border:1px solid #2f5273;position:relative}
+  [data-skin="z14"] .pool.wet{background:var(--u)}
+  [data-skin="z14"] .pool.fish::after{content:"";position:absolute;left:3px;top:2px;width:8px;height:4px;border-radius:50% 50% 50% 0;background:#f4f2ea;transform:rotate(-20deg)}
+  [data-skin="z14"] .lbl{font-size:8px;margin-top:3px}[data-skin="z14"] .pct{font-size:10px}
+  [data-skin="z14"] .compact .pool{width:12px;height:7px}
+  [data-skin="z14"] .compact .lbl{font-size:7px}[data-skin="z14"] .compact .pct{font-size:9px}
+
+  /* ══════════════════ Z15 · Hanging Scale ══════════════════ */
+  [data-skin="z15"] .hs{display:flex;justify-content:space-around;align-items:flex-start;flex:1}
+  [data-skin="z15"] .col{display:flex;flex-direction:column;align-items:center;gap:3px}
+  [data-skin="z15"] .dial{position:relative;width:40px;height:40px;border-radius:50%;background:#211f1b;border:2px solid #4a4842}
+  [data-skin="z15"] .dial::before{content:"";position:absolute;inset:3px;border-radius:50%;background:conic-gradient(from -135deg,#333 0 270deg,transparent 0)}
+  [data-skin="z15"] .needle{position:absolute;left:50%;top:50%;width:2px;height:15px;background:var(--u);transform-origin:bottom center;transform:translate(-50%,-100%) rotate(calc(-135deg + var(--p)*2.7deg));border-radius:2px}
+  [data-skin="z15"] .dial .pin{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:var(--u);transform:translate(-50%,-50%)}
+  [data-skin="z15"] .hook{width:2px;height:8px;background:#8a8470}
+  [data-skin="z15"] .col .lbl{font-size:8px}[data-skin="z15"] .col .pct{font-size:10px}
+  [data-skin="z15"] .compact .dial{width:28px;height:28px}
+  [data-skin="z15"] .compact .needle{height:10px}
+  [data-skin="z15"] .compact .col .lbl{font-size:7px}[data-skin="z15"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z16 · Wind Sock ══════════════════ */
+  [data-skin="z16"] .ws{display:flex;justify-content:space-around;align-items:flex-start;flex:1;padding-top:2px}
+  [data-skin="z16"] .col{display:flex;flex-direction:column;align-items:center;gap:4px}
+  [data-skin="z16"] .pole{position:relative;width:2px;height:56px;background:#4a4842}
+  [data-skin="z16"] .sock{position:absolute;left:1px;top:2px;height:12px;transform-origin:left center;transform:rotate(calc(90deg - var(--p)*0.9deg));background:repeating-linear-gradient(90deg,var(--u) 0 6px,#e7e4d9 6px 12px);width:calc(14px + var(--p)*0.18%);border-radius:0 3px 3px 0;clip-path:polygon(0 0,100% 22%,100% 78%,0 100%)}
+  [data-skin="z16"] .col .lbl{font-size:8px}[data-skin="z16"] .col .pct{font-size:10px}
+  [data-skin="z16"] .compact .pole{height:40px}
+  [data-skin="z16"] .compact .col .lbl{font-size:7px}[data-skin="z16"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z17 · Reactor Rods ══════════════════ */
+  [data-skin="z17"] .rx{display:flex;justify-content:space-around;align-items:flex-start;flex:1}
+  [data-skin="z17"] .col{display:flex;flex-direction:column;align-items:center;gap:3px}
+  [data-skin="z17"] .chan{position:relative;width:16px;height:60px;border-radius:3px;background:radial-gradient(120% 60% at 50% 100%,var(--u),#1a1a17 70%);border:1px solid #3a3a34;overflow:hidden}
+  [data-skin="z17"] .rod{position:absolute;left:4px;right:4px;top:0;height:calc(100% - var(--p)*1%);background:#5a5850;border-radius:0 0 3px 3px;box-shadow:0 2px 3px rgba(0,0,0,.5)}
+  [data-skin="z17"] .col .lbl{font-size:8px}[data-skin="z17"] .col .pct{font-size:10px}
+  [data-skin="z17"] .compact .chan{height:42px;width:13px}
+  [data-skin="z17"] .compact .col .lbl{font-size:7px}[data-skin="z17"] .compact .col .pct{font-size:9px}
+
+  /* ══════════════════ Z18 · Flood Barrier ══════════════════ */
+  [data-skin="z18"] .fb{display:flex;justify-content:space-around;align-items:flex-end;flex:1;padding-bottom:2px}
+  [data-skin="z18"] .col{display:flex;flex-direction:column-reverse;align-items:center;gap:2px}
+  [data-skin="z18"] .bag{width:22px;height:6px;border-radius:4px;background:linear-gradient(var(--u),color-mix(in srgb,var(--u) 60%,#000));box-shadow:inset 0 -1px 0 rgba(0,0,0,.3)}
+  [data-skin="z18"] .bag:nth-child(even){width:19px}
+  [data-skin="z18"] .lbl{font-size:8px;margin-top:4px}[data-skin="z18"] .pct{font-size:10px}
+  [data-skin="z18"] .compact .bag{width:16px;height:5px}
+  [data-skin="z18"] .compact .bag:nth-child(even){width:13px}
+  [data-skin="z18"] .compact .lbl{font-size:7px}[data-skin="z18"] .compact .pct{font-size:9px}
+
+  /* ══════════════════ Z19 · Tug of War ══════════════════ */
+  [data-skin="z19"] .rows{display:flex;flex-direction:column;gap:11px;flex:1;justify-content:center}
+  [data-skin="z19"] .r{display:flex;align-items:center;gap:7px}
+  [data-skin="z19"] .r .lbl{width:44px;font-size:8.5px}
+  [data-skin="z19"] .rope{flex:1;height:10px;position:relative}
+  [data-skin="z19"] .rope::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;transform:translateY(-50%);border-radius:3px;background:repeating-linear-gradient(45deg,#b79a6a 0 3px,#8a744a 3px 6px)}
+  [data-skin="z19"] .rope::after{content:"";position:absolute;left:50%;top:50%;width:1.5px;height:12px;background:#e5484d;transform:translate(-50%,-50%)}
+  [data-skin="z19"] .knot{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;background:var(--u);left:calc(var(--p)*1% - 4px);transform:translateY(-50%);box-shadow:0 0 5px var(--u)}
+  [data-skin="z19"] .r .pct{width:26px;text-align:right;font-size:10px}
+  [data-skin="z19"] .compact .r .lbl{width:12px;font-size:8px}
+  [data-skin="z19"] .compact .r .pct{width:24px;font-size:9px}
+
+  /* ══════════════════ Z20 · Nixie Tubes ══════════════════ */
+  [data-skin="z20"] .nx{display:flex;justify-content:space-around;align-items:center;flex:1}
+  [data-skin="z20"] .col{display:flex;flex-direction:column;align-items:center;gap:5px}
+  [data-skin="z20"] .tube{position:relative;width:44px;height:56px;border-radius:8px;background:radial-gradient(60% 50% at 50% 45%,rgba(230,120,60,.22),rgba(20,20,18,.6));border:1px solid #3a3a34;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 12px rgba(230,120,60,.15)}
+  [data-skin="z20"] .tube .n{font:800 22px var(--font-mono);color:#ff9d5c;text-shadow:0 0 6px rgba(255,140,60,.8),0 0 12px rgba(255,120,40,.5)}
+  [data-skin="z20"] .tube::before{content:"";position:absolute;top:-3px;left:14px;right:14px;height:5px;border-radius:3px;background:#26251f;border:1px solid #3a3a34}
+  [data-skin="z20"] .col .lbl{font-size:8px;text-transform:uppercase;letter-spacing:.6px}
+  [data-skin="z20"] .compact .tube{width:30px;height:38px}
+  [data-skin="z20"] .compact .tube .n{font-size:15px}
+  [data-skin="z20"] .compact .col .lbl{font-size:6.5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Usage Panel — 20 more <span>· series Z, no repeats</span></h1>
+  <p class="sub">Twenty fresh desktop-sized concepts for the <b>Current · Weekly · Fable</b> usage panel, each shown at the true HUD footprints — <b>full 200×136</b> and <b>compact 120×106</b>. Every mechanism is checked against the ~240 existing skins across the U / S / T / V / W / X / Y series; none of these repeat a metaphor already drawn. Clawd keeps its locked orange <code>#e17956</code>; only its eyes blink (and here it runs the working bob).</p>
+  <p class="legend"><span class="dot"></span>payload <code>Current 94%</code> (red) · <code>Weekly 82%</code> (yellow) · <code>Fable 18%</code> (blue) · <code>reset 2h 47m</code> — spread across the three threshold colors so each shows a hot / warm / cool state at once.</p>
+</header>
+
+<div class="band"><h2>Usage Panel · desktop-sized</h2><span class="tag">20 more · series Z · no repeats</span><span class="rule"></span></div>
+<div class="grid">
+
+<!-- ══ Z1 · Sextant ══ -->
+<figure class="skin" data-skin="z1">
+  <span class="st">Concept</span>
+  <figcaption><b>Z1 · Sextant</b> — three graduated brass quarter-arcs, an index arm sweeping each scale to its reading. Nautical, precise, glanceable.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="arc">
+        <div class="col"><svg class="gg" viewBox="0 0 44 26"><path class="tk" pathLength="100" d="M4 24 A18 18 0 0 1 40 24"/><path class="fl" pathLength="100" stroke-dasharray="94 100" style="stroke:var(--red)" d="M4 24 A18 18 0 0 1 40 24"/></svg><span class="gv">94</span><span class="lbl">Current</span></div>
+        <div class="col"><svg class="gg" viewBox="0 0 44 26"><path class="tk" pathLength="100" d="M4 24 A18 18 0 0 1 40 24"/><path class="fl" pathLength="100" stroke-dasharray="82 100" style="stroke:var(--yel)" d="M4 24 A18 18 0 0 1 40 24"/></svg><span class="gv">82</span><span class="lbl">Weekly</span></div>
+        <div class="col"><svg class="gg" viewBox="0 0 44 26"><path class="tk" pathLength="100" d="M4 24 A18 18 0 0 1 40 24"/><path class="fl" pathLength="100" stroke-dasharray="18 100" style="stroke:var(--blu)" d="M4 24 A18 18 0 0 1 40 24"/></svg><span class="gv">18</span><span class="lbl">Fable</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="arc">
+        <div class="col"><svg class="gg" viewBox="0 0 44 26"><path class="tk" pathLength="100" d="M4 24 A18 18 0 0 1 40 24"/><path class="fl" pathLength="100" stroke-dasharray="94 100" style="stroke:var(--red)" d="M4 24 A18 18 0 0 1 40 24"/></svg><span class="gv">94</span><span class="lbl">C</span></div>
+        <div class="col"><svg class="gg" viewBox="0 0 44 26"><path class="tk" pathLength="100" d="M4 24 A18 18 0 0 1 40 24"/><path class="fl" pathLength="100" stroke-dasharray="82 100" style="stroke:var(--yel)" d="M4 24 A18 18 0 0 1 40 24"/></svg><span class="gv">82</span><span class="lbl">W</span></div>
+        <div class="col"><svg class="gg" viewBox="0 0 44 26"><path class="tk" pathLength="100" d="M4 24 A18 18 0 0 1 40 24"/><path class="fl" pathLength="100" stroke-dasharray="18 100" style="stroke:var(--blu)" d="M4 24 A18 18 0 0 1 40 24"/></svg><span class="gv">18</span><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z2 · Escalator ══ -->
+<figure class="skin" data-skin="z2">
+  <span class="st">Concept</span>
+  <figcaption><b>Z2 · Escalator</b> — each limit is a rising flight of steps, lit from the bottom up. The higher the load, the further the climb.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="esc">
+        <div class="col"><div class="stair" data-p="94" style="--u:var(--red)"></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="stair" data-p="82" style="--u:var(--yel)"></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="stair" data-p="18" style="--u:var(--blu)"></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="esc">
+        <div class="col"><div class="stair" data-p="94" style="--u:var(--red)"></div><span class="lbl">C</span></div>
+        <div class="col"><div class="stair" data-p="82" style="--u:var(--yel)"></div><span class="lbl">W</span></div>
+        <div class="col"><div class="stair" data-p="18" style="--u:var(--blu)"></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z3 · Rain Gauge ══ -->
+<figure class="skin" data-skin="z3">
+  <span class="st">Concept</span>
+  <figcaption><b>Z3 · Rain Gauge</b> — three graduated measuring cylinders; usage fills each like collected rainfall, with a bright meniscus at the line.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rg">
+        <div class="col"><div class="cyl"><div class="w" style="--p:94"></div></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="cyl"><div class="w" style="--p:82"></div></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="cyl"><div class="w" style="--p:18"></div></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rg">
+        <div class="col"><div class="cyl"><div class="w" style="--p:94;background:var(--red)"></div></div><span class="lbl">C</span></div>
+        <div class="col"><div class="cyl"><div class="w" style="--p:82;background:var(--yel)"></div></div><span class="lbl">W</span></div>
+        <div class="col"><div class="cyl"><div class="w" style="--p:18;background:var(--blu)"></div></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z4 · Air Hockey ══ -->
+<figure class="skin" data-skin="z4">
+  <span class="st">Concept</span>
+  <figcaption><b>Z4 · Air Hockey</b> — three glowing lanes; the puck slides toward the goal as the load climbs. Playful, high-contrast on the dark table.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">Current</span><div class="lane"><div class="puck" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="lane"><div class="puck" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="lane"><div class="puck" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">C</span><div class="lane"><div class="puck" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="lane"><div class="puck" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="lane"><div class="puck" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z5 · Slide Rule ══ -->
+<figure class="skin" data-skin="z5">
+  <span class="st">Concept</span>
+  <figcaption><b>Z5 · Slide Rule</b> — engraved ivory scales with a colored hairline cursor parked at each reading. An analog-computer feel.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">Current</span><div class="rule"><div class="ticks"></div><div class="cur" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="rule"><div class="ticks"></div><div class="cur" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="rule"><div class="ticks"></div><div class="cur" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">C</span><div class="rule"><div class="ticks"></div><div class="cur" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="rule"><div class="ticks"></div><div class="cur" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="rule"><div class="ticks"></div><div class="cur" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z6 · Rolodex ══ -->
+<figure class="skin" data-skin="z6">
+  <span class="st">Concept</span>
+  <figcaption><b>Z6 · Rolodex</b> — three rotary-file cards on a spindle, each flipped to show its number big. Deskbound, tactile, easy to read.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rolo">
+        <div class="card"><span class="pct" style="--u:var(--red)">94</span><span class="lbl">Current</span></div>
+        <div class="card"><span class="pct" style="--u:var(--yel)">82</span><span class="lbl">Weekly</span></div>
+        <div class="card"><span class="pct" style="--u:var(--blu)">18</span><span class="lbl">Fable</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rolo">
+        <div class="card"><span class="pct" style="--u:var(--red)">94</span><span class="lbl">C</span></div>
+        <div class="card"><span class="pct" style="--u:var(--yel)">82</span><span class="lbl">W</span></div>
+        <div class="card"><span class="pct" style="--u:var(--blu)">18</span><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z7 · Thermometer ══ -->
+<figure class="skin" data-skin="z7">
+  <span class="st">Concept</span>
+  <figcaption><b>Z7 · Thermometer</b> — three mercury tubes with bulbs; the column rises with the load. Red current runs hot, blue fable barely warm.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="th">
+        <div class="col"><span class="lbl">Current</span><div class="therm" style="--u:var(--red)"><div class="m" style="--p:94"></div></div><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><span class="lbl">Weekly</span><div class="therm" style="--u:var(--yel)"><div class="m" style="--p:82"></div></div><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><span class="lbl">Fable</span><div class="therm" style="--u:var(--blu)"><div class="m" style="--p:18"></div></div><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="th">
+        <div class="col"><span class="lbl">C</span><div class="therm" style="--u:var(--red)"><div class="m" style="--p:94"></div></div></div>
+        <div class="col"><span class="lbl">W</span><div class="therm" style="--u:var(--yel)"><div class="m" style="--p:82"></div></div></div>
+        <div class="col"><span class="lbl">F</span><div class="therm" style="--u:var(--blu)"><div class="m" style="--p:18"></div></div></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z8 · Baggage Carousel ══ -->
+<figure class="skin" data-skin="z8">
+  <span class="st">Concept</span>
+  <figcaption><b>Z8 · Baggage Carousel</b> — a top-down belt loop; each metric is a numbered bag parked further round the carousel as it fills.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="car"><div class="belt"></div>
+        <div class="bag" data-p="94" style="--u:var(--red)">94</div>
+        <div class="bag" data-p="82" style="--u:var(--yel)">82</div>
+        <div class="bag" data-p="18" style="--u:var(--blu)">18</div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="car"><div class="belt"></div>
+        <div class="bag" data-p="94" style="--u:var(--red)">94</div>
+        <div class="bag" data-p="82" style="--u:var(--yel)">82</div>
+        <div class="bag" data-p="18" style="--u:var(--blu)">18</div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z9 · Cash Drawer ══ -->
+<figure class="skin" data-skin="z9">
+  <span class="st">Concept</span>
+  <figcaption><b>Z9 · Cash Drawer</b> — three coin wells stacking discs to the fill line, like a till counting up the day's take.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="draw">
+        <div class="col"><div class="well" data-p="94" style="--u:var(--red)"></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="well" data-p="82" style="--u:var(--yel)"></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="well" data-p="18" style="--u:var(--blu)"></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="draw">
+        <div class="col"><div class="well" data-p="94" style="--u:var(--red)"></div><span class="lbl">C</span></div>
+        <div class="col"><div class="well" data-p="82" style="--u:var(--yel)"></div><span class="lbl">W</span></div>
+        <div class="col"><div class="well" data-p="18" style="--u:var(--blu)"></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z10 · Cuckoo Clock ══ -->
+<figure class="skin" data-skin="z10">
+  <span class="st">Concept</span>
+  <figcaption><b>Z10 · Cuckoo Clock</b> — three chained pinecone weights; the heavier the load, the lower the weight has dropped on its chain.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="ck">
+        <div class="col"><div class="chain" style="--p:94"></div><div class="wt" style="--u:var(--red)"></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="chain" style="--p:82"></div><div class="wt" style="--u:var(--yel)"></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="chain" style="--p:18"></div><div class="wt" style="--u:var(--blu)"></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="ck">
+        <div class="col"><div class="chain" style="--p:94"></div><div class="wt" style="--u:var(--red)"></div><span class="lbl">C</span></div>
+        <div class="col"><div class="chain" style="--p:82"></div><div class="wt" style="--u:var(--yel)"></div><span class="lbl">W</span></div>
+        <div class="col"><div class="chain" style="--p:18"></div><div class="wt" style="--u:var(--blu)"></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z11 · Reel-to-Reel ══ -->
+<figure class="skin" data-skin="z11">
+  <span class="st">Concept</span>
+  <figcaption><b>Z11 · Reel-to-Reel</b> — three take-up reels wound proportionally with tape, the number on the hub. A studio-tape look.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rr">
+        <div class="col"><div class="rwrap"><div class="reel" style="--p:94;--u:var(--red)"></div><span class="hub"><i></i><i></i><i></i></span></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="rwrap"><div class="reel" style="--p:82;--u:var(--yel)"></div><span class="hub"><i></i><i></i><i></i></span></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="rwrap"><div class="reel" style="--p:18;--u:var(--blu)"></div><span class="hub"><i></i><i></i><i></i></span></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rr">
+        <div class="col"><div class="rwrap"><div class="reel" style="--p:94;--u:var(--red)"></div><span class="hub"><i></i><i></i><i></i></span></div><span class="lbl">C</span></div>
+        <div class="col"><div class="rwrap"><div class="reel" style="--p:82;--u:var(--yel)"></div><span class="hub"><i></i><i></i><i></i></span></div><span class="lbl">W</span></div>
+        <div class="col"><div class="rwrap"><div class="reel" style="--p:18;--u:var(--blu)"></div><span class="hub"><i></i><i></i><i></i></span></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z12 · Xylophone ══ -->
+<figure class="skin" data-skin="z12">
+  <span class="st">Concept</span>
+  <figcaption><b>Z12 · Xylophone</b> — each limit is a struck bar; longer bar, higher note, more load. Two mallet dots ride the end of each key.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="xy">
+        <div class="r"><span class="lbl">Current</span><div class="barw"><div class="key" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="barw"><div class="key" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="barw"><div class="key" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="xy">
+        <div class="r"><span class="lbl">C</span><div class="barw"><div class="key" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="barw"><div class="key" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="barw"><div class="key" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z13 · Dipstick ══ -->
+<figure class="skin" data-skin="z13">
+  <span class="st">Concept</span>
+  <figcaption><b>Z13 · Dipstick</b> — three engine dipsticks pulled out; the oily length shows the level between the LO and HI notches.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="dp">
+        <div class="col"><div class="stick" style="--u:var(--red)"><span class="hi"></span><span class="lo"></span><div class="oil" style="--p:94"></div></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="stick" style="--u:var(--yel)"><span class="hi"></span><span class="lo"></span><div class="oil" style="--p:82"></div></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="stick" style="--u:var(--blu)"><span class="hi"></span><span class="lo"></span><div class="oil" style="--p:18"></div></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="dp">
+        <div class="col"><div class="stick" style="--u:var(--red)"><span class="hi"></span><span class="lo"></span><div class="oil" style="--p:94"></div></div><span class="lbl">C</span></div>
+        <div class="col"><div class="stick" style="--u:var(--yel)"><span class="hi"></span><span class="lo"></span><div class="oil" style="--p:82"></div></div><span class="lbl">W</span></div>
+        <div class="col"><div class="stick" style="--u:var(--blu)"><span class="hi"></span><span class="lo"></span><div class="oil" style="--p:18"></div></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z14 · Fish Ladder ══ -->
+<figure class="skin" data-skin="z14">
+  <span class="st">Concept</span>
+  <figcaption><b>Z14 · Fish Ladder</b> — stepped pools climbing a weir; the salmon has swum as far up as the load allows. Filled pools glow.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="fl">
+        <div class="col" data-p="94" style="--u:var(--red)"><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col" data-p="82" style="--u:var(--yel)"><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col" data-p="18" style="--u:var(--blu)"><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="fl">
+        <div class="col" data-p="94" style="--u:var(--red)"><span class="lbl">C</span></div>
+        <div class="col" data-p="82" style="--u:var(--yel)"><span class="lbl">W</span></div>
+        <div class="col" data-p="18" style="--u:var(--blu)"><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z15 · Hanging Scale ══ -->
+<figure class="skin" data-skin="z15">
+  <span class="st">Concept</span>
+  <figcaption><b>Z15 · Hanging Scale</b> — three hook scales; the needle swings across a 270° dial to weigh each limit. Butcher-shop honest.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="hs">
+        <div class="col"><span class="hook"></span><div class="dial" style="--u:var(--red)"><div class="needle" style="--p:94"></div><span class="pin"></span></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><span class="hook"></span><div class="dial" style="--u:var(--yel)"><div class="needle" style="--p:82"></div><span class="pin"></span></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><span class="hook"></span><div class="dial" style="--u:var(--blu)"><div class="needle" style="--p:18"></div><span class="pin"></span></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="hs">
+        <div class="col"><div class="dial" style="--u:var(--red)"><div class="needle" style="--p:94"></div><span class="pin"></span></div><span class="lbl">C</span></div>
+        <div class="col"><div class="dial" style="--u:var(--yel)"><div class="needle" style="--p:82"></div><span class="pin"></span></div><span class="lbl">W</span></div>
+        <div class="col"><div class="dial" style="--u:var(--blu)"><div class="needle" style="--p:18"></div><span class="pin"></span></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z16 · Wind Sock ══ -->
+<figure class="skin" data-skin="z16">
+  <span class="st">Concept</span>
+  <figcaption><b>Z16 · Wind Sock</b> — three striped airport socks; the stronger the load, the more the sock lifts toward horizontal.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="ws">
+        <div class="col"><div class="pole"><div class="sock" style="--p:94;--u:var(--red)"></div></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="pole"><div class="sock" style="--p:82;--u:var(--yel)"></div></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="pole"><div class="sock" style="--p:18;--u:var(--blu)"></div></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="ws">
+        <div class="col"><div class="pole"><div class="sock" style="--p:94;--u:var(--red)"></div></div><span class="lbl">C</span></div>
+        <div class="col"><div class="pole"><div class="sock" style="--p:82;--u:var(--yel)"></div></div><span class="lbl">W</span></div>
+        <div class="col"><div class="pole"><div class="sock" style="--p:18;--u:var(--blu)"></div></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z17 · Reactor Rods ══ -->
+<figure class="skin" data-skin="z17">
+  <span class="st">Concept</span>
+  <figcaption><b>Z17 · Reactor Rods</b> — three fuel channels; a control rod withdraws and the core glows hotter as the load climbs.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rx">
+        <div class="col"><div class="chan" style="--u:var(--red)"><div class="rod" style="--p:94"></div></div><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col"><div class="chan" style="--u:var(--yel)"><div class="rod" style="--p:82"></div></div><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col"><div class="chan" style="--u:var(--blu)"><div class="rod" style="--p:18"></div></div><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rx">
+        <div class="col"><div class="chan" style="--u:var(--red)"><div class="rod" style="--p:94"></div></div><span class="lbl">C</span></div>
+        <div class="col"><div class="chan" style="--u:var(--yel)"><div class="rod" style="--p:82"></div></div><span class="lbl">W</span></div>
+        <div class="col"><div class="chan" style="--u:var(--blu)"><div class="rod" style="--p:18"></div></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z18 · Flood Barrier ══ -->
+<figure class="skin" data-skin="z18">
+  <span class="st">Concept</span>
+  <figcaption><b>Z18 · Flood Barrier</b> — sandbag levees stacked row by row; the higher the load, the taller the wall you've had to build.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="fb">
+        <div class="col" data-p="94" style="--u:var(--red)"><span class="lbl">Current</span><span class="pct" style="color:var(--red)">94%</span></div>
+        <div class="col" data-p="82" style="--u:var(--yel)"><span class="lbl">Weekly</span><span class="pct" style="color:var(--yel)">82%</span></div>
+        <div class="col" data-p="18" style="--u:var(--blu)"><span class="lbl">Fable</span><span class="pct" style="color:var(--blu)">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="fb">
+        <div class="col" data-p="94" style="--u:var(--red)"><span class="lbl">C</span></div>
+        <div class="col" data-p="82" style="--u:var(--yel)"><span class="lbl">W</span></div>
+        <div class="col" data-p="18" style="--u:var(--blu)"><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z19 · Tug of War ══ -->
+<figure class="skin" data-skin="z19">
+  <span class="st">Concept</span>
+  <figcaption><b>Z19 · Tug of War</b> — three ropes with a center flag; the knot is dragged toward the danger end as each limit fills.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">Current</span><div class="rope"><div class="knot" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">Weekly</span><div class="rope"><div class="knot" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">Fable</span><div class="rope"><div class="knot" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="rows">
+        <div class="r"><span class="lbl">C</span><div class="rope"><div class="knot" style="--p:94;--u:var(--red)"></div></div><span class="pct">94%</span></div>
+        <div class="r"><span class="lbl">W</span><div class="rope"><div class="knot" style="--p:82;--u:var(--yel)"></div></div><span class="pct">82%</span></div>
+        <div class="r"><span class="lbl">F</span><div class="rope"><div class="knot" style="--p:18;--u:var(--blu)"></div></div><span class="pct">18%</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+<!-- ══ Z20 · Nixie Tubes ══ -->
+<figure class="skin" data-skin="z20">
+  <span class="st">Concept</span>
+  <figcaption><b>Z20 · Nixie Tubes</b> — three warm-glowing numeric tubes reading the percentages straight out. Retro instrumentation, perfect palette fit.</figcaption>
+  <div class="tiles">
+    <div class="tile full"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.15"></span><div class="ttl">Usage</div><span class="rst-top">Resets 2h 47m</span></div>
+      <div class="nx">
+        <div class="col"><div class="tube"><span class="n">94</span></div><span class="lbl">Current</span></div>
+        <div class="col"><div class="tube"><span class="n">82</span></div><span class="lbl">Weekly</span></div>
+        <div class="col"><div class="tube"><span class="n">18</span></div><span class="lbl">Fable</span></div>
+      </div>
+    </div></div>
+    <div class="tile compact"><div class="in">
+      <div class="zhd"><span class="clawd-i" data-px="1.0"></span><div class="ttl">Usage</div><span class="rst-top">2h 47m</span></div>
+      <div class="nx">
+        <div class="col"><div class="tube"><span class="n">94</span></div><span class="lbl">C</span></div>
+        <div class="col"><div class="tube"><span class="n">82</span></div><span class="lbl">W</span></div>
+        <div class="col"><div class="tube"><span class="n">18</span></div><span class="lbl">F</span></div>
+      </div>
+    </div></div>
+  </div>
+</figure>
+
+</div>
+
+<script>
+// LOCKED clawd sprite — geometry from clawd-mascot-spec (never redraw by eye).
+const BODY=[15.8,0,84.2,47.6];
+const ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,46.6,25.5,64.8],[33.4,46.6,43.1,64.8],[56.9,46.6,66.6,64.8],[74.5,46.6,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+function sprite(px){
+  const w=(17*px).toFixed(1),h=(11.9*px).toFixed(1);
+  const r=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 70" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><g class="g-all"><g fill="currentColor">${r(BODY)}${r(ARM_L)}${r(ARM_R)}${LEGS.map(r).join("")}</g><g class="g-eyes"><g class="eyes" fill="#111">${EYES.map(r).join("")}</g></g></g></svg>`;
+}
+document.querySelectorAll('.clawd-i').forEach((el,i)=>{
+  el.classList.add('clawd'); el.style.setProperty('--bi',i%7);
+  el.innerHTML=sprite(parseFloat(el.dataset.px||'1.15'));
+});
+document.body.classList.add('working');
+
+// Mechanisms that need discrete children built from a [data-p]:
+// Z2 escalator (10 steps, lit = round(p/10)), Z9 cash well (12 discs),
+// Z8 carousel (bag angle), Z14 fish ladder (6 pools), Z18 flood barrier (rows).
+document.querySelectorAll('[data-skin="z2"] .stair').forEach(s=>{
+  const p=+s.dataset.p, n=10, lit=Math.max(1,Math.round(p/100*n));
+  for(let i=0;i<n;i++){const el=document.createElement('i');el.style.setProperty('--s',i);if(i<lit)el.classList.add('on');s.appendChild(el);}
+});
+document.querySelectorAll('[data-skin="z9"] .well').forEach(w=>{
+  const p=+w.dataset.p, n=12, lit=Math.max(1,Math.round(p/100*n));
+  for(let i=0;i<lit;i++){const el=document.createElement('i');w.appendChild(el);}
+});
+document.querySelectorAll('[data-skin="z8"] .car').forEach(car=>{
+  const bags=car.querySelectorAll('.bag');
+  bags.forEach(b=>{
+    const p=+b.dataset.p, ang=(-90+p*3.6)*Math.PI/180;
+    const compact=car.closest('.compact');
+    const rx=compact?36:60, ry=compact?26:38;
+    b.style.left=`calc(50% + ${(Math.cos(ang)*rx).toFixed(1)}px - ${compact?7.5:10}px)`;
+    b.style.top=`calc(50% + ${(Math.sin(ang)*ry).toFixed(1)}px - ${compact?5.5:7}px)`;
+  });
+});
+document.querySelectorAll('[data-skin="z14"] .fl .col').forEach(col=>{
+  const p=+col.dataset.p, n=6, wet=Math.max(1,Math.round(p/100*n));
+  for(let i=0;i<n;i++){const el=document.createElement('div');el.className='pool';if(i<wet)el.classList.add('wet');if(i===wet-1)el.classList.add('fish');col.insertBefore(el,col.firstChild);}
+});
+document.querySelectorAll('[data-skin="z18"] .fb .col').forEach(col=>{
+  const p=+col.dataset.p, n=Math.max(1,Math.round(p/100*8));
+  for(let i=0;i<n;i++){const el=document.createElement('div');el.className='bag';col.insertBefore(el,col.firstChild);}
+});
+</script>
+</body>
+</html>

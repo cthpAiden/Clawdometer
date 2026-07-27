@@ -1,0 +1,225 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Clawd — D1 turntable, thickness iteration</title>
+<!--
+  Iteration on D1 (Z-stacked extrusion turntable) from clawd-3d-concepts.html.
+  Goal: more thickness. Thickness = slices x step. Raising `step` alone is the
+  wrong lever — the visible gap between slices is step * sin(rotation), so a big
+  step bands badly at the extremes. Thicker therefore means MORE SLICES at a
+  SMALL step. Every slice is the LOCKED silhouette; the front slice is
+  pixel-identical to the shipped sprite when viewed dead-on.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500&family=Hanken+Grotesk:wght@500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --cc-bg:#262624; --cc-panel:#1e1e1c; --cc-line:#3a3a36;
+          --cc-text:#e7e4d9; --cc-text-2:#b1ada0; --cc-muted:#7c776b; --clawd:#e17956; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:40px 32px 96px; background:#161615; color:var(--cc-text);
+         font-family:"Hanken Grotesk",system-ui,sans-serif; font-weight:500; }
+  h1 { font-family:Newsreader,serif; font-weight:500; font-size:34px; margin:0 0 10px; }
+  h2 { font-family:Newsreader,serif; font-weight:500; font-size:22px; margin:52px 0 6px;
+       padding-top:26px; border-top:1px solid var(--cc-line); }
+  .lede,.sub { color:var(--cc-text-2); font-size:14px; line-height:1.55; max-width:76ch; margin:0 0 6px; }
+  code { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--clawd); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:18px; margin-top:24px; }
+  .card { background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:12px;
+          padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .card h3 { margin:0; font-size:13px; font-weight:800; }
+  .card h3 .id { color:var(--cc-muted); font-family:"JetBrains Mono",monospace; font-weight:400; margin-right:6px; }
+  .meta { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--cc-muted); }
+  .note { font-size:11.5px; line-height:1.5; color:var(--cc-muted); margin:0; }
+  .stage { background:var(--cc-bg); border-radius:8px; height:190px; display:grid;
+           place-items:center; overflow:hidden; perspective:640px; }
+  .stage.tall { height:300px; }
+
+  .hud { background:#000; border-radius:8px; padding:8px 9px; width:150px; align-self:center; }
+  .hud .hd { display:flex; align-items:center; gap:5px; min-height:18px; }
+  .hud .hd .ttl { font-family:Newsreader,serif; font-size:11px; flex:1; text-align:center; }
+  .hud .row { display:flex; justify-content:space-between; font-size:8px; color:var(--cc-text-2); margin-top:4px; }
+  .hud .row b { color:#fff; font-weight:600; }
+  .hud .bar { height:2px; border-radius:1px; background:#2a2a28; margin-top:2px; }
+  .hud .bar i { display:block; height:100%; border-radius:1px; background:#3f7fbf; }
+
+  .clawd { color:var(--clawd); display:inline-block; line-height:0; }
+  .clawd svg { overflow:visible; }
+  @keyframes cv-blink { 0%,92%,100%{transform:scaleY(1);} 96%{transform:scaleY(.12);} }
+  .eyes { transform-origin:50px 12px; animation:cv-blink 4.6s infinite; }
+
+  .slab { transform-style:preserve-3d; position:relative; }
+  .slab .sl { position:absolute; inset:0; }
+  @keyframes cv-turn { 0%{transform:rotateX(-10deg) rotateY(-32deg);}
+                       50%{transform:rotateX(-10deg) rotateY(32deg);}
+                       100%{transform:rotateX(-10deg) rotateY(-32deg);} }
+  .turn .slab { animation:cv-turn 5.4s ease-in-out infinite; }
+
+  /* --- live control panel --- */
+  .panel { background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:12px;
+           padding:18px 20px; display:grid; grid-template-columns:260px 1fr; gap:26px; margin-top:24px; }
+  .ctrls { display:flex; flex-direction:column; gap:12px; }
+  .ctrl label { display:flex; justify-content:space-between; font-size:11.5px;
+                color:var(--cc-text-2); margin-bottom:4px; }
+  .ctrl label b { font-family:"JetBrains Mono",monospace; color:var(--clawd); font-weight:400; }
+  .ctrl input[type=range] { width:100%; accent-color:var(--clawd); }
+  .readout { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--cc-muted);
+             border-top:1px solid var(--cc-line); padding-top:10px; line-height:1.7; white-space:pre; }
+  .warn { color:#dcbc6a; }
+  .bad { color:#e5848a; }
+  .ok { color:#86c99a; }
+</style>
+
+<h1>D1 turntable — thickness iteration</h1>
+<p class="lede">
+  Thickness is <code>slices × step</code>. The visible seam between slices is
+  <code>step × sin(rotation)</code>, so raising <code>step</code> to get depth just produces banding
+  at the extremes. Every card below therefore holds <code>step</code> near 1.3px and adds slices.
+  Depth ratio is quoted against the 161px sprite width.
+</p>
+
+<h2>Depth ladder</h2>
+<p class="sub">T1 is the current D1 for reference. Each step up roughly doubles the depth ratio.</p>
+<div class="grid" id="ladder"></div>
+
+<h2>Live dial</h2>
+<p class="sub">Drag to find the exact numbers. The readout flags banding and warns when the slice count gets expensive for the HUD.</p>
+<div class="panel">
+  <div class="ctrls">
+    <div class="ctrl"><label>Slices <b id="v-n">34</b></label><input type="range" id="c-n" min="4" max="90" value="34"></div>
+    <div class="ctrl"><label>Step (px) <b id="v-s">1.30</b></label><input type="range" id="c-s" min="0.4" max="5" step="0.1" value="1.3"></div>
+    <div class="ctrl"><label>Rotation (±°) <b id="v-r">32</b></label><input type="range" id="c-r" min="0" max="70" value="32"></div>
+    <div class="ctrl"><label>Tilt X (°) <b id="v-x">-10</b></label><input type="range" id="c-x" min="-40" max="20" value="-10"></div>
+    <div class="ctrl"><label>Side darkening <b id="v-d">0.62</b></label><input type="range" id="c-d" min="0" max="0.95" step="0.01" value="0.62"></div>
+    <div class="ctrl"><label>Perspective (px) <b id="v-p">640</b></label><input type="range" id="c-p" min="200" max="2000" value="640"></div>
+    <div class="readout" id="readout"></div>
+  </div>
+  <div>
+    <div class="stage tall turn" id="live-stage"></div>
+    <div style="display:flex;gap:14px;align-items:center;margin-top:14px">
+      <div class="hud" id="live-hud"></div>
+      <p class="note" style="margin:0">Left: enlarged. Right: the same settings at the true HUD footprint
+      (24.6 × 17.3 px). The HUD slab scales <code>step</code> down with the sprite, so it keeps the
+      same depth <i>ratio</i>, not the same pixel depth.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// -------- LOCKED geometry (overlapped inner edges; outer silhouette exact) ----
+const BODY=[15.8,0,84.2,47.6], ARM_L=[-1.2,16.9,19.0,35.8], ARM_R=[81.0,16.9,101.2,35.8];
+const LEGS=[[15.8,42.0,25.5,64.8],[33.4,42.0,43.1,64.8],[56.9,42.0,66.6,64.8],[74.5,42.0,84.2,64.8]];
+const EYES=[[24.9,7.8,32.7,16.3],[67.3,7.8,75.1,16.3]];
+const SOLIDS=[BODY,ARM_L,ARM_R,...LEGS];
+const rect=a=>`<rect x="${a[0]}" y="${a[1]}" width="${(a[2]-a[0]).toFixed(2)}" height="${(a[3]-a[1]).toFixed(2)}"/>`;
+
+function sprite(px, fill, withEyes) {
+  return `<svg width="${(17*px).toFixed(1)}" height="${(11.9*px).toFixed(1)}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">`
+    + `<g fill="${fill}">${SOLIDS.map(rect).join("")}</g>`
+    + (withEyes ? `<g class="eyes" fill="#111">${EYES.map(rect).join("")}</g>` : "")
+    + `</svg>`;
+}
+
+// N copies of the exact silhouette along Z. Back slices darken so the extruded
+// sides read as shaded flanks rather than a smear of the same orange.
+function slab(px, n, step, dark) {
+  const w=17*px, h=11.9*px;
+  let out="";
+  for (let i=n-1; i>=0; i--) {
+    const front = i===0;
+    const k = 1 - (i/Math.max(n-1,1))*dark;
+    const col = front ? "#e17956"
+      : `rgb(${Math.round(225*k)},${Math.round(121*k)},${Math.round(86*k)})`;
+    out += `<div class="sl" style="transform:translateZ(${(-i*step).toFixed(2)}px)">`
+         + `<span class="clawd">${sprite(px, col, front)}</span></div>`;
+  }
+  return `<div class="slab" style="width:${w}px;height:${h}px">${out}</div>`;
+}
+
+const BIG=9.5, HUD=1.45, SPRITE_W=17*BIG;   // 161.5px
+
+function hudCard(inner) {
+  return `<div class="hd">${inner}<span class="ttl">Usage</span></div>
+    <div class="row"><span>Current</span><b>94%</b></div><div class="bar"><i style="width:94%;background:#e5484d"></i></div>
+    <div class="row"><span>Weekly</span><b>82%</b></div><div class="bar"><i style="width:82%;background:#f59e0b"></i></div>
+    <div class="row"><span>Fable</span><b>18%</b></div><div class="bar"><i style="width:18%"></i></div>`;
+}
+
+// -------------------------------- ladder -----------------------------------
+const LADDER = [
+  { id:"T1", name:"Current D1",  n:12, step:2.6, dark:.62,
+    note:"Where we are now. 29px of depth on a 161px sprite — and the 2.6px step already bands at the turn extremes." },
+  { id:"T2", name:"Solid",       n:24, step:1.3, dark:.62,
+    note:"Double the depth, half the step. Banding gone, and it finally reads as an object with a back." },
+  { id:"T3", name:"Chunky",      n:34, step:1.3, dark:.66,
+    note:"27% depth ratio. Roughly a real toy figurine's proportions — deep enough that the flanks carry the shading." },
+  { id:"T4", name:"Blocky",      n:48, step:1.3, dark:.70,
+    note:"39%. Clawd becomes a brick. Strong silhouette from the side, but the front face starts to feel like the small end of a box." },
+  { id:"T5", name:"Deep",        n:64, step:1.3, dark:.74,
+    note:"52% — as deep as it is tall. Dramatic, but 64 nodes per mascot and the extrusion now dominates the character." },
+  { id:"T6", name:"Chunky, wide swing", n:34, step:1.3, dark:.66, rot:52,
+    note:"T3's body at ±52° instead of ±32°. Same thickness — the extra depth *perception* is free, it comes from the angle." },
+];
+
+document.getElementById("ladder").innerHTML = LADDER.map(t => {
+  const depth = (t.n-1)*t.step, ratio = depth/SPRITE_W;
+  const seam = t.step * Math.sin((t.rot||32)*Math.PI/180);
+  const seamCls = seam > 1.0 ? "bad" : seam > 0.65 ? "warn" : "ok";
+  const rotStyle = t.rot
+    ? `style="--rot:${t.rot}deg;animation:none;transform:rotateX(-10deg) rotateY(0deg)"` : "";
+  return `<div class="card">
+    <h3><span class="id">${t.id}</span>${t.name}</h3>
+    <div class="stage turn" ${t.rot?`data-rot="${t.rot}"`:""}>${slab(BIG, t.n, t.step, t.dark)}</div>
+    <div class="meta">${t.n} slices × ${t.step}px = ${depth.toFixed(0)}px deep
+      · ratio <b style="color:var(--clawd)">${(ratio*100).toFixed(0)}%</b>
+      · seam <span class="${seamCls}">${seam.toFixed(2)}px</span></div>
+    <div class="hud">${hudCard(slab(HUD, Math.min(t.n,20), t.step*HUD/BIG, t.dark))}</div>
+    <p class="note">${t.note}</p>
+  </div>`;
+}).join("");
+
+// T6 swings wider than the shared keyframes, so give it its own animation.
+document.querySelectorAll('.stage[data-rot]').forEach(st => {
+  const r = st.dataset.rot, sl = st.querySelector('.slab');
+  const kf = `@keyframes cv-turn-${r} {0%{transform:rotateX(-10deg) rotateY(-${r}deg);}
+    50%{transform:rotateX(-10deg) rotateY(${r}deg);} 100%{transform:rotateX(-10deg) rotateY(-${r}deg);}}`;
+  const s = document.createElement("style"); s.textContent = kf; document.head.appendChild(s);
+  sl.style.animation = `cv-turn-${r} 5.4s ease-in-out infinite`;
+});
+
+// ------------------------------- live dial ---------------------------------
+const C = { n:c("c-n"), s:c("c-s"), r:c("c-r"), x:c("c-x"), d:c("c-d"), p:c("c-p") };
+function c(id){ return document.getElementById(id); }
+const stage = document.getElementById("live-stage"), hud = document.getElementById("live-hud");
+let liveStyle = document.createElement("style"); document.head.appendChild(liveStyle);
+
+function render() {
+  const n=+C.n.value, step=+C.s.value, rot=+C.r.value, tx=+C.x.value, dark=+C.d.value, per=+C.p.value;
+  c("v-n").textContent=n; c("v-s").textContent=step.toFixed(2); c("v-r").textContent=rot;
+  c("v-x").textContent=tx; c("v-d").textContent=dark.toFixed(2); c("v-p").textContent=per;
+
+  stage.style.perspective = per+"px";
+  stage.innerHTML = slab(BIG, n, step, dark);
+  hud.innerHTML = hudCard(slab(HUD, Math.min(n,24), step*HUD/BIG, dark));
+
+  liveStyle.textContent = `@keyframes cv-live {
+    0%{transform:rotateX(${tx}deg) rotateY(${-rot}deg);}
+    50%{transform:rotateX(${tx}deg) rotateY(${rot}deg);}
+    100%{transform:rotateX(${tx}deg) rotateY(${-rot}deg);}}`;
+  stage.querySelector(".slab").style.animation = "cv-live 5.4s ease-in-out infinite";
+  hud.querySelector(".slab").style.animation = "cv-live 5.4s ease-in-out infinite";
+
+  const depth=(n-1)*step, ratio=depth/SPRITE_W, seam=step*Math.sin(rot*Math.PI/180);
+  const seamCls = seam>1.0?"bad":seam>0.65?"warn":"ok";
+  const seamMsg = seam>1.0?"BANDING — add slices, cut step":seam>0.65?"faint seams at the extremes":"seamless";
+  const cost = n>56?"bad":n>40?"warn":"ok";
+  const costMsg = n>56?"heavy — 2 mascots on screen = "+(n*2)+" nodes":n>40?"acceptable":"cheap";
+  c("readout").innerHTML =
+    `depth      ${depth.toFixed(0)}px  (ratio ${(ratio*100).toFixed(0)}%)\n`
+  + `seam       <span class="${seamCls}">${seam.toFixed(2)}px — ${seamMsg}</span>\n`
+  + `slice cost <span class="${cost}">${n} nodes — ${costMsg}</span>\n`
+  + `hud depth  ${(depth*HUD/BIG).toFixed(1)}px of 24.6px wide`;
+}
+Object.values(C).forEach(el => el.addEventListener("input", render));
+render();
+</script>
