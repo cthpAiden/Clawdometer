@@ -20,7 +20,14 @@ const TAIL_BYTES: u64 = 512 * 1024;
 // this age a healthy setup would have refreshed several times over — while a
 // statusline-fed session keeps the age near zero and rightly suppresses the
 // alert even if the headless CLI happens to be broken.
-const OFFLINE_STALE_SECS: i64 = 180;
+//
+// Sized to outlast one whole failed refresh cycle: an attempt that burns all
+// its retries takes about a minute, then the refresher waits out its failure
+// spacing and tries again. Alerting before that recovery lands turns
+// `/usage`'s flaky summary fetch — which clears on its own — into a red
+// "check CLI login" strip the user can do nothing about. Two failed cycles
+// running is a real fault worth showing.
+const OFFLINE_STALE_SECS: i64 = 360;
 
 pub fn build_payload(
     state_path: &Path,
@@ -382,11 +389,14 @@ mod tests {
         // fresh snapshot (60s old) suppresses offline even while failing
         let now = epoch("2026-07-12T00:01:00Z");
         assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], false);
+        // a whole failed refresh cycle's worth of staleness still suppresses it
+        let now = epoch("2026-07-12T00:04:00Z");
+        assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], false);
         // exactly at the threshold: still fresh (strictly-older-than)
-        let now = epoch("2026-07-12T00:03:00Z");
+        let now = epoch("2026-07-12T00:06:00Z");
         assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], false);
         // past the threshold: offline iff failing
-        let now = epoch("2026-07-12T00:03:01Z");
+        let now = epoch("2026-07-12T00:06:01Z");
         assert_eq!(build_payload(&state_path, &live, &noproj, now, true)["offline"], true);
         assert_eq!(build_payload(&state_path, &live, &noproj, now, false)["offline"], false);
         // future-stamped snapshot (stepped clock) reads fresh, not offline

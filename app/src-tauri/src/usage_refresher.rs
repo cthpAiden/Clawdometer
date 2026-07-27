@@ -30,17 +30,23 @@ const STALE_AFTER: Duration = Duration::from_secs(60);
 /// is a Node process, but a single short-lived spawn per minute is cheap and
 /// only happens while no statusline session is feeding fresher data.
 const MIN_SPACING: Duration = Duration::from_secs(60);
-/// Spacing after a failed attempt (claude not installed, parse mismatch) —
-/// retrying every minute won't change anything.
-const FAILURE_SPACING: Duration = Duration::from_secs(10 * 60);
+/// Spacing after a failed attempt. Long enough that a genuinely broken setup
+/// (claude not installed, signed out, output reworded) isn't respawned every
+/// minute, short enough that the far more common cause — every retry below
+/// landing on the same flaky summary fetch — clears within one alert's worth
+/// of staleness instead of parking the HUD on old numbers for ten minutes.
+const FAILURE_SPACING: Duration = Duration::from_secs(2 * 60);
 /// `claude` is a Node CLI with a slow cold start; well past that is a hang.
 const CLI_TIMEOUT: Duration = Duration::from_secs(90);
 /// `/usage`'s "Current session/week" summary comes from a network fetch that
-/// intermittently fails (~1 in 3 runs). When it does, claude still prints the
-/// local analysis but omits those lines, so the parse yields nothing. Retry a
-/// few times within one refresh so a single flaky fetch doesn't drop the whole
-/// attempt into FAILURE_SPACING.
-const REFRESH_TRIES: usize = 3;
+/// intermittently fails. When it does, claude still exits 0 and prints the
+/// local analysis, but omits those lines, so the parse yields nothing. Retry
+/// within one refresh so a flaky fetch doesn't drop the whole attempt into
+/// FAILURE_SPACING. The miss rate is machine-dependent and can be far worse
+/// than the ~1 in 3 first measured — 6 of 9 consecutive runs on a busy one —
+/// where three tries still give up about a third of the time. Five costs one
+/// extra spawn on the failures it rescues and none on a healthy first try.
+const REFRESH_TRIES: usize = 5;
 /// Pause between retries. Measured: back-to-back `claude` runs a couple of
 /// seconds apart fail reliably (exit 1 / empty output — some internal
 /// concurrency or rate guard), while ~10s spacing succeeds. Anything shorter
