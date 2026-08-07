@@ -115,6 +115,7 @@ fn current_prefs(app: &tauri::AppHandle) -> ui_prefs::UiPrefs {
             opacity: 1.0,
             compact: false,
             rice: ui_prefs::default_rice(),
+            show_fable: true,
         }
     })
 }
@@ -136,6 +137,10 @@ fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
         } else {
             0.0
         };
+        // Dropping the Fable row shortens the two row-stack skins by exactly
+        // one row; Bento re-flows its grid and ClawdBoy keeps its shell, so
+        // both hold their footprints (see body.pro in style.css).
+        let fb = prefs.show_fable;
         let (w, h) = if prefs.rice.starts_with("audiowave_orb") {
             (160.0, 160.0)
         } else if prefs.rice.starts_with("clawdboy") {
@@ -144,10 +149,20 @@ fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
         } else if prefs.rice == "bento" {
             if prefs.compact { (120.0, 112.0 + strip) } else { (206.0, 138.0 + strip) }
         } else if prefs.rice == "rowline" {
-            if prefs.compact { (120.0, 100.0 + strip) } else { (172.0, 100.0 + strip) }
+            match (prefs.compact, fb) {
+                (true, true) => (120.0, 87.0 + strip),
+                (true, false) => (120.0, 69.0 + strip),
+                (false, true) => (172.0, 100.0 + strip),
+                (false, false) => (172.0, 78.0 + strip),
+            }
         } else {
             // "classic" = Underline (U8), the default skin.
-            if prefs.compact { (120.0, 114.0 + strip) } else { (200.0, 122.0 + strip) }
+            match (prefs.compact, fb) {
+                (true, true) => (120.0, 114.0 + strip),
+                (true, false) => (120.0, 91.0 + strip),
+                (false, true) => (200.0, 122.0 + strip),
+                (false, false) => (200.0, 97.0 + strip),
+            }
         };
         let _ = win.set_size(tauri::LogicalSize::new(w, h));
     }
@@ -157,6 +172,7 @@ fn apply_prefs(app: &tauri::AppHandle, prefs: &ui_prefs::UiPrefs) {
             "opacity": prefs.opacity,
             "compact": prefs.compact,
             "rice": prefs.rice,
+            "showFable": prefs.show_fable,
         }),
     );
 }
@@ -268,6 +284,11 @@ fn main() {
             let compact_item = CheckMenuItem::with_id(
                 app, "compact", "Compact size", true, prefs.compact, None::<&str>,
             )?;
+            // Fable's weekly window is Max-only; off, the card skins re-cut
+            // around two windows and their panels shrink (see apply_prefs).
+            let fable_item = CheckMenuItem::with_id(
+                app, "fable", "Fable bar", true, prefs.show_fable, None::<&str>,
+            )?;
             let opacity_items = OPACITY_STEPS
                 .iter()
                 .map(|(id, val)| {
@@ -363,7 +384,10 @@ fn main() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
-                &[&show_hide, &refresh, &compact_item, &opacity_menu, &rice_menu, &autostart, &quit],
+                &[
+                    &show_hide, &refresh, &compact_item, &fable_item, &opacity_menu, &rice_menu,
+                    &autostart, &quit,
+                ],
             )?;
             // Cloned for the HUD right-click, which pops this same full menu.
             let context_menu = menu.clone();
@@ -386,6 +410,7 @@ fn main() {
                 })
                 .on_menu_event({
                     let compact_item = compact_item.clone();
+                    let fable_item = fable_item.clone();
                     let opacity_items = opacity_items.clone();
                     let autostart_item = autostart.clone();
                     let rice_items = rice_items.clone();
@@ -397,6 +422,12 @@ fn main() {
                         "compact" => {
                             let mut p = current_prefs(app);
                             p.compact = compact_item.is_checked().unwrap_or(!p.compact);
+                            ui_prefs::save(&ui_path(), &p);
+                            apply_prefs(app, &p);
+                        }
+                        "fable" => {
+                            let mut p = current_prefs(app);
+                            p.show_fable = fable_item.is_checked().unwrap_or(!p.show_fable);
                             ui_prefs::save(&ui_path(), &p);
                             apply_prefs(app, &p);
                         }

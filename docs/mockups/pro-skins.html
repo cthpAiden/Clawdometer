@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Clawdometer — Pro layouts (no Fable bar)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0e0e11; color: #e8e8ea;
+  font: 13px/1.55 "Segoe UI", sans-serif;
+  padding: 34px 40px 90px;
+}
+h1 { font: 600 19px/1.3 "Segoe UI", sans-serif; margin-bottom: 6px; }
+.lede { color: #8c8c96; max-width: 720px; margin-bottom: 6px; }
+.lede b { color: #d8d8de; font-weight: 600; }
+.zoombar { display: flex; align-items: center; gap: 8px; margin: 18px 0 6px; color: #6a6a74; font-size: 11px; }
+.zoombar button {
+  background: #1c1c22; color: #b8b8c2; border: 1px solid #2c2c34; border-radius: 6px;
+  padding: 4px 11px; font: 600 11px "Segoe UI", sans-serif; cursor: pointer;
+}
+.zoombar button.on { background: #e17956; border-color: #e17956; color: #17130f; }
+
+.band { border-top: 1px solid #24242b; margin-top: 30px; padding-top: 20px; }
+.band > h2 { font: 600 15px/1.3 "Segoe UI", sans-serif; margin-bottom: 3px; }
+.band > h2 .dim { color: #6a6a74; font-weight: 400; font-size: 12px; margin-left: 6px; }
+.band > .note { color: #8c8c96; font-size: 12px; max-width: 700px; margin-bottom: 18px; }
+.band > .note b { color: #cfcfd6; font-weight: 600; }
+
+.opt { margin-bottom: 22px; }
+.opt > h3 { font: 600 12px/1.4 "Segoe UI", sans-serif; color: #e8e8ea; margin-bottom: 2px; }
+.opt > h3 .tag {
+  display: inline-block; margin-left: 7px; padding: 1px 6px; border-radius: 4px;
+  background: #23231b; color: #b6c26a; font-size: 10px; font-weight: 700; vertical-align: 1px;
+}
+.opt > .onote { color: #7e7e88; font-size: 11.5px; max-width: 660px; margin-bottom: 12px; }
+
+.stage { display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
+.slot { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; }
+.slabel { color: #5c5c66; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
+.slabel .px { color: #8c8c96; letter-spacing: 0; text-transform: none; }
+.slot.ref .slabel { color: #4a4a54; }
+/* Checkerboard, so the transparent window's rounded corners stay visible. */
+.pad {
+  padding: 14px; border-radius: 12px;
+  background:
+    linear-gradient(45deg, #191920 25%, transparent 25%, transparent 75%, #191920 75%),
+    linear-gradient(45deg, #191920 25%, #131317 25%, #131317 75%, #191920 75%);
+  background-size: 12px 12px; background-position: 0 0, 6px 6px;
+}
+.zwrap { overflow: hidden; }
+.zwrap iframe { border: 0; display: block; transform-origin: top left; }
+</style>
+</head>
+<body>
+
+<h1>Pro layouts — every skin with the Fable bar removed</h1>
+<p class="lede">
+  Fable's weekly window only exists on a Max plan, so the third bar is dead space
+  for everyone else. These are the current skins re-cut for <b>Fable off</b>, next
+  to today's Max layout for comparison. Audiowave Orb is left out: it never showed
+  Fable in the first place.
+</p>
+<p class="lede">
+  Every preview is the shipping stylesheet (<b>app/ui/style.css</b>) plus the draft
+  override sheet (<b>pro-skins.css</b>) rendered live, not a redraw. The size under
+  each panel is its measured footprint, which is the number
+  <b>apply_prefs</b> would have to carry.
+</p>
+
+<div class="zoombar">
+  <span>ZOOM</span>
+  <button data-z="1" class="on">1×</button>
+  <button data-z="2">2×</button>
+  <button data-z="3">3×</button>
+</div>
+
+<div id="out"></div>
+
+<script>
+// Each band is one skin. `opts` are the layout choices worth a decision; skins
+// with only one sane answer carry a single unnamed option.
+const BANDS = [
+  {
+    rice: "classic", title: "Classic (Underline)", dim: "default skin",
+    note: "Rows are content-height in a flex column, so the Fable row just leaves. No re-balancing needed, no width change: the panel gets shorter by exactly one row.",
+    max: { w: 200, h: 122, cw: 120, ch: 114 },
+    opts: [{ id: "", name: "", note: "", w: 200, h: 97, cw: 120, ch: 91 }],
+  },
+  {
+    rice: "rowline", title: "Rowline", dim: "labelled bars",
+    note: "Same as Classic — one row out, panel shortens, everything else holds. Compact Max is trimmed here too, from 100px to 87px: its rows never filled the taller panel and the dead band under the last bar showed.",
+    max: { w: 172, h: 100, cw: 120, ch: 87 },
+    opts: [{ id: "", name: "", note: "", w: 172, h: 78, cw: 120, ch: 69 }],
+  },
+  {
+    rice: "bento", title: "Bento Box", dim: "needs a real decision",
+    note: "The only skin the removal actually breaks: the bottom row is a pair of cells, and killing one leaves a hole. Two ways out.",
+    max: { w: 206, h: 138, cw: 120, ch: 112 },
+    opts: [
+      {
+        id: "b1", name: "Stack", tag: "recommended",
+        note: "Weekly widens into the freed cell. Current stays the hero across the top, so the skin still reads as Bento and the 206px width stays filled. Footprint is unchanged from Max.",
+        w: 206, h: 138, cw: 120, ch: 112,
+      },
+      {
+        id: "b2", name: "Pair",
+        note: "Drop the hero: Current and Weekly become twin cells side by side, reset moves to the header corner (the swap Compact already does). Much shorter, but Current loses its emphasis.",
+        w: 206, h: 87, cw: 120, ch: 75,
+      },
+    ],
+  },
+  {
+    rice: "clawdboy_table", title: "ClawdBoy — Table", dim: "shell size unchanged",
+    note: "The handheld is a physical object; resizing the plastic when a row leaves would read as a different device. The glass keeps its 76px and the freed line goes back into type size and into Clawd, who grows from 34px to 40px.",
+    max: { w: 200, h: 136, cw: 120, ch: 106 },
+    opts: [{ id: "", name: "", note: "", w: 200, h: 136, cw: 120, ch: 106 }],
+  },
+  {
+    rice: "clawdboy_menu", title: "ClawdBoy — Menu",
+    note: "Three rows instead of four: CURRENT / WEEKLY / RESET IN. Row type goes 11.5px to 13px and the mascot at the foot of the menu grows with the space.",
+    max: { w: 200, h: 136, cw: 120, ch: 106 },
+    opts: [{ id: "", name: "", note: "", w: 200, h: 136, cw: 120, ch: 106 }],
+  },
+  {
+    rice: "clawdboy_quad", title: "ClawdBoy — Quad", dim: "needs a real decision",
+    note: "Four hairline cells, one of which was Fable. Same problem as Bento, on a 2×2 grid.",
+    max: { w: 200, h: 136, cw: 120, ch: 106 },
+    opts: [
+      {
+        id: "q1", name: "Band", tag: "recommended",
+        note: "Current and Weekly share the top row; Clawd's cell spans the full width below with the reset beside him instead of under him.",
+        w: 200, h: 136, cw: 120, ch: 106,
+      },
+      {
+        id: "q3", name: "Column",
+        note: "Numbers stack down the left, Clawd gets a tall cell on the right at 32px. Reads more like a device panel; the two numbers get less width.",
+        w: 200, h: 136, cw: 120, ch: 106,
+      },
+    ],
+  },
+];
+
+let zoom = 1;
+let seq = 0;
+const frames = new Map(); // id -> { iframe, wrap, label, w, h }
+
+function slot(label, rice, pro, compact, opt, w, h, isRef) {
+  const id = "f" + (seq++);
+  const el = document.createElement("div");
+  el.className = "slot" + (isRef ? " ref" : "");
+  const lab = document.createElement("div");
+  lab.className = "slabel";
+  lab.innerHTML = label + ' <span class="px">' + w + " × " + h + "</span>";
+  const pad = document.createElement("div");
+  pad.className = "pad";
+  const wrap = document.createElement("div");
+  wrap.className = "zwrap";
+  const f = document.createElement("iframe");
+  f.src = "pro-frame.html?rice=" + rice + "&pro=" + (pro ? 1 : 0) +
+          "&compact=" + (compact ? 1 : 0) + "&opt=" + opt + "&id=" + id;
+  f.scrolling = "no";
+  el.append(lab, pad); pad.append(wrap); wrap.append(f);
+  frames.set(id, { f, wrap, lab, label, w, h });
+  size(id);
+  return el;
+}
+
+function size(id) {
+  const s = frames.get(id);
+  if (!s) return;
+  s.f.style.width = s.w + "px";
+  s.f.style.height = s.h + "px";
+  s.f.style.transform = "scale(" + zoom + ")";
+  s.wrap.style.width = s.w * zoom + "px";
+  s.wrap.style.height = s.h * zoom + "px";
+  s.lab.innerHTML = s.label + ' <span class="px">' + s.w + " × " + s.h + "</span>";
+}
+
+// The frame measures its own panel and reports back, so the printed footprint is
+// what the CSS actually produced rather than what this file guessed.
+window.addEventListener("message", (e) => {
+  const d = e.data || {};
+  const s = frames.get(d.id);
+  if (!s || !d.w) return;
+  s.w = d.w; s.h = d.h;
+  size(d.id);
+});
+
+const out = document.getElementById("out");
+for (const b of BANDS) {
+  const band = document.createElement("div");
+  band.className = "band";
+  band.innerHTML = "<h2>" + b.title + (b.dim ? ' <span class="dim">' + b.dim + "</span>" : "") +
+                   '</h2><div class="note">' + b.note + "</div>";
+  for (const o of b.opts) {
+    const box = document.createElement("div");
+    box.className = "opt";
+    if (o.name) {
+      box.innerHTML = "<h3>" + o.name + (o.tag ? ' <span class="tag">' + o.tag + "</span>" : "") +
+                      '</h3><div class="onote">' + o.note + "</div>";
+    }
+    const stage = document.createElement("div");
+    stage.className = "stage";
+    stage.append(
+      slot("Max — full", b.rice, false, false, "", b.max.w, b.max.h, true),
+      slot("Pro — full", b.rice, true, false, o.id, o.w, o.h, false),
+      slot("Max — compact", b.rice, false, true, "", b.max.cw, b.max.ch, true),
+      slot("Pro — compact", b.rice, true, true, o.id, o.cw, o.ch, false),
+    );
+    box.append(stage);
+    band.append(box);
+  }
+  out.append(band);
+}
+
+document.querySelectorAll(".zoombar button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".zoombar button").forEach((b) => b.classList.remove("on"));
+    btn.classList.add("on");
+    zoom = parseFloat(btn.dataset.z);
+    for (const id of frames.keys()) size(id);
+  });
+});
+</script>
+</body>
+</html>

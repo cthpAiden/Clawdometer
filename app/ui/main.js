@@ -218,6 +218,10 @@ logRejection(window.__TAURI__.event.listen("ui-prefs", (event) => {
   const p = event.payload || {};
   compactMode = !!p.compact;
   document.body.classList.toggle("compact", compactMode);
+  // Fable off ("Fable bar" in the tray): body.pro drops the third row and each
+  // card skin re-cuts around two windows (see style.css). Absent means on, so a
+  // payload from an older backend keeps the three-row layout.
+  document.body.classList.toggle("pro", p.showFable === false);
   const opacity = typeof p.opacity === "number" ? p.opacity : 1;
   els.card.style.opacity = opacity;
   for (const id of ["bento", "orb", "underline", "clawdboy"]) {

@@ -177,8 +177,9 @@ the standard HKCU Run registry key, only when you click it.
   current monitors, so an unplugged display can't strand it off-screen).
 - **Tray icon, left-click:** show/hide the HUD.
 - **Tray icon, right-click:** menu with *Show/Hide*, *Refresh usage* (runs a
-  headless `claude /usage` now), *RICE*, *Compact size*, *Opacity*, *Start with
-  Windows* (check mark reflects the actual HKCU Run key state), and *Quit*.
+  headless `claude /usage` now), *RICE*, *Compact size*, *Fable bar*, *Opacity*,
+  *Start with Windows* (check mark reflects the actual HKCU Run key state), and
+  *Quit*.
 - **RICE:** picks the skin — *Classic*, *Rowline*, *Bento Box*, *ClawdBoy* →
   *Table* / *Menu* / *Quad*, or *Audiowave
   Orb* → *Bars* / *Peak hold* / *LED Bloom* (see [Skins](#skins)). One radio group, so exactly
@@ -189,6 +190,11 @@ the standard HKCU Run registry key, only when you click it.
 - **Compact size:** shrinks the card to roughly half width (the same numbers,
   with 5H / 7D / FBL row labels on Rowline). Also toggled by
   double-clicking the card. Remembered across restarts.
+- **Fable bar:** on by default. Fable's weekly window is a Max-plan limit, so on
+  any other plan that third row can never fill — turn it off and every card skin
+  re-cuts around two windows: the row stacks shorten, Bento widens Weekly into
+  the freed cell, and ClawdBoy keeps its shell and spends the freed line on
+  bigger type. Remembered across restarts.
 - **Opacity:** 100/85/70/55% — makes the always-on-top card less visually
   blocking. Also available by right-clicking the card. Remembered across
   restarts.
@@ -454,8 +460,8 @@ registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 - **Biểu tượng khay, chuột trái:** ẩn/hiện HUD.
 - **Biểu tượng khay, chuột phải:** menu gồm *Show/Hide*, *Refresh usage*
   (chạy `claude /usage` headless ngay lập tức), *RICE*, *Compact size*,
-  *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng thái khóa
-  HKCU Run hiện tại), và *Quit*.
+  *Fable bar*, *Opacity*, *Start with Windows* (dấu tích phản ánh đúng trạng
+  thái khóa HKCU Run hiện tại), và *Quit*.
 - **RICE:** chọn giao diện — *Classic*, *Rowline*, *Bento Box*, *ClawdBoy* →
   *Table* / *Menu* / *Quad*, hoặc *Audiowave
   Orb* → *Bars* / *Peak hold* / *LED Bloom* (xem [Giao diện](#giao-diện-skins)). Cả chín là một
@@ -466,6 +472,11 @@ registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 - **Compact size:** thu thẻ còn khoảng nửa chiều rộng (vẫn các con số đó, với
   nhãn hàng 5H / 7D / FBL trên Rowline). Cũng bật/tắt được bằng cách
   nhấp đúp vào thẻ. Được nhớ qua các lần khởi động.
+- **Fable bar:** mặc định bật. Cửa sổ tuần Fable là giới hạn riêng của gói Max,
+  nên trên các gói khác hàng thứ ba đó không bao giờ có dữ liệu — tắt nó đi thì
+  mọi giao diện thẻ tự sắp lại quanh hai cửa sổ: các thẻ dạng hàng ngắn lại,
+  Bento cho Weekly chiếm luôn ô vừa trống, còn ClawdBoy giữ nguyên vỏ máy và
+  dùng chỗ trống đó để phóng to chữ. Được nhớ qua các lần khởi động.
 - **Opacity:** 100/85/70/55% — giúp thẻ luôn-nổi-trên-cùng bớt che khuất.
   Cũng mở được bằng chuột phải vào thẻ. Được nhớ qua các lần khởi động.
 - **Hiệu ứng hoạt động:** khi bất kỳ phiên Claude Code nào đang tạo phản hồi,

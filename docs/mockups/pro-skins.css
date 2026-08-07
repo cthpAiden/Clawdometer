@@ -1,0 +1,44 @@
+/* ── Pro layouts: the alternates that did NOT ship ──────────────────────────
+   The chosen designs now live in app/ui/style.css under body.pro, so the
+   gallery gets them for free from the real stylesheet. What is left here is
+   the two rejected alternates, kept so the comparison in pro-skins.html still
+   renders: Bento "Pair" (data-opt="b2") and Quad "Column" (data-opt="q3").
+   Each has to undo the shipped rule it replaces, which is why the two blocks
+   below restate properties that look redundant. */
+
+/* ── Bento "Pair" — two equal cells, no hero ────────────────────────────── */
+body.pro[data-opt="b2"] #bento { height: auto; grid-template-rows: auto 1fr; }
+body.pro[data-opt="b2"] #bento .top { grid-column: 1 / 2; padding: 7px 9px; gap: 5px; }
+body.pro[data-opt="b2"] #bento .top .toprow { align-items: baseline; gap: 0; }
+body.pro[data-opt="b2"] #bento .top .lbl { order: 1; margin-left: 0; font-size: 11px; }
+body.pro[data-opt="b2"] #bento .top .pct { order: 2; margin-left: auto; font-size: 15px; }
+body.pro[data-opt="b2"] #bento .top .bar { height: 5px; }
+body.pro[data-opt="b2"] #bento .top .toprow .rst-top { display: none; }
+body.pro[data-opt="b2"] #bento .hd-reset { display: block; }
+/* Weekly stays a half-width cell here, so the shipped full-width treatment
+   (Stack) has to come back off. */
+body.pro[data-opt="b2"] #bento .cel.w { grid-column: 2 / 3; grid-row: 2 / 3; }
+body.compact.pro[data-opt="b2"] #bento .cel.w .celtop { flex-direction: column; align-items: flex-start; gap: 2px; }
+body.compact.pro[data-opt="b2"] #bento .cel.w .pct { order: 0; font-size: 12px; }
+body.compact.pro[data-opt="b2"] #bento .cel.w .lbl { order: 0; font-size: 8px; }
+body.compact.pro[data-opt="b2"] #bento .top { padding: 5px 7px; }
+body.compact.pro[data-opt="b2"] #bento .top .pct { font-size: 12px; }
+body.compact.pro[data-opt="b2"] #bento .top .lbl { font-size: 8px; }
+body.compact.pro[data-opt="b2"] #bento .top .toprow { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+/* ── Quad "Column" — numbers stacked left, Clawd tall on the right ──────── */
+body.pro[data-opt="q3"] #clawdboy .cb-q:nth-child(1) { grid-area: 1 / 1 / 2 / 2; }
+/* Weekly moves under Current, so it takes over the column divider the base
+   rule strips from the second cell, and drops its own bottom rule. */
+body.pro[data-opt="q3"] #clawdboy .cb-q:nth-child(2) {
+  grid-area: 2 / 1 / 3 / 2;
+  border-right: 1px solid var(--cb-ink); border-bottom: 0;
+}
+/* Undoes the shipped Band row: this cell is a tall column, not a wide band. */
+body.pro[data-opt="q3"] #clawdboy .cb-q.mas {
+  grid-area: 1 / 2 / 3 / 3; flex-direction: column; gap: 5px;
+}
+body.pro[data-opt="q3"] #clawdboy .cb-quad .clawd svg { width: 32px; }
+body.pro[data-opt="q3"] #clawdboy .cb-q .cb-v.rst { font-size: 14px; }
+body.compact.pro[data-opt="q3"] #clawdboy .cb-quad .clawd svg { width: 22px; }
+body.compact.pro[data-opt="q3"] #clawdboy .cb-q .cb-v.rst { font-size: 10px; }

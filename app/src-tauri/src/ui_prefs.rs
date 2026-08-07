@@ -20,10 +20,20 @@ pub struct UiPrefs {
     // zone + band-specific bloom). serde default keeps pre-rice ui.json loading.
     #[serde(default = "default_rice")]
     pub rice: String,
+    // Fable's weekly window is a Max-plan limit, so on every other plan the
+    // third bar is a row that can never fill. Off drops it and the card skins
+    // re-cut around two windows (body.pro in the webview). Defaults to on so
+    // existing ui.json files keep the layout their owner already has.
+    #[serde(default = "default_show_fable")]
+    pub show_fable: bool,
 }
 
 fn default_opacity() -> f64 {
     1.0
+}
+
+const fn default_show_fable() -> bool {
+    true
 }
 
 pub fn default_rice() -> String {
@@ -128,7 +138,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("ui.json");
         assert!(load(&path).is_none());
-        let prefs = UiPrefs { x: -100, y: 2000, opacity: 0.7, compact: true, rice: "audiowave_orb".into() };
+        let prefs = UiPrefs {
+            x: -100, y: 2000, opacity: 0.7, compact: true,
+            rice: "audiowave_orb".into(), show_fable: false,
+        };
         save(&path, &prefs);
         assert_eq!(load(&path), Some(prefs));
         std::fs::write(&path, "garbage").unwrap();
@@ -147,5 +160,6 @@ mod tests {
         assert_eq!(p.opacity, 1.0);
         assert!(!p.compact);
         assert_eq!(p.rice, "classic");
+        assert!(p.show_fable); // pre-toggle files keep the three-window layout
     }
 }

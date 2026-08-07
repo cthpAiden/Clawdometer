@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>pro skin frame</title>
+<!-- The real shipping stylesheet, plus the Pro (no-Fable) override sheet.
+     Nothing is re-drawn by hand here: every preview in pro-skins.html is the
+     actual HUD CSS with pro-skins.css layered on top, so what the gallery
+     shows is what the app would render. -->
+<link rel="stylesheet" href="../../app/ui/style.css" />
+<link rel="stylesheet" href="pro-skins.css" />
+</head>
+<body data-rice="classic">
+  <div id="card">
+    <div id="header">
+      <span class="clawd-i" data-px="1.45"></span>
+      <span class="ttl">Usage</span>
+      <span id="countdown" class="rst-top">—</span>
+    </div>
+    <div class="rows">
+      <div class="r">
+        <span class="lbl"><span class="lf">Current</span><span class="lc">5H</span></span>
+        <div class="bar"><div id="bar5h" class="fill"></div></div>
+        <span id="txt5h" class="pct">—</span>
+      </div>
+      <div class="r">
+        <span class="lbl"><span class="lf">Weekly</span><span class="lc">7D</span></span>
+        <div class="bar"><div id="bar7d" class="fill"></div></div>
+        <span id="txt7d" class="pct">—</span>
+      </div>
+      <div class="r fb">
+        <span class="lbl"><span class="lf">Fable</span><span class="lc">FBL</span></span>
+        <div class="bar"><div id="barfb" class="fill"></div></div>
+        <span id="txtfb" class="pct">—</span>
+      </div>
+    </div>
+  </div>
+  <div id="bento">
+    <div class="hd2">
+      <span class="clawd-i" data-px="1.45"></span>
+      <span class="ttl">Usage</span>
+      <span id="brtop2" class="rst-top hd-reset">—</span>
+    </div>
+    <div class="top card">
+      <div class="toprow"><span class="pct" id="b5v">—</span><span class="lbl">Current</span><span id="brtop" class="rst-top">—</span></div>
+      <div class="bar"><div id="b5b" class="fill"></div></div>
+    </div>
+    <div class="cel card w">
+      <div class="celtop"><span class="lbl">Weekly</span><span class="pct" id="b7v">—</span></div>
+      <div class="bar"><div id="b7b" class="fill"></div></div>
+    </div>
+    <div class="cel card fb">
+      <div class="celtop"><span class="lbl">Fable</span><span class="pct" id="bfv">—</span></div>
+      <div class="bar"><div id="bfb" class="fill"></div></div>
+    </div>
+  </div>
+  <div id="underline">
+    <div class="uhead">
+      <span class="clawd-i" data-px="1.45"></span>
+      <span class="ttl">Usage</span>
+      <span id="ureset" class="rst-top">—</span>
+    </div>
+    <div class="u"><div class="urow"><span class="lbl">Current</span><span id="utxt5h" class="pct">—</span></div><div class="uline"><i id="uln5h"></i></div></div>
+    <div class="u"><div class="urow"><span class="lbl">Weekly</span><span id="utxt7d" class="pct">—</span></div><div class="uline"><i id="uln7d"></i></div></div>
+    <div class="u fb"><div class="urow"><span class="lbl">Fable</span><span id="utxtfb" class="pct">—</span></div><div class="uline"><i id="ulnfb"></i></div></div>
+  </div>
+  <div id="clawdboy">
+    <div class="cb-body">
+      <div class="cb-scr">
+        <div class="cb-table">
+          <span class="clawd-i" data-px="1.47"></span>
+          <div class="cb-col">
+            <div class="cb-rw hero"><span>5H</span><span class="cb-v" data-k="5h">—</span></div>
+            <div class="cb-rw"><span>7D</span><span class="cb-v" data-k="7d">—</span></div>
+            <div class="cb-rw fb"><span>FB</span><span class="cb-v" data-k="fb">—</span></div>
+            <div class="cb-rw rst"><span class="cb-lf">RESET</span><span class="cb-lc">↻</span><span class="cb-v" data-k="rst">—</span></div>
+          </div>
+        </div>
+        <div class="cb-menu">
+          <div class="cb-li sel"><span class="c">▸</span>CURRENT<span class="cb-v" data-k="5h">—</span></div>
+          <div class="cb-li"><span class="c"></span>WEEKLY<span class="cb-v" data-k="7d">—</span></div>
+          <div class="cb-li fb"><span class="c"></span>FABLE<span class="cb-v" data-k="fb">—</span></div>
+          <div class="cb-li"><span class="c"></span>RESET IN<span class="cb-v" data-k="rst">—</span></div>
+          <div class="cb-mv"><span class="clawd-i" data-px="0.87"></span></div>
+        </div>
+        <div class="cb-quad">
+          <div class="cb-q"><span class="k">CURRENT</span><span class="cb-v" data-k="5h">—</span></div>
+          <div class="cb-q"><span class="k">WEEKLY</span><span class="cb-v" data-k="7d">—</span></div>
+          <div class="cb-q fb"><span class="k">FABLE</span><span class="cb-v" data-k="fb">—</span></div>
+          <div class="cb-q mas"><span class="clawd-i" data-px="0.89"></span><span class="cb-v rst" data-k="rst">—</span></div>
+        </div>
+      </div>
+      <div class="cb-ctl">
+        <div class="cb-dpad"></div>
+        <span class="cb-wm">Clawd<i>Boy</i></span>
+        <div class="cb-btns"><i></i><i></i></div>
+      </div>
+    </div>
+  </div>
+  <script src="../../app/ui/clawd.js"></script>
+  <script>
+  // Static demo snapshot — one warn-level window and one ok-level one, so every
+  // preview shows the threshold palette doing its job instead of a flat blue.
+  (function () {
+    const q = new URLSearchParams(location.search);
+    const rice = q.get("rice") || "classic";
+    const pro = q.get("pro") === "1";
+    const compact = q.get("compact") === "1";
+    const opt = q.get("opt") || "";
+
+    document.body.dataset.rice = rice;
+    if (opt) document.body.dataset.opt = opt;
+    document.body.classList.toggle("pro", pro);
+    document.body.classList.toggle("compact", compact);
+
+    const P5 = 82, P7 = 41, PF = 12;
+    const LEVELS = {
+      ok:   { bar: "#3f7fbf", num: "#6aa9e8" },
+      warn: { bar: "#f59e0b", num: "#f0b429" },
+      crit: { bar: "#e5484d", num: "#e5484d" },
+    };
+    const lv = (p) => LEVELS[p >= 90 ? "crit" : p >= 75 ? "warn" : "ok"];
+
+    const row = (fill, txt, pct) => {
+      const f = document.getElementById(fill), t = document.getElementById(txt);
+      f.style.width = pct + "%";
+      f.style.setProperty("--u", lv(pct).bar);
+      t.textContent = pct + "%";
+    };
+    // Bento colours its number too (the only limit cue once compact hides bars).
+    const cell = (fill, txt, pct) => {
+      row(fill, txt, pct);
+      document.getElementById(txt).style.color = lv(pct).num;
+    };
+
+    row("bar5h", "txt5h", P5); row("bar7d", "txt7d", P7); row("barfb", "txtfb", PF);
+    row("uln5h", "utxt5h", P5); row("uln7d", "utxt7d", P7); row("ulnfb", "utxtfb", PF);
+    cell("b5b", "b5v", P5); cell("b7b", "b7v", P7); cell("bfb", "bfv", PF);
+
+    document.getElementById("countdown").textContent = "2h 47m";
+    document.getElementById("ureset").textContent = compact ? "2h 47m" : "Resets 2h 47m";
+    document.getElementById("brtop").textContent = "2h 47m";
+    document.getElementById("brtop2").textContent = "2h 47m";
+    const LCD = { "5h": P5 + "%", "7d": P7 + "%", fb: PF + "%", rst: "2H47" };
+    document.querySelectorAll("#clawdboy [data-k]").forEach((el) => {
+      el.textContent = LCD[el.dataset.k];
+    });
+
+    // Report the panel's real footprint to the gallery, which sizes the iframe
+    // to it and prints the number — that footprint is what apply_prefs would
+    // have to hardcode on the Rust side.
+    const shown = [...document.querySelectorAll("#card,#bento,#underline,#clawdboy")]
+      .find((el) => el.offsetParent !== null || el.offsetHeight > 0);
+    if (shown && parent !== window) {
+      const r = shown.getBoundingClientRect();
+      parent.postMessage(
+        { id: q.get("id"), w: Math.round(r.width), h: Math.round(r.height) }, "*"
+      );
+    }
+  })();
+  </script>
+</body>
+</html>

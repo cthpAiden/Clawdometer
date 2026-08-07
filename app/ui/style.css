@@ -239,7 +239,10 @@ body.working[data-canim="speedread"] .clawd .g-eyes { animation: cv-read 3.9s li
 #card .r .pct { width: 30px; text-align: right; font-size: 11px; }
 /* Compact swaps the row labels to short window codes (5H / 7D / FBL). */
 #card .lc { display: none; }
-body.compact #card { width: 120px; height: 100px; padding: 8px 9px; }
+/* 87px, not 100: the compact rows are short enough that a 100px panel left a
+   dead band under the last bar. Full size needs no such trim — its three rows
+   already fill 99 of its 100. */
+body.compact #card { width: 120px; height: 87px; padding: 8px 9px; }
 body.compact #card #header { margin-bottom: 6px; }
 body.compact #card .ttl { font-size: 11px; }
 body.compact #card .rows { gap: 7px; }
@@ -324,6 +327,56 @@ body.compact #underline .ttl { font-size: 12px; }
 body.compact #underline .urow .lbl { font-size: 9px; }
 body.compact #underline .urow .pct { font-size: 12px; }
 
+/* ── Pro layouts — body.pro, the "Fable bar" tray toggle turned off ────────
+   Fable's weekly window is a Max-plan limit, so on any other plan the third
+   row is one that can never fill. Off, the row goes and each skin re-cuts:
+   the two row-stacks simply shorten, Bento widens Weekly into the freed cell,
+   and ClawdBoy keeps its shell (it is a physical object — resizing the plastic
+   because a row left would read as a different device) and spends the freed
+   line on type size and on a bigger Clawd. Every height here has a twin in
+   apply_prefs (main.rs); change one and the panel clips or floats. */
+body.pro #card .r.fb,
+body.pro #underline .u.fb,
+body.pro #bento .cel.fb,
+body.pro #clawdboy .fb { display: none; }
+
+body.pro #underline { height: 97px; }
+body.compact.pro #underline { height: 91px; }
+body.pro #card { height: 78px; }
+body.compact.pro #card { height: 69px; }
+
+/* Bento: Weekly takes the whole bottom row instead of half of it, so the grid
+   keeps its shape and its footprint. Compact hides the bars, which would leave
+   a full-width cell with its label stacked in one corner and the other half
+   empty — so there it mirrors the Current hero instead: number, then label. */
+body.pro #bento .cel.w { grid-column: 1 / 3; }
+body.compact.pro #bento .cel.w .celtop { flex-direction: row; align-items: center; gap: 8px; }
+body.compact.pro #bento .cel.w .pct { order: 1; font-size: 18px; }
+body.compact.pro #bento .cel.w .lbl { order: 2; font-size: 11px; }
+
+/* ClawdBoy Table / Menu: the freed line goes back into the type. */
+body.pro #clawdboy .cb-table .clawd svg { width: 40px; }
+body.pro #clawdboy .cb-rw { font-size: 12.5px; }
+body.pro #clawdboy .cb-rw.hero { font-size: 20px; }
+body.pro #clawdboy .cb-rw.rst { font-size: 10.5px; margin-top: 5px; padding-top: 5px; }
+body.compact.pro #clawdboy .cb-table .clawd svg { width: 26px; }
+body.compact.pro #clawdboy .cb-rw { font-size: 10.5px; }
+body.compact.pro #clawdboy .cb-rw.hero { font-size: 14px; }
+body.compact.pro #clawdboy .cb-rw.rst { font-size: 8.5px; margin-top: 3px; padding-top: 3px; }
+body.pro #clawdboy .cb-li { font-size: 13px; line-height: 1.15; }
+body.pro #clawdboy .cb-menu .clawd svg { width: 27px; }
+body.compact.pro #clawdboy .cb-li { font-size: 10px; line-height: 1.15; }
+body.compact.pro #clawdboy .cb-menu .clawd svg { width: 21px; }
+
+/* ClawdBoy Quad: Current and Weekly share the top row and Clawd's cell spans
+   the width below, reset beside him instead of under him. The hidden Fable
+   cell still counts for :nth-child, so the base border rules land right. */
+body.pro #clawdboy .cb-q.mas { grid-column: 1 / 3; flex-direction: row; gap: 10px; }
+body.pro #clawdboy .cb-quad .clawd svg { width: 27px; }
+body.pro #clawdboy .cb-q .cb-v.rst { font-size: 15px; }
+body.compact.pro #clawdboy .cb-quad .clawd svg { width: 19px; }
+body.compact.pro #clawdboy .cb-q .cb-v.rst { font-size: 10px; }
+
 /* ── Offline alert ─────────────────────────────────────────────────────────
    body.offline = the payload's offline flag (headless /usage refresher failing
    AND the merged snapshot stale — see watcher::build_payload): the numbers on
@@ -352,7 +405,13 @@ body.offline #underline .offstrip { display: flex; }
 body.offline #underline { height: 146px; }
 body.offline.compact #underline { height: 134px; }
 body.offline #card { height: 124px; }
-body.offline.compact #card { height: 120px; }
+body.offline.compact #card { height: 107px; }
+/* Same footprint + strip for the Pro cuts. These have to out-specify the plain
+   body.pro heights above, which is why every class in play is spelled out. */
+body.offline.pro #underline { height: 121px; }
+body.offline.compact.pro #underline { height: 111px; }
+body.offline.pro #card { height: 102px; }
+body.offline.compact.pro #card { height: 89px; }
 /* Bento's 1fr grid row would stretch its cells into the strip; the extra
    padding-bottom (base padding + strip) keeps the grid clear of it. */
 body.offline #bento { height: 162px; padding-bottom: 34px; }
