@@ -32,7 +32,7 @@ The orb skins react to your system audio.
 
 Already have your own statusline? The HUD leaves it alone. Run `clawdometer install` to chain it.
 
-**Needs:** Windows 10/11, WebView2 (preinstalled on most PCs), and Claude Code signed in.
+**Needs:** Windows 10/11, WebView2 (preinstalled on most PCs), and Claude Code (CLI) signed in.
 
 **Build from source** (Rust + [tauri-cli](https://tauri.app)):
 
@@ -83,7 +83,7 @@ Chín kiểu hiển thị, cùng một dữ liệu. Đổi bất cứ lúc nào:
 
 Đã có statusline riêng? HUD sẽ không động vào. Chạy `clawdometer install` để nối chuỗi.
 
-**Cần:** Windows 10/11, WebView2 (có sẵn trên hầu hết máy), và Claude Code đã đăng nhập.
+**Cần:** Windows 10/11, WebView2 (có sẵn trên hầu hết máy), và Claude Code (CLI) đã đăng nhập.
 
 **Tự biên dịch** (Rust + [tauri-cli](https://tauri.app)):
 

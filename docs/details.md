@@ -98,7 +98,7 @@ the standard HKCU Run registry key, only when you click it.
 - Windows 10 or 11.
 - Microsoft Edge WebView2 runtime — preinstalled on Windows 11 and updated
   Windows 10. If missing, the installer downloads it, which needs internet.
-- Claude Code installed and signed in — all data comes from its statusline
+- Claude Code (CLI) installed and signed in — all data comes from its statusline
   hook, so the HUD only updates while Claude Code is in use. (Clawdometer
   honors `%CLAUDE_CONFIG_DIR%` if you've relocated `~/.claude`.)
 
