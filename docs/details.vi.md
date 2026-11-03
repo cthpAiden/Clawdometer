@@ -104,7 +104,7 @@ registry HKCU Run tiêu chuẩn, chỉ khi bạn bấm vào.
 - Windows 10 hoặc 11.
 - Microsoft Edge WebView2 runtime — có sẵn trên Windows 11 và Windows 10 đã
   cập nhật. Nếu thiếu, trình cài đặt sẽ tải về, việc này cần internet.
-- Đã cài và đăng nhập Claude Code — toàn bộ dữ liệu đến từ hook statusline
+- Đã cài và đăng nhập Claude Code (CLI) — toàn bộ dữ liệu đến từ hook statusline
   của nó, nên HUD chỉ cập nhật khi Claude Code đang được dùng. (Clawdometer
   tôn trọng `%CLAUDE_CONFIG_DIR%` nếu bạn đã di dời `~/.claude`.)
 
